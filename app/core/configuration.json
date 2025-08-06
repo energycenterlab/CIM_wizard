@@ -1,0 +1,309 @@
+{
+  "services": {
+    "raster_gateway": {
+      "url": "http://localhost:8002/height/"
+    },
+    "census_gateway": {
+      "url": "http://localhost:8004/api/census_spatial/"
+    }
+  },
+  "features": {
+    "scenario_geo": {
+      "constraints": {
+        "datatype": "dict",
+        "required": true
+      },
+      "class_path": "cim_wizard.calculators.scenario_geo_calculator",
+      "class_name": "ScenarioGeoCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["scenario_geo"],
+          "method_name": "calculate_from_scenario_geo"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_from_buildings_geo"
+        }
+      ]
+    },
+    "building_geo": {
+      "constraints": {
+        "datatype": "dict",
+        "required": true
+      },
+      "class_path": "cim_wizard.calculators.building_geo_calculator",
+      "class_name": "BuildingGeoCalculator", 
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_from_building_geo"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["project_id", "scenario_id", "scenario_census_boundary"],
+          "method_name": "calculate_from_scenario_census_geo"
+        }
+      ]
+    },
+    "building_props": {
+      "constraints": {
+        "datatype": "dict",
+        "required": true
+      },
+      "class_path": "cim_wizard.calculators.building_props_calculator",
+      "class_name": "BuildingPropsCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo"],
+          "method_name": "init"
+        }
+      ]
+    },
+    "building_height": {
+      "constraints": {
+        "datatype": "float",
+        "value_range": [0, 500],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_height_calculator",
+      "class_name": "BuildingHeightCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo", "raster_service_url"],
+          "method_name": "calculate_from_raster_service"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_from_osm_height"
+        },
+        {
+          "priority": 3,
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_default_estimate"
+        }
+      ]
+    },
+    "building_area": {
+      "constraints": {
+        "datatype": "float",
+        "value_range": [0, 100000],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_area_calculator",
+      "class_name": "BuildingAreaCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_from_geometry"
+        }
+      ]
+    },
+    "building_volume": {
+      "constraints": {
+        "datatype": "float",
+        "value_range": [0, 1000000],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_volume_calculator",
+      "class_name": "BuildingVolumeCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_height", "building_area"],
+          "method_name": "calculate_from_height_and_area"
+        }
+      ]
+    },
+    "building_n_floors": {
+      "constraints": {
+        "datatype": "int",
+        "value_range": [0, 200],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_n_floors_calculator",
+      "class_name": "BuildingNFloorsCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_props"],
+          "method_name": "estimate_by_height"
+        }
+      ]
+    },
+    "scenario_census_boundary": {
+      "constraints": {
+        "datatype": "geometry",
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.scenario_census_boundary_calculator",
+      "class_name": "ScenarioCensusBoundaryCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["project_id", "scenario_id", "scenario_geo", "census_service_url"],
+          "method_name": "calculate_from_census_api"
+        }
+      ]
+    },
+    "census_population": {
+      "constraints": {
+        "datatype": "float",
+        "value_range": [0, 1000000],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.census_population_calculator",
+      "class_name": "CensusPopulationCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["scenario_census_boundary"],
+          "method_name": "calculate_from_census_boundary"
+        }
+      ]
+    },
+    "building_population": {
+      "constraints": {
+        "datatype": "float",
+        "value_range": [0, 10000],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_population_calculator",
+      "class_name": "BuildingPopulationCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_volume", "census_population"],
+          "method_name": "calculate_from_volume_distribution"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["scenario_census_boundary", "building_type", "building_volume"],
+          "method_name": "by_census_osm"
+        }
+      ]
+    },
+    "building_type": {
+      "constraints": {
+        "datatype": "string",
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_type_calculator",
+      "class_name": "BuildingTypeCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["scenario_census_boundary", "building_geo", "building_area", "building_height"],
+          "method_name": "by_census_osm"
+        }
+      ]
+    },
+    "building_construction_year": {
+      "constraints": {
+        "datatype": "int",
+        "value_range": [1800, 2025],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_construction_year_calculator",
+      "class_name": "BuildingConstructionYearCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["scenario_census_boundary", "building_type"],
+          "method_name": "by_census_osm"
+        }
+      ]
+    },
+    "building_n_families": {
+      "constraints": {
+        "datatype": "float",
+        "value_range": [0, 1000],
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_n_families_calculator",
+      "class_name": "BuildingNFamiliesCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_population"],
+          "method_name": "calculate_from_population"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["building_population", "building_type"],
+          "method_name": "by_census_osm"
+        }
+      ]
+    },
+    "building_demographic": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_demographic_calculator",
+      "class_name": "BuildingDemographicCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["project_id", "scenario_id", "project_boundary", "scenario_census_boundary"],
+          "method_name": "by_census_osm"
+        }
+      ]
+    },
+    "building_geo_lod12": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "cim_wizard.calculators.building_geo_lod12_calculator",
+      "class_name": "BuildingGeoLod12Calculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_id", "project_id", "scenario_id", "building_geo", "building_height"],
+          "method_name": "by_footprint_height"
+        }
+      ]
+    }
+  },
+  "predefined_pipelines": {
+    "milestone1_scenario": {
+      "description": "Initialize scenario_geo, building_geo, and building_props from scenario_id",
+      "features": ["scenario_geo", "building_geo", "building_props"],
+      "required_inputs": ["scenario_id"]
+    },
+    "milestone1_building": {
+      "description": "Initialize scenario_geo, building_geo, and building_props from building_geo",
+      "features": ["scenario_geo", "building_geo", "building_props"],
+      "required_inputs": ["building_geo"]
+    },
+    "milestone2": {
+      "description": "Calculate building height, area, and scenario census boundary",
+      "features": ["building_height", "building_area", "scenario_census_boundary"],
+      "required_inputs": ["scenario_geo", "building_geo"],
+      "async": true
+    },
+    "milestone3": {
+      "description": "Calculate building volume",
+      "features": ["building_volume"],
+      "required_inputs": ["building_height", "building_area"]
+    },
+    "milestone4_demographic": {
+      "description": "Distribute census population and families through buildings",
+      "features": ["census_population", "building_population", "building_families"],
+      "required_inputs": ["scenario_census_boundary", "building_volume"]
+    }
+  },
+  "global_settings": {
+    "default_timeout": 30,
+    "retry_attempts": 3,
+    "enable_caching": true,
+    "validation_enabled": true
+  }
+} 
