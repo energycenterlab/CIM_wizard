@@ -1,11 +1,9 @@
 #!/bin/bash
-# Docker PostGIS Setup Script for CIM Wizard Integrated
-# This script automates the complete Docker PostGIS setup
 
-set -e  # Exit on any error
+# Docker PostGIS Setup Script for CIM Wizard Integrated (Unix/Linux/macOS)
+# This script sets up and starts the PostGIS database container
 
-echo "🐳 CIM Wizard Integrated - Docker PostGIS Setup"
-echo "================================================"
+set -e  # Exit on error
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,174 +12,152 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+echo ""
+echo "==================================================="
+echo "   CIM Wizard Integrated - PostGIS Docker Setup"
+echo "==================================================="
+echo ""
 
 # Check if Docker is running
-check_docker() {
-    print_status "Checking Docker..."
-    if ! docker info > /dev/null 2>&1; then
-        print_error "Docker is not running. Please start Docker first."
-        exit 1
-    fi
-    print_success "Docker is running"
-}
+echo -e "${YELLOW}[1/6] Checking Docker...${NC}"
+if ! command -v docker &> /dev/null; then
+    echo -e "${RED}[ERROR] Docker is not installed${NC}"
+    echo "Please install Docker first"
+    exit 1
+fi
+
+if ! docker info &> /dev/null; then
+    echo -e "${RED}[ERROR] Docker is not running${NC}"
+    echo "Please start Docker daemon"
+    exit 1
+fi
+echo -e "${GREEN}[SUCCESS] Docker is running${NC}"
 
 # Check if docker-compose is available
-check_docker_compose() {
-    print_status "Checking Docker Compose..."
-    if ! command -v docker-compose &> /dev/null; then
-        print_error "Docker Compose not found. Please install Docker Compose."
+echo -e "${YELLOW}[2/6] Checking Docker Compose...${NC}"
+if ! command -v docker-compose &> /dev/null; then
+    # Try docker compose (newer Docker versions)
+    if docker compose version &> /dev/null; then
+        echo -e "${GREEN}[SUCCESS] Docker Compose is available (docker compose)${NC}"
+        COMPOSE_CMD="docker compose"
+    else
+        echo -e "${RED}[ERROR] Docker Compose not found${NC}"
+        echo "Please install Docker Compose"
         exit 1
     fi
-    print_success "Docker Compose is available"
-}
-
-# Stop existing containers
-stop_existing() {
-    print_status "Stopping existing containers..."
-    docker-compose down > /dev/null 2>&1 || true
-    print_success "Existing containers stopped"
-}
-
-# Build PostGIS container
-build_postgis() {
-    print_status "Building custom PostGIS container..."
-    docker-compose build postgres
-    print_success "PostGIS container built"
-}
-
-# Start PostGIS container
-start_postgis() {
-    print_status "Starting PostGIS container..."
-    docker-compose up postgres -d
-    
-    # Wait for container to be healthy
-    print_status "Waiting for PostGIS to be ready..."
-    local max_attempts=30
-    local attempt=1
-    
-    while [ $attempt -le $max_attempts ]; do
-        if docker-compose ps postgres | grep -q "healthy"; then
-            print_success "PostGIS container is healthy"
-            return 0
-        fi
-        
-        echo -n "."
-        sleep 2
-        attempt=$((attempt + 1))
-    done
-    
-    print_error "PostGIS container did not become healthy in time"
-    docker-compose logs postgres
-    exit 1
-}
-
-# Test database connection
-test_connection() {
-    print_status "Testing database connection..."
-    if python scripts/test_docker_connection.py > /dev/null 2>&1; then
-        print_success "Database connection test passed"
-    else
-        print_warning "Database connection test failed - running full test"
-        python scripts/test_docker_connection.py
-    fi
-}
-
-# Populate sample data
-populate_data() {
-    print_status "Populating sample data..."
-    if python scripts/populate_sample_data.py > /dev/null 2>&1; then
-        print_success "Sample data populated"
-    else
-        print_warning "Sample data population failed - running with output"
-        python scripts/populate_sample_data.py
-    fi
-}
-
-# Start pgAdmin
-start_pgadmin() {
-    print_status "Starting pgAdmin..."
-    docker-compose up pgadmin -d
-    print_success "pgAdmin started - access at http://localhost:5050"
-    print_status "pgAdmin credentials: admin@cimwizard.com / admin"
-}
+else
+    echo -e "${GREEN}[SUCCESS] Docker Compose is available${NC}"
+    COMPOSE_CMD="docker-compose"
+fi
 
 # Create .env file if it doesn't exist
-setup_env() {
-    if [ ! -f .env ]; then
-        print_status "Creating .env file..."
-        cp env.example .env
-        print_success ".env file created"
+echo -e "${YELLOW}[3/6] Setting up environment...${NC}"
+if [ ! -f ".env" ]; then
+    if [ -f ".env.development" ]; then
+        cp .env.development .env
+        echo -e "${GREEN}[SUCCESS] Development environment file created${NC}"
+    elif [ -f ".env.example" ]; then
+        cp .env.example .env
+        echo -e "${GREEN}[SUCCESS] Environment file created from example${NC}"
     else
-        print_status ".env file already exists"
+        echo -e "${YELLOW}[WARNING] No environment template found${NC}"
+        echo -e "${YELLOW}[INFO] Please create .env file manually${NC}"
     fi
-}
+else
+    echo -e "${YELLOW}[INFO] Environment file already exists${NC}"
+fi
 
-# Test the application
-test_application() {
-    print_status "Testing application startup..."
+# Stop existing containers
+echo -e "${YELLOW}[4/6] Cleaning up existing containers...${NC}"
+$COMPOSE_CMD down > /dev/null 2>&1 || true
+
+# Build PostGIS container
+echo -e "${YELLOW}[5/6] Building PostGIS container...${NC}"
+if $COMPOSE_CMD build postgis; then
+    echo -e "${GREEN}[SUCCESS] PostGIS container built${NC}"
+else
+    echo -e "${RED}[ERROR] Failed to build PostGIS container${NC}"
+    exit 1
+fi
+
+# Start PostGIS container
+echo -e "${YELLOW}[6/6] Starting PostGIS container...${NC}"
+if $COMPOSE_CMD up postgis -d; then
+    echo -e "${GREEN}[SUCCESS] PostGIS container started${NC}"
+else
+    echo -e "${RED}[ERROR] Failed to start PostGIS container${NC}"
+    exit 1
+fi
+
+# Wait for database to be ready
+echo ""
+echo -e "${YELLOW}Waiting for database to be ready...${NC}"
+attempts=0
+max_attempts=30
+
+while [ $attempts -lt $max_attempts ]; do
+    if $COMPOSE_CMD ps | grep -q "healthy"; then
+        echo -e "${GREEN}[SUCCESS] PostGIS is healthy${NC}"
+        break
+    fi
     
-    # Try to import the application
-    if python -c "from app.db.database import engine; print('✅ Application can import database')" 2>/dev/null; then
-        print_success "Application imports successful"
+    attempts=$((attempts + 1))
+    if [ $attempts -eq $max_attempts ]; then
+        echo -e "${RED}[ERROR] PostGIS container did not become healthy in time${NC}"
+        $COMPOSE_CMD logs postgis
+        exit 1
+    fi
+    
+    echo -n "."
+    sleep 2
+done
+
+# Test database connection
+echo ""
+echo -e "${YELLOW}Testing database connection...${NC}"
+if docker exec cim_wizard_postgis_dev pg_isready -U cim_wizard_user -d cim_wizard_integrated &> /dev/null; then
+    echo -e "${GREEN}[SUCCESS] Database connection successful${NC}"
+else
+    echo -e "${YELLOW}[WARNING] Database not ready, waiting...${NC}"
+    sleep 5
+    if docker exec cim_wizard_postgis_dev pg_isready -U cim_wizard_user -d cim_wizard_integrated &> /dev/null; then
+        echo -e "${GREEN}[SUCCESS] Database connection successful${NC}"
     else
-        print_warning "Application import test failed"
+        echo -e "${RED}[ERROR] Database connection failed${NC}"
+        echo "Please check Docker logs: $COMPOSE_CMD logs postgis"
+        exit 1
     fi
-}
+fi
 
-# Main setup function
-main() {
-    echo
-    print_status "Starting Docker PostGIS setup for CIM Wizard Integrated"
-    echo
-    
-    # Run setup steps
-    check_docker
-    check_docker_compose
-    setup_env
-    stop_existing
-    build_postgis
-    start_postgis
-    test_connection
-    populate_data
-    start_pgadmin
-    test_application
-    
-    echo
-    print_success "🎉 Docker PostGIS setup completed!"
-    echo
-    echo "📊 Service URLs:"
-    echo "   • Database: localhost:5432"
-    echo "   • pgAdmin: http://localhost:5050"
-    echo "   • Application: http://localhost:8000 (after starting)"
-    echo
-    echo "🚀 Next steps:"
-    echo "   1. Start the application: python run.py"
-    echo "   2. Test the API: python examples/simple_api_usage.py"
-    echo "   3. Access API docs: http://localhost:8000/docs"
-    echo
-    echo "🔧 Useful commands:"
-    echo "   • Check status: docker-compose ps"
-    echo "   • View logs: docker-compose logs postgres"
-    echo "   • Stop services: docker-compose down"
-    echo "   • Restart: docker-compose restart postgres"
-    echo
-}
-
-# Run main function
-main "$@"
+echo ""
+echo "==================================================="
+echo -e "${GREEN}   PostGIS Setup Complete!${NC}"
+echo "==================================================="
+echo ""
+echo "Database Connection Details:"
+echo "  Host:     localhost"
+echo "  Port:     5432"
+echo "  Database: cim_wizard_integrated"
+echo "  Username: cim_wizard_user"
+echo "  Password: cim_wizard_password"
+echo ""
+echo "Connection String:"
+echo "  postgresql://cim_wizard_user:cim_wizard_password@localhost:5432/cim_wizard_integrated"
+echo ""
+echo "Available Services:"
+echo "  - PostgreSQL/PostGIS: localhost:5432"
+echo "  - pgAdmin (optional): http://localhost:5050"
+echo "    To enable: $COMPOSE_CMD --profile tools up pgadmin -d"
+echo ""
+echo "Useful Commands:"
+echo "  View logs:         $COMPOSE_CMD logs -f postgis"
+echo "  Stop database:     $COMPOSE_CMD down"
+echo "  Start database:    $COMPOSE_CMD up postgis -d"
+echo "  Restart database:  $COMPOSE_CMD restart postgis"
+echo "  Access psql:       docker exec -it cim_wizard_postgis_dev psql -U cim_wizard_user -d cim_wizard_integrated"
+echo ""
+echo "Next Steps:"
+echo "  1. Test connection:     python scripts/test_docker_connection.py"
+echo "  2. Populate sample data: python scripts/populate_sample_data.py"
+echo "  3. Run application:     python run.py"
+echo ""

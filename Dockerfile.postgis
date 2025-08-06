@@ -1,0 +1,40 @@
+# PostgreSQL/PostGIS Docker Image for CIM Wizard Integrated
+FROM postgis/postgis:15-3.4
+
+# Set environment variables (can be overridden by docker-compose)
+ENV POSTGRES_DB=cim_wizard_integrated
+ENV POSTGRES_USER=cim_wizard_user
+ENV POSTGRES_PASSWORD=cim_wizard_password
+ENV PGDATA=/var/lib/postgresql/data/pgdata
+
+# Install additional PostGIS extensions and tools
+RUN apt-get update && apt-get install -y \
+    postgresql-15-pgrouting \
+    postgresql-15-postgis-3-scripts \
+    postgresql-15-h3-postgis \
+    postgresql-15-mobilitydb \
+    postgresql-15-ogr-fdw \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories for initialization scripts
+RUN mkdir -p /docker-entrypoint-initdb.d/
+
+# Set proper permissions
+RUN chmod -R 755 /docker-entrypoint-initdb.d/
+
+# Configure PostgreSQL for better performance
+RUN echo "shared_buffers = 256MB" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "max_connections = 200" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "work_mem = 4MB" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "maintenance_work_mem = 64MB" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "effective_cache_size = 1GB" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "random_page_cost = 1.1" >> /usr/share/postgresql/postgresql.conf.sample
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD pg_isready -U $POSTGRES_USER -d $POSTGRES_DB

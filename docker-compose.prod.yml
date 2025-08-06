@@ -1,0 +1,100 @@
+# Production Docker Compose - Full Stack
+# This configuration runs both PostGIS and the application in containers
+
+version: '3.8'
+
+services:
+  # PostgreSQL with PostGIS
+  postgis:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgis
+    container_name: cim_wizard_postgis_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cim_wizard_integrated}
+      POSTGRES_USER: ${POSTGRES_USER:-cim_wizard_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cim_wizard_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgis_data_prod:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cim_wizard_user} -d ${POSTGRES_DB:-cim_wizard_integrated}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - cim_prod_network
+    restart: unless-stopped
+
+  # CIM Wizard Integrated Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cim_wizard_app_prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cim_wizard_user}:${POSTGRES_PASSWORD:-cim_wizard_password}@postgis:5432/${POSTGRES_DB:-cim_wizard_integrated}
+      DEBUG: ${DEBUG:-False}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      HOST: 0.0.0.0
+      PORT: 8000
+      API_V1_STR: ${API_V1_STR:-/api}
+      PROJECT_NAME: ${PROJECT_NAME:-CIM Wizard Integrated}
+      VERSION: ${VERSION:-2.0.0}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-["*"]}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      postgis:
+        condition: service_healthy
+    networks:
+      - cim_prod_network
+    restart: unless-stopped
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: cim_wizard_nginx_prod
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - cim_prod_network
+    restart: unless-stopped
+    profiles:
+      - proxy
+
+  # pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cim_wizard_pgadmin_prod
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@cimwizard.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'True'
+    volumes:
+      - pgadmin_data_prod:/var/lib/pgadmin
+    networks:
+      - cim_prod_network
+    restart: unless-stopped
+    profiles:
+      - tools
+
+volumes:
+  postgis_data_prod:
+    name: cim_wizard_postgis_data_prod
+  pgadmin_data_prod:
+    name: cim_wizard_pgadmin_data_prod
+
+networks:
+  cim_prod_network:
+    name: cim_wizard_prod_network
+    driver: bridge
