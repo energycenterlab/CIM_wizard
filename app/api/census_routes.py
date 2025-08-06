@@ -10,10 +10,7 @@ import json
 
 from app.db.database import get_db
 from app.services.census_service import CensusService
-from app.schemas.census_schemas import (
-    CensusSpatialQuery, CensusResponse, CensusStatistics,
-    BuildingAgeDistribution
-)
+# Removed Pydantic schemas for simplicity - using dict responses
 
 
 router = APIRouter()

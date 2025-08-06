@@ -10,10 +10,7 @@ import json
 
 from app.db.database import get_db
 from app.services.raster_service import RasterService
-from app.schemas.raster_schemas import (
-    BuildingHeightRequest, BuildingHeightResponse,
-    RasterClipRequest, RasterStatisticsResponse
-)
+# Removed Pydantic schemas for simplicity - using dict responses
 
 
 router = APIRouter()

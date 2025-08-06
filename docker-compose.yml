@@ -1,31 +1,37 @@
 version: '3.8'
 
 services:
-  # PostgreSQL with PostGIS
+  # PostgreSQL with PostGIS (Custom Build)
   postgres:
-    image: postgis/postgis:15-3.3
+    build:
+      context: ./docker/postgis
+      dockerfile: Dockerfile
     container_name: cim_integrated_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: cim_wizard_integrated
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./docker/postgis/init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U cim_wizard_user -d cim_wizard_integrated"]
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 60s
+    networks:
+      - cim_network
 
   # CIM Wizard Integrated Application
   cim_wizard:
     build: .
     container_name: cim_integrated_app
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cim_wizard_integrated
+      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@postgres:5432/cim_wizard_integrated
       DEBUG: ${DEBUG:-False}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
@@ -37,6 +43,8 @@ services:
       - ./app:/app/app
       - ./main.py:/app/main.py
       - ./run.py:/app/run.py
+    networks:
+      - cim_network
 
   # pgAdmin for database management
   pgadmin:
@@ -45,18 +53,23 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@cimwizard.com
       PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "5050:80"
     depends_on:
       - postgres
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - cim_network
+
+
 
 volumes:
   postgres_data:
   pgadmin_data:
 
 networks:
-  default:
+  cim_network:
     name: cim_integrated_network
     driver: bridge

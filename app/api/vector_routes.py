@@ -16,17 +16,13 @@ from app.models.vector import (
     ProjectScenario, Building, BuildingProperties, 
     GridBus, GridLine
 )
-from app.schemas.vector_schemas import (
-    ProjectScenarioResponse, BuildingGeometryResponse,
-    BuildingsGeoJSONResponse, BuildingPropertiesResponse,
-    GridBusResponse, GridLineResponse
-)
+# Removed Pydantic schemas for simplicity - using dict responses
 
 
 router = APIRouter()
 
 
-@router.get("/projects", response_model=List[ProjectScenarioResponse])
+@router.get("/projects")
 async def get_all_projects(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -57,7 +53,7 @@ async def project_dashboard(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/pscenarios/{project_id}", response_model=List[ProjectScenarioResponse])
+@router.get("/pscenarios/{project_id}")
 async def get_project_scenarios(
     project_id: str,
     db: Session = Depends(get_db)
@@ -79,8 +75,7 @@ async def get_project_scenarios(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/project_scenario_details/{project_id}/{scenario_id}", 
-           response_model=ProjectScenarioResponse)
+@router.get("/project_scenario_details/{project_id}/{scenario_id}")
 async def get_project_scenario_details(
     project_id: str,
     scenario_id: str,
@@ -106,7 +101,7 @@ async def get_project_scenario_details(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/bgeo/{building_id}", response_model=BuildingGeometryResponse)
+@router.get("/bgeo/{building_id}")
 async def get_building_geometry(
     building_id: str,
     lod: Optional[int] = Query(0),
@@ -198,8 +193,7 @@ async def get_buildings_geojson(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/buildingproperties/{project_id}/{scenario_id}", 
-           response_model=List[BuildingPropertiesResponse])
+@router.get("/buildingproperties/{project_id}/{scenario_id}")
 async def query_building_properties(
     project_id: str,
     scenario_id: str,
@@ -299,8 +293,7 @@ async def building_id_fetcher_buffer(
 
 
 # Grid-related endpoints
-@router.get("/{project_id}/{scenario_id}/gridline", 
-           response_model=List[GridLineResponse])
+@router.get("/{project_id}/{scenario_id}/gridline")
 async def get_grid_lines(
     project_id: str,
     scenario_id: str,
@@ -328,8 +321,7 @@ async def get_grid_lines(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/gridline/network/{network_id}", 
-           response_model=List[GridLineResponse])
+@router.get("/gridline/network/{network_id}")
 async def get_grid_lines_by_network(
     network_id: str,
     limit: int = Query(100, ge=1, le=1000),

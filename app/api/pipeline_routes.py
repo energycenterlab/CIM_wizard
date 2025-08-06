@@ -12,10 +12,7 @@ from app.db.database import get_db
 from app.models.vector import ProjectScenario, Building, BuildingProperties
 from app.core.data_manager import CimWizardDataManager
 from app.core.pipeline_executor import CimWizardPipelineExecutor
-from app.schemas.pipeline_schemas import (
-    PipelineRequest, ExplicitPipelineRequest, PredefinedPipelineRequest,
-    PipelineResponse, FeatureCalculationRequest, FeatureCalculationResponse
-)
+# Removed Pydantic schemas for simplicity - using dict instead
 
 
 router = APIRouter()
@@ -30,9 +27,9 @@ def get_pipeline_executor(db: Session = Depends(get_db)):
     return executor, data_manager
 
 
-@router.post("/execute", response_model=PipelineResponse)
+@router.post("/execute")
 async def execute_pipeline(
-    request: PipelineRequest,
+    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """Execute a pipeline to calculate multiple features"""
@@ -40,22 +37,42 @@ async def execute_pipeline(
         # Get executor and data manager with DB session
         executor, data_manager = get_pipeline_executor(db)
         
+        # Possible errors to handle later:
+        # - Missing project_id, scenario_id, features
+        # - Invalid feature names
+        # - Database connection issues
+        # - Calculator execution failures
+        
+        project_id = request_data.get('project_id')
+        scenario_id = request_data.get('scenario_id')
+        building_id = request_data.get('building_id')
+        features = request_data.get('features', [])
+        parallel = request_data.get('parallel', False)
+        input_data = request_data.get('input_data')
+        
+        if not project_id:
+            return {"error": "Missing project_id"}
+        if not scenario_id:
+            return {"error": "Missing scenario_id"}
+        if not features:
+            return {"error": "Missing features list"}
+        
         # Set context from request
         data_manager.set_context(
-            project_id=request.project_id,
-            scenario_id=request.scenario_id,
-            building_id=request.building_id,
+            project_id=project_id,
+            scenario_id=scenario_id,
+            building_id=building_id,
             db_session=db  # Pass DB session to context
         )
         
         # Set any additional input data
-        if request.input_data:
-            data_manager.set_context(**request.input_data)
+        if input_data:
+            data_manager.set_context(**input_data)
         
         # Execute pipeline
         result = executor.execute_pipeline(
-            request.features,
-            parallel=request.parallel
+            features,
+            parallel=parallel
         )
         
         # Add calculated feature values to result
@@ -76,9 +93,9 @@ async def execute_pipeline(
         raise HTTPException(status_code=500, detail=f"Pipeline execution error: {str(e)}")
 
 
-@router.post("/execute_explicit", response_model=PipelineResponse)
+@router.post("/execute_explicit")
 async def execute_explicit_pipeline(
-    request: ExplicitPipelineRequest,
+    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """Execute pipeline with explicit feature.method specifications"""
@@ -86,21 +103,35 @@ async def execute_explicit_pipeline(
         # Get executor and data manager with DB session
         executor, data_manager = get_pipeline_executor(db)
         
+        # Possible errors to handle later:
+        # - Missing execution_plan
+        # - Invalid execution plan format
+        # - Method not found
+        
+        execution_plan = request_data.get('execution_plan', [])
+        project_id = request_data.get('project_id')
+        scenario_id = request_data.get('scenario_id')
+        building_id = request_data.get('building_id')
+        input_data = request_data.get('input_data')
+        
+        if not execution_plan:
+            return {"error": "Missing execution_plan"}
+        
         # Set context from request
         data_manager.set_context(
-            project_id=request.project_id,
-            scenario_id=request.scenario_id,
-            building_id=request.building_id,
+            project_id=project_id,
+            scenario_id=scenario_id,
+            building_id=building_id,
             db_session=db
         )
         
         # Set any additional input data
-        if request.input_data:
-            data_manager.set_context(**request.input_data)
+        if input_data:
+            data_manager.set_context(**input_data)
         
         # Execute explicit pipeline
         result = executor.execute_explicit_pipeline(
-            request.execution_plan
+            execution_plan
         )
         
         return result
@@ -110,9 +141,9 @@ async def execute_explicit_pipeline(
         raise HTTPException(status_code=500, detail=f"Pipeline execution error: {str(e)}")
 
 
-@router.post("/execute_predefined", response_model=PipelineResponse)
+@router.post("/execute_predefined")
 async def execute_predefined_pipeline(
-    request: PredefinedPipelineRequest,
+    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """Execute a predefined pipeline from configuration"""
@@ -120,21 +151,32 @@ async def execute_predefined_pipeline(
         # Get executor and data manager with DB session
         executor, data_manager = get_pipeline_executor(db)
         
+        # Possible errors to handle later:
+        # - Missing pipeline_name
+        # - Pipeline not found in configuration
+        # - Execution errors
+        
+        pipeline_name = request_data.get('pipeline_name')
+        project_id = request_data.get('project_id')
+        scenario_id = request_data.get('scenario_id')
+        building_id = request_data.get('building_id')
+        input_data = request_data.get('input_data', {})
+        
+        if not pipeline_name:
+            return {"error": "Missing pipeline_name"}
+        
         # Set context from request
         data_manager.set_context(
-            project_id=request.project_id,
-            scenario_id=request.scenario_id,
-            building_id=request.building_id,
+            project_id=project_id,
+            scenario_id=scenario_id,
+            building_id=building_id,
             db_session=db
         )
         
-        # Set any additional input data
-        additional_context = request.input_data or {}
-        
         # Execute predefined pipeline
         result = executor.execute_predefined_pipeline(
-            request.pipeline_name,
-            **additional_context
+            pipeline_name,
+            **input_data
         )
         
         return result
@@ -144,9 +186,9 @@ async def execute_predefined_pipeline(
         raise HTTPException(status_code=500, detail=f"Pipeline execution error: {str(e)}")
 
 
-@router.post("/calculate_feature", response_model=FeatureCalculationResponse)
+@router.post("/calculate_feature")
 async def calculate_feature(
-    request: FeatureCalculationRequest,
+    request_data: dict,
     db: Session = Depends(get_db)
 ):
     """Calculate a single feature"""
@@ -154,42 +196,58 @@ async def calculate_feature(
         # Get executor and data manager with DB session
         executor, data_manager = get_pipeline_executor(db)
         
+        # Possible errors to handle later:
+        # - Missing feature_name
+        # - Feature not found in configuration
+        # - Method not found
+        # - Calculation errors
+        
+        feature_name = request_data.get('feature_name')
+        method_name = request_data.get('method_name')
+        project_id = request_data.get('project_id')
+        scenario_id = request_data.get('scenario_id')
+        building_id = request_data.get('building_id')
+        input_data = request_data.get('input_data')
+        
+        if not feature_name:
+            return {"error": "Missing feature_name"}
+        
         # Set context from request
         data_manager.set_context(
-            project_id=request.project_id,
-            scenario_id=request.scenario_id,
-            building_id=request.building_id,
+            project_id=project_id,
+            scenario_id=scenario_id,
+            building_id=building_id,
             db_session=db
         )
         
         # Set any additional input data
-        if request.input_data:
-            data_manager.set_context(**request.input_data)
+        if input_data:
+            data_manager.set_context(**input_data)
         
         # Execute single feature
         success = executor.execute_feature(
-            request.feature_name,
-            request.method_name
+            feature_name,
+            method_name
         )
         
         if success:
-            value = data_manager.get_feature(request.feature_name)
-            execution_info = executor.execution_results.get(request.feature_name, {})
+            value = data_manager.get_feature(feature_name)
+            execution_info = executor.execution_results.get(feature_name, {})
             method_used = execution_info.get('method', None)
             
             return {
                 "success": True,
-                "feature_name": request.feature_name,
+                "feature_name": feature_name,
                 "value": value,
                 "method_used": method_used
             }
         else:
-            execution_info = executor.execution_results.get(request.feature_name, {})
+            execution_info = executor.execution_results.get(feature_name, {})
             error = execution_info.get('error', 'Unknown error')
             
             return {
                 "success": False,
-                "feature_name": request.feature_name,
+                "feature_name": feature_name,
                 "value": None,
                 "method_used": None,
                 "error": error
