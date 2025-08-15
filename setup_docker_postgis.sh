@@ -29,13 +29,13 @@ fi
 if ! docker info &> /dev/null; then
     echo -e "${RED}[ERROR] Docker is not running${NC}"
     echo "Please start Docker daemon"
-    exit 1
-fi
+        exit 1
+    fi
 echo -e "${GREEN}[SUCCESS] Docker is running${NC}"
 
 # Check if docker-compose is available
 echo -e "${YELLOW}[2/6] Checking Docker Compose...${NC}"
-if ! command -v docker-compose &> /dev/null; then
+    if ! command -v docker-compose &> /dev/null; then
     # Try docker compose (newer Docker versions)
     if docker compose version &> /dev/null; then
         echo -e "${GREEN}[SUCCESS] Docker Compose is available (docker compose)${NC}"
@@ -106,11 +106,11 @@ while [ $attempts -lt $max_attempts ]; do
         echo -e "${RED}[ERROR] PostGIS container did not become healthy in time${NC}"
         $COMPOSE_CMD logs postgis
         exit 1
-    fi
-    
-    echo -n "."
-    sleep 2
-done
+        fi
+        
+        echo -n "."
+        sleep 2
+    done
 
 # Test database connection
 echo ""

@@ -1,8 +1,6 @@
 # Production Docker Compose - Full Stack
 # This configuration runs both PostGIS and the application in containers
 
-version: '3.8'
-
 services:
   # PostgreSQL with PostGIS
   postgis:
