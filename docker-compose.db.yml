@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  db:
+    # Build from the local Dockerfile and also tag it "integrateddb:latest"
+    build:
+      context: .
+      dockerfile: Dockerfile.postgis
+    image: integrateddb:latest
+
+    container_name: integrateddb
+    restart: unless-stopped
+
+    # Publish DB on host port 5433
+    ports:
+      - "5433:5432"
+
+    # Persist data and mount init scripts and raw data
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./rawdata:/rawdata:ro
+
+    # You can override these with a .env file if you want
+    environment:
+      POSTGRES_DB: cim_wizard_integrated
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
