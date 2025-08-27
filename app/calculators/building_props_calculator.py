@@ -43,54 +43,32 @@ class BuildingPropsCalculator:
             created_count = 0
             updated_count = 0
             
-            try:
-                from cim_wizard.models import BuildingProperties
-                from django.db import transaction
+            # Create building properties for each building (simplified for FastAPI)
+            for building in buildings:
+                building_id = building.get('building_id')
+                lod = building.get('lod', 0)
+
+                if not building_id:
+                    self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
+                    continue
+
+                # Create building properties object
+                building_props_obj = {
+                    'building_id': building_id,
+                    'scenario_id': scenario_id,
+                    'lod': lod,
+                    'height': None,
+                    'area': None,
+                    'volume': None,
+                    'number_of_floors': None
+                }
                 
-                with transaction.atomic():
-                    for building in buildings:
-                        building_id = building.get('building_id')
-                        lod = building.get('lod', 0)
-
-                        if not building_id:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
-                            continue
-
-                        # Create or get BuildingProperties for each building
-                        building_props_obj, created = BuildingProperties.objects.update_or_create(
-                            building_id=building_id,
-                            project_id=project_id,
-                            scenario_id=scenario_id,
-                            lod=lod,
-                            defaults={
-                                'height': None,
-                                'area': None,
-                                'volume': None,
-                                'number_of_floors': None
-                            }
-                        )
-                        
-                        if created:
-                            created_count += 1
-                        else:
-                            updated_count += 1
-                        
-                        # Add to result list
-                        building_properties_list.append({
-                            'building_id': building_id,
-                            'scenario_id': scenario_id,
-                            'lod': lod,
-                            'height': None,
-                            'area': None,
-                            'volume': None,
-                            'number_of_floors': None
-                        })
-                    
-                    self.pipeline.log_info(self.calculator_name, f"Created {created_count} new BuildingProperties, updated {updated_count} existing")
-                    
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to save to database: {str(e)}")
-                return None
+                created_count += 1
+                
+                # Add to result list
+                building_properties_list.append(building_props_obj)
+            
+            self.pipeline.log_info(self.calculator_name, f"Created {created_count} building properties")
 
             # Create result with all building properties
             building_props = {
@@ -99,8 +77,8 @@ class BuildingPropsCalculator:
                 'building_properties': building_properties_list
             }
 
-            # Store result
-            self.pipeline.store_result('building_props', building_props)
+            # Store result in data manager
+            self.data_manager.set_feature('building_props', building_props)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'init', f"Initialized {len(building_properties_list)} building properties")
             return building_props

@@ -93,7 +93,7 @@ class BuildingGeoCalculator:
                 'created_from': 'sample_buildings_for_testing'
             }
             
-                        self.pipeline.log_calculation_success(self.calculator_name, "sample_buildings_query", building_geo,
+            self.pipeline.log_calculation_success(self.calculator_name, "sample_buildings_query", building_geo,
                                          f"Created {len(sample_buildings)} sample buildings for testing")
             return building_geo
             

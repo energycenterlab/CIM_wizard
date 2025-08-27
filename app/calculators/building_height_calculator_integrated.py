@@ -23,9 +23,9 @@ class BuildingHeightCalculator:
         self.data_manager = pipeline_executor.data_manager
         self.calculator_name = "BuildingHeightCalculator"
     
-    def calculate_from_raster_service(self) -> Optional[float]:
+    def calculate_from_raster_service(self) -> Optional[Dict[str, Any]]:
         """
-        Calculate building height using integrated raster service
+        Calculate building heights using integrated raster service
         Direct database access instead of API call
         """
         # Validate inputs
@@ -33,35 +33,39 @@ class BuildingHeightCalculator:
         if not building_geo:
             return None
         
-        # Get building ID if available
-        building_id = getattr(self.data_manager, 'building_id', None)
-        
         try:
             # For now, use a simplified approach since integrated raster service might not be fully implemented
             # This will be replaced with actual raster service integration
             self.pipeline.log_info(self.calculator_name, 
-                                 "Calculating height using simplified approach")
+                                 "Calculating heights using simplified approach")
             
-            # Default height calculation (placeholder for integrated raster service)
-            if building_geo and isinstance(building_geo, dict):
+            # Get buildings from building_geo
+            buildings = building_geo.get('buildings', [])
+            if not buildings:
+                self.pipeline.log_warning(self.calculator_name, 
+                                        "No buildings found in building_geo")
+                return None
+            
+            # Calculate heights for all buildings
+            building_heights = []
+            for building in buildings:
                 # Simple default height based on building type or area
                 default_height = 12.0  # Default 4-story building height
-                self.pipeline.log_info(self.calculator_name, 
-                                     f"Using default height: {default_height}m")
-                
-                # Store metadata
-                self.data_manager.set_feature('height_calculation_method', 'default')
-                
-                return default_height
+                building_heights.append(default_height)
             
-            self.pipeline.log_warning(self.calculator_name, 
-                                    "No building geometry available for height calculation")
-            return None
+            self.pipeline.log_info(self.calculator_name, 
+                                 f"Calculated heights for {len(building_heights)} buildings")
+            
+            # Store metadata
+            self.data_manager.set_feature('height_calculation_method', 'default')
+            
+            # Return heights as a list
+            return building_heights
             
         except Exception as e:
             # Possible errors: Database connection issues, raster data not available
             self.pipeline.log_error(self.calculator_name, 
-                                  f"Error calculating height: {str(e)}")
+                                  f"Error calculating heights: {str(e)}")
             return None
     
     def calculate_from_osm_height(self) -> Optional[float]:

@@ -38,54 +38,30 @@ class BuildingAreaCalculator:
             building_properties_list = []
             updated_count = 0
             
-            try:
-                from cim_wizard.models import BuildingProperties
-                from django.db import transaction
-                
-                with transaction.atomic():
-                    for building in buildings:
-                        building_id = building.get('building_id')
-                        lod = building.get('lod', 0)
+            # Calculate areas for all buildings (simplified for FastAPI)
+            for building in buildings:
+                building_id = building.get('building_id')
+                lod = building.get('lod', 0)
 
-                        if not building_id:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
-                            continue
-                        
-                        # Calculate area from geometry using proper geographic projection
-                        geometry = building.get('geometry', {})
-                        area = self._calculate_polygon_area(geometry)
-                        
-                        # Update BuildingProperties
-                        try:
-                            building_props = BuildingProperties.objects.get(
-                                building_id=building_id,
-                                project_id=project_id,
-                                scenario_id=scenario_id,
-                                lod=lod
-                            )
-                            
-                            # Update area
-                            building_props.area = area
-                            building_props.save()
-                            updated_count += 1
-                            
-                            # Add to result list
-                            building_properties_list.append({
-                                'building_id': building_id,
-                                'scenario_id': scenario_id,
-                                'lod': lod,
-                                'area': area
-                            })
-                            
-                        except BuildingProperties.DoesNotExist:
-                            self.pipeline.log_warning(self.calculator_name, f"BuildingProperties not found for building {building_id}")
-                            continue
-                    
-                    self.pipeline.log_info(self.calculator_name, f"Updated areas for {updated_count} buildings")
-                    
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to save to database: {str(e)}")
-                return None
+                if not building_id:
+                    self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
+                    continue
+                
+                # Calculate area from geometry using proper geographic projection
+                geometry = building.get('geometry', {})
+                area = self._calculate_polygon_area(geometry)
+                
+                # Add to result list
+                building_properties_list.append({
+                    'building_id': building_id,
+                    'scenario_id': scenario_id,
+                    'lod': lod,
+                    'area': area
+                })
+                
+                updated_count += 1
+            
+            self.pipeline.log_info(self.calculator_name, f"Calculated areas for {updated_count} buildings")
 
             # Create result
             result = {
@@ -94,8 +70,8 @@ class BuildingAreaCalculator:
                 'building_properties': building_properties_list
             }
 
-            # Store result
-            self.pipeline.store_result('building_area', result)
+            # Store result in data manager
+            self.data_manager.set_feature('building_area', result)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'calculate_from_geometry', f"Calculated areas for {len(building_properties_list)} buildings")
             return result

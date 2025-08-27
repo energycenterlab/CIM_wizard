@@ -16,71 +16,50 @@ class BuildingNFloorsCalculator:
     def estimate_by_height(self) -> Optional[Dict[str, Any]]:
         """Estimate number of floors by dividing height by 3 and rounding down"""
         try:
-            # Use the general context enrichment system
-            required_inputs = ['project_id', 'scenario_id', 'lod']
-            enriched_context = self.pipeline.enrich_context_from_inputs_or_database(required_inputs, self.calculator_name)
+            # Get building_geo and building_height data
+            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
+            building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)
             
-            # Check if we have the critical inputs
-            if 'project_id' not in enriched_context or 'scenario_id' not in enriched_context:
-                self.pipeline.log_error(self.calculator_name, "Missing required project_id or scenario_id after context enrichment")
+            if not building_geo:
+                self.pipeline.log_error(self.calculator_name, "No building_geo data available")
                 return None
             
-            project_id = enriched_context['project_id']
-            scenario_id = enriched_context['scenario_id']
-            lod = enriched_context.get('lod', 0)
-
-            # Use the general database query method
-            building_props_queryset = self.pipeline.get_enriched_building_properties_from_database(
-                project_id=project_id,
-                scenario_id=scenario_id,
-                lod=lod,
-                required_fields=['height'],
-                calculator_name=self.calculator_name
-            )
-            
-            if not building_props_queryset or not building_props_queryset.exists():
-                self.pipeline.log_error(self.calculator_name, f"No BuildingProperties with height data found for project_id={project_id}, scenario_id={scenario_id}, lod={lod}")
+            if not building_heights:
+                self.pipeline.log_error(self.calculator_name, "No building_height data available")
                 return None
-
-            # Process ALL buildings instead of just the first one
-            building_properties_list = []
+            
+            # Get buildings from building_geo
+            buildings = building_geo.get('buildings', [])
+            if not buildings:
+                self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
+                return None
+            
+            project_id = building_geo.get('project_id')
+            scenario_id = building_geo.get('scenario_id')
+            
+            self.pipeline.log_info(self.calculator_name, f"Estimating number of floors for {len(buildings)} buildings")
+            
+            # Calculate number of floors for all buildings
+            building_floors = []
             processed_count = 0
             
-            try:
-                from django.db import transaction
+            for i, building in enumerate(buildings):
+                building_id = building.get('building_id')
                 
-                with transaction.atomic():
-                    for building_props_obj in building_props_queryset:
-                        height = building_props_obj.height
-                        
-                        if height is None or height <= 0:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_props_obj.building_id} - invalid height: {height}")
-                            continue
+                # Get height for this building
+                height = building_heights[i] if i < len(building_heights) else 12.0  # Default height
+                
+                if height is None or height <= 0:
+                    self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_id} - invalid height: {height}")
+                    continue
 
-                        # Calculate number of floors
-                        number_of_floors = math.floor(height / 3)
-                        
-                        # Update the database record
-                        building_props_obj.number_of_floors = number_of_floors
-                        building_props_obj.save()
-                        
-                        # Add to result list
-                        building_properties_list.append({
-                            'building_id': building_props_obj.building_id,
-                            'scenario_id': scenario_id,
-                            'lod': building_props_obj.lod,
-                            'number_of_floors': number_of_floors,
-                            'height': height  # Include height for reference
-                        })
-                        
-                        processed_count += 1
-                    
-                    self.pipeline.log_info(self.calculator_name, f"Processed number of floors for {processed_count} buildings")
-                    
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to process buildings from database: {str(e)}")
-                return None
-
+                # Calculate number of floors
+                number_of_floors = math.floor(height / 3)
+                building_floors.append(number_of_floors)
+                
+                self.pipeline.log_info(self.calculator_name, f"Building {building_id}: {number_of_floors} floors (height: {height}m)")
+                processed_count += 1
+            
             if processed_count == 0:
                 self.pipeline.log_error(self.calculator_name, "No buildings were processed successfully")
                 return None
@@ -89,11 +68,12 @@ class BuildingNFloorsCalculator:
             result = {
                 'project_id': project_id,
                 'scenario_id': scenario_id,
-                'building_properties': building_properties_list
+                'building_floors': building_floors,
+                'processed_count': processed_count
             }
 
-            # Store result
-            self.pipeline.store_result('building_n_floors', result)
+            # Store result in data manager
+            self.data_manager.set_feature('building_n_floors', result)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} buildings")
             return result

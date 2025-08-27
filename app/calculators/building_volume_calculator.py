@@ -19,83 +19,63 @@ class BuildingVolumeCalculator:
         with open(config_path, 'r') as f:
             self.config = json.load(f)
     
-    def calculate_from_height_and_area(self) -> Optional[float]:
-        """Calculate building volume from height and area"""
+    def calculate_from_height_and_area(self) -> Optional[Dict[str, Any]]:
+        """Calculate building volumes from height and area"""
         try:
-            # Use the general context enrichment system
-            required_inputs = ['project_id', 'scenario_id', 'lod']
-            enriched_context = self.pipeline.enrich_context_from_inputs_or_database(required_inputs, self.calculator_name)
+            # Get building_geo and other required data
+            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
+            building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)
+            building_areas = self.pipeline.get_feature_safely('building_area', calculator_name=self.calculator_name)
             
-            # Check if we have the critical inputs
-            if 'project_id' not in enriched_context or 'scenario_id' not in enriched_context:
-                self.pipeline.log_error(self.calculator_name, "Missing required project_id or scenario_id after context enrichment")
+            if not building_geo:
+                self.pipeline.log_error(self.calculator_name, "No building_geo data available")
                 return None
             
-            project_id = enriched_context['project_id']
-            scenario_id = enriched_context['scenario_id'] 
-            lod = enriched_context.get('lod', 0)
-
-            self.pipeline.log_info(self.calculator_name, f"Calculating building volumes from height and area for project_id={project_id}, scenario_id={scenario_id}, lod={lod}")
-
-            # Use the general database query method
-            building_props_queryset = self.pipeline.get_enriched_building_properties_from_database(
-                project_id=project_id,
-                scenario_id=scenario_id, 
-                lod=lod,
-                required_fields=['height', 'area'],
-                calculator_name=self.calculator_name
-            )
-            
-            if not building_props_queryset or not building_props_queryset.exists():
-                self.pipeline.log_error(self.calculator_name, f"No BuildingProperties with both height and area data found for project_id={project_id}, scenario_id={scenario_id}, lod={lod}")
+            if not building_heights:
+                self.pipeline.log_error(self.calculator_name, "No building_height data available")
                 return None
-
-            # Process ALL buildings from the database where both height and area exist
-            building_properties_list = []
+            
+            if not building_areas:
+                self.pipeline.log_error(self.calculator_name, "No building_area data available")
+                return None
+            
+            # Get buildings from building_geo
+            buildings = building_geo.get('buildings', [])
+            if not buildings:
+                self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
+                return None
+            
+            project_id = building_geo.get('project_id')
+            scenario_id = building_geo.get('scenario_id')
+            
+            self.pipeline.log_info(self.calculator_name, f"Calculating building volumes for {len(buildings)} buildings")
+            
+            # Calculate volumes for all buildings
+            building_volumes = []
             processed_count = 0
             
-            try:
-                from django.db import transaction
+            for i, building in enumerate(buildings):
+                building_id = building.get('building_id')
+                
+                # Get height and area for this building
+                height = building_heights[i] if i < len(building_heights) else 12.0  # Default height
+                area = building_areas[i] if i < len(building_areas) else 100.0  # Default area
+                
+                if height is None or height <= 0:
+                    self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_id} - invalid height: {height}")
+                    continue
                     
-                with transaction.atomic():
-                    for building_props_obj in building_props_queryset:
-                        height = building_props_obj.height
-                        area = building_props_obj.area
-                        
-                        if height is None or height <= 0:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_props_obj.building_id} - invalid height: {height}")
-                            continue
-                            
-                        if area is None or area <= 0:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_props_obj.building_id} - invalid area: {area}")
-                            continue
+                if area is None or area <= 0:
+                    self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_id} - invalid area: {area}")
+                    continue
 
-                        # Calculate volume
-                        volume = height * area
-                        
-                        # Update the database record
-                        building_props_obj.volume = volume
-                        building_props_obj.save()
-                        
-                        # Add to result list
-                        building_properties_list.append({
-                            'building_id': building_props_obj.building_id,
-                            'scenario_id': scenario_id,
-                            'lod': building_props_obj.lod,
-                            'volume': volume,
-                            'height': height,  # Include height for reference
-                            'area': area       # Include area for reference
-                        })
-                        
-                        self.pipeline.log_info(self.calculator_name, f"Building {building_props_obj.building_id}: volume = {volume:.2f}m³ ({height}m × {area}m²)")
-                        processed_count += 1
-                    
-                    self.pipeline.log_info(self.calculator_name, f"Bulk updated volumes for {processed_count} buildings")
-                    
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to process buildings from database: {str(e)}")
-                return None
-
+                # Calculate volume
+                volume = height * area
+                building_volumes.append(volume)
+                
+                self.pipeline.log_info(self.calculator_name, f"Building {building_id}: volume = {volume:.2f}m³ ({height}m × {area}m²)")
+                processed_count += 1
+            
             if processed_count == 0:
                 self.pipeline.log_error(self.calculator_name, "No buildings were processed successfully")
                 return None
@@ -104,20 +84,18 @@ class BuildingVolumeCalculator:
             result = {
                 'project_id': project_id,
                 'scenario_id': scenario_id,
-                'building_properties': building_properties_list
+                'building_volumes': building_volumes,
+                'processed_count': processed_count
             }
 
-            # Store result
-            self.pipeline.store_result('building_volume', result)
-
-            # Return volume for first building (for compatibility with single-building pipeline)
-            first_volume = building_properties_list[0]['volume'] if building_properties_list else None
+            # Store result in data manager
+            self.data_manager.set_feature('building_volume', result)
             
-            if first_volume is not None:
-                self.pipeline.log_info(self.calculator_name, f"Successfully calculated volumes for {processed_count} buildings")
-                return first_volume
-            else:
-                self.pipeline.log_error(self.calculator_name, "No volume calculated for any building")
+            self.pipeline.log_info(self.calculator_name, f"Successfully calculated volumes for {processed_count} buildings")
+            return result
+            
+        except Exception as e:
+            self.pipeline.log_calculation_failure(self.calculator_name, 'calculate_from_height_and_area', str(e))
             return None
                 
         except Exception as e:
