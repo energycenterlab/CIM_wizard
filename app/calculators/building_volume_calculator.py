@@ -25,7 +25,7 @@ class BuildingVolumeCalculator:
             # Get building_geo and other required data
             building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
             building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)
-            building_areas = self.pipeline.get_feature_safely('building_area', calculator_name=self.calculator_name)
+            building_area_data = self.pipeline.get_feature_safely('building_area', calculator_name=self.calculator_name)
             
             if not building_geo:
                 self.pipeline.log_error(self.calculator_name, "No building_geo data available")
@@ -35,8 +35,20 @@ class BuildingVolumeCalculator:
                 self.pipeline.log_error(self.calculator_name, "No building_height data available")
                 return None
             
-            if not building_areas:
+            if not building_area_data:
                 self.pipeline.log_error(self.calculator_name, "No building_area data available")
+                return None
+            
+            # Extract areas list from building_area_data
+            building_areas = building_area_data.get('building_areas', [])
+            if not building_areas:
+                # Try to extract from building_properties
+                building_properties = building_area_data.get('building_properties', [])
+                if building_properties:
+                    building_areas = [bp.get('area', 0) for bp in building_properties]
+            
+            if not building_areas:
+                self.pipeline.log_error(self.calculator_name, "No building areas found in data")
                 return None
             
             # Get buildings from building_geo

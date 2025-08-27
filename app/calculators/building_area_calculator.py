@@ -39,6 +39,7 @@ class BuildingAreaCalculator:
             updated_count = 0
             
             # Calculate areas for all buildings (simplified for FastAPI)
+            building_areas = []
             for building in buildings:
                 building_id = building.get('building_id')
                 lod = building.get('lod', 0)
@@ -59,6 +60,7 @@ class BuildingAreaCalculator:
                     'area': area
                 })
                 
+                building_areas.append(area)
                 updated_count += 1
             
             self.pipeline.log_info(self.calculator_name, f"Calculated areas for {updated_count} buildings")
@@ -67,11 +69,14 @@ class BuildingAreaCalculator:
             result = {
                 'project_id': project_id,
                 'scenario_id': scenario_id,
-                'building_properties': building_properties_list
+                'building_properties': building_properties_list,
+                'building_areas': building_areas  # Add areas list for compatibility
             }
 
             # Store result in data manager
             self.data_manager.set_feature('building_area', result)
+            # Also store the areas list directly for easier access
+            self.data_manager.set_feature('building_areas', building_areas)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'calculate_from_geometry', f"Calculated areas for {len(building_properties_list)} buildings")
             return result

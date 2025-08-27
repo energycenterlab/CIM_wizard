@@ -269,6 +269,14 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 run fast api
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
+
+
+
+DATABASE_URL=postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated uvicorn main:app --host 0.0.0.0 --port 8000
+
+
+
+
 method1:
 # Copy the development environment
 cp env.development .env
