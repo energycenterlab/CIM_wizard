@@ -7,37 +7,19 @@ Manages three schemas: cim_vector, cim_census, cim_raster
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
+from app.core.settings import settings, DATABASE_URL
 
-# Load environment variables
-load_dotenv()
-
-# Database configuration with Docker and local fallback
-def get_database_url():
-    """Get database URL with Docker PostGIS as primary and local as fallback"""
-    
-    # Priority 1: Environment variable (can override everything)
-    if os.getenv("DATABASE_URL"):
-        return os.getenv("DATABASE_URL")
-    
-    # Priority 2: Docker PostGIS (recommended for development/production)
-    docker_url = "postgresql://cim_wizard_user:cim_wizard_password@localhost:5432/cim_wizard_integrated"
-    
-    # Priority 3: Local PostgreSQL fallback (commented but available)
-    # local_url = "postgresql://postgres:postgres@localhost:5432/cim_wizard_integrated"
-    
-    return docker_url
-
-DATABASE_URL = get_database_url()
+# Debug: Print the database URL being used
+print(f"Using database URL: {DATABASE_URL}")
 
 # Create SQLAlchemy engine
 engine = create_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for debugging
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20
+    echo=settings.SHOW_SQL_QUERIES,  # Use settings for SQL query logging
+    pool_pre_ping=settings.POOL_PRE_PING,
+    pool_size=settings.POOL_SIZE,
+    max_overflow=settings.MAX_OVERFLOW,
+    pool_recycle=settings.POOL_RECYCLE
 )
 
 # Create session factory

@@ -172,7 +172,7 @@ class BuildingDemographicCalculator:
         """Call census service to get scenario_census_boundary"""
         try:
             # Import and use the scenario census boundary calculator
-            from cim_wizard.calculators.scenario_census_boundary_calculator import ScenarioCensusBoundaryCalculator
+            from .scenario_census_boundary_calculator import ScenarioCensusBoundaryCalculator
             census_calc = ScenarioCensusBoundaryCalculator(self.pipeline)
             
             # Create temporary data for census calculation
@@ -272,7 +272,7 @@ class BuildingDemographicCalculator:
                 return None
             
             # Use existing OSM query method from building_geo_calculator
-            from cim_wizard.calculators.building_geo_calculator import BuildingGeoCalculator
+            from .building_geo_calculator import BuildingGeoCalculator
             building_geo_calc = BuildingGeoCalculator(self.pipeline)
             
             # Query OSM buildings - prioritize osmnx over Overpass API
@@ -321,7 +321,7 @@ class BuildingDemographicCalculator:
         """Calculate area, height, and volume for all buildings"""
         try:
             # Import existing calculators
-            from cim_wizard.calculators.building_area_calculator import BuildingAreaCalculator
+            from .building_area_calculator import BuildingAreaCalculator
             
             area_calc = BuildingAreaCalculator(self.pipeline)
             

@@ -7,9 +7,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import vector_routes, pipeline_routes, census_routes, raster_routes
+from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route
 from app.db.database import engine, Base
 from app.db.database import create_all_schemas
+from app.core.settings import settings
 
 
 # Create database schemas on startup
@@ -27,16 +28,19 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="CIM Wizard Integrated",
+    title=settings.PROJECT_NAME,
     description="Integrated FastAPI service with vector, census, and raster capabilities",
-    version="2.0.0",
-    lifespan=lifespan
+    version=settings.VERSION,
+    lifespan=lifespan,
+    docs_url="/docs" if settings.DOCS_ENABLED else None,
+    redoc_url="/redoc" if settings.DOCS_ENABLED else None,
+    debug=settings.DEBUG
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify allowed origins
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,44 +49,50 @@ app.add_middleware(
 # Include routers
 app.include_router(
     vector_routes.router,
-    prefix="/api/vector",
+    prefix=f"{settings.API_V1_STR}/vector",
     tags=["Vector Data"]
 )
 
 app.include_router(
     pipeline_routes.router,
-    prefix="/api/pipeline",
+    prefix=f"{settings.API_V1_STR}/pipeline",
     tags=["Pipeline Execution"]
 )
 
 app.include_router(
     census_routes.router,
-    prefix="/api/census",
+    prefix=f"{settings.API_V1_STR}/census",
     tags=["Census Data"]
 )
 
 app.include_router(
     raster_routes.router,
-    prefix="/api/raster",
+    prefix=f"{settings.API_V1_STR}/raster",
     tags=["Raster Data"]
+)
+
+app.include_router(
+    complete_chain_route.router,
+    prefix=f"{settings.API_V1_STR}/complete",
+    tags=["Complete Chain Execution"]
 )
 
 
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to CIM Wizard Integrated API",
-        "version": "2.0.0",
+        "message": f"Welcome to {settings.PROJECT_NAME} API",
+        "version": settings.VERSION,
         "services": {
-            "vector_data": "/api/vector",
-            "pipeline_execution": "/api/pipeline",
-            "census_data": "/api/census",
-            "raster_data": "/api/raster"
+            "vector_data": f"{settings.API_V1_STR}/vector",
+            "pipeline_execution": f"{settings.API_V1_STR}/pipeline",
+            "census_data": f"{settings.API_V1_STR}/census",
+            "raster_data": f"{settings.API_V1_STR}/raster"
         },
         "documentation": {
             "swagger": "/docs",
             "redoc": "/redoc"
-        }
+        } if settings.DOCS_ENABLED else None
     }
 
 

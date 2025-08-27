@@ -244,4 +244,48 @@ This approach prioritizes **clarity and simplicity** over robustness, making the
 
 ## License
 
-[Your License Here]
+MIT
+
+
+
+
+
+install environment:
+pip install -r requirements.txt
+
+docker-compose -f docker-compose.db.yml up -d
+
+
+
+export DATABASE_URL="postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated"
+export POSTGRES_HOST="localhost"
+export POSTGRES_PORT="5433"
+export POSTGRES_DB="cim_wizard_integrated"
+export POSTGRES_USER="cim_wizard_user"
+export POSTGRES_PASSWORD="cim_wizard_password"
+
+# Then run uvicorn
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+run fast api
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+method1:
+# Copy the development environment
+cp env.development .env
+
+# Start the application
+./start_app.sh dev
+
+method2:
+# Set environment variables
+export DATABASE_URL="postgresql://user:pass@host:port/db"
+export DEBUG=True
+export PORT=9000
+
+# Start the application
+./start_app.sh dev
+
+Method3:
+# Override settings for a single run
+DATABASE_URL="postgresql://user:pass@host:port/db" PORT=9000 ./start_app.sh dev
+

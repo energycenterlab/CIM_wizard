@@ -13,7 +13,7 @@
         "datatype": "dict",
         "required": true
       },
-      "class_path": "cim_wizard.calculators.scenario_geo_calculator",
+      "class_path": "app.calculators.scenario_geo_calculator",
       "class_name": "ScenarioGeoCalculator",
       "methods": [
         {
@@ -33,7 +33,7 @@
         "datatype": "dict",
         "required": true
       },
-      "class_path": "cim_wizard.calculators.building_geo_calculator",
+      "class_path": "app.calculators.building_geo_calculator",
       "class_name": "BuildingGeoCalculator", 
       "methods": [
         {
@@ -53,7 +53,7 @@
         "datatype": "dict",
         "required": true
       },
-      "class_path": "cim_wizard.calculators.building_props_calculator",
+      "class_path": "app.calculators.building_props_calculator",
       "class_name": "BuildingPropsCalculator",
       "methods": [
         {
@@ -69,7 +69,7 @@
         "value_range": [0, 500],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_height_calculator",
+      "class_path": "app.calculators.building_height_calculator_integrated",
       "class_name": "BuildingHeightCalculator",
       "methods": [
         {
@@ -95,7 +95,7 @@
         "value_range": [0, 100000],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_area_calculator",
+      "class_path": "app.calculators.building_area_calculator",
       "class_name": "BuildingAreaCalculator",
       "methods": [
         {
@@ -111,7 +111,7 @@
         "value_range": [0, 1000000],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_volume_calculator",
+      "class_path": "app.calculators.building_volume_calculator",
       "class_name": "BuildingVolumeCalculator",
       "methods": [
         {
@@ -127,7 +127,7 @@
         "value_range": [0, 200],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_n_floors_calculator",
+      "class_path": "app.calculators.building_n_floors_calculator",
       "class_name": "BuildingNFloorsCalculator",
       "methods": [
         {
@@ -142,7 +142,7 @@
         "datatype": "geometry",
         "required": false
       },
-      "class_path": "cim_wizard.calculators.scenario_census_boundary_calculator",
+      "class_path": "app.calculators.scenario_census_boundary_calculator",
       "class_name": "ScenarioCensusBoundaryCalculator",
       "methods": [
         {
@@ -158,7 +158,7 @@
         "value_range": [0, 1000000],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.census_population_calculator",
+      "class_path": "app.calculators.census_population_calculator",
       "class_name": "CensusPopulationCalculator",
       "methods": [
         {
@@ -174,7 +174,7 @@
         "value_range": [0, 10000],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_population_calculator",
+      "class_path": "app.calculators.building_population_calculator",
       "class_name": "BuildingPopulationCalculator",
       "methods": [
         {
@@ -194,7 +194,7 @@
         "datatype": "string",
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_type_calculator",
+      "class_path": "app.calculators.building_type_calculator",
       "class_name": "BuildingTypeCalculator",
       "methods": [
         {
@@ -210,7 +210,7 @@
         "value_range": [1800, 2025],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_construction_year_calculator",
+      "class_path": "app.calculators.building_construction_year_calculator",
       "class_name": "BuildingConstructionYearCalculator",
       "methods": [
         {
@@ -226,7 +226,7 @@
         "value_range": [0, 1000],
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_n_families_calculator",
+      "class_path": "app.calculators.building_n_families_calculator",
       "class_name": "BuildingNFamiliesCalculator",
       "methods": [
         {
@@ -246,7 +246,7 @@
         "datatype": "dict",
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_demographic_calculator",
+      "class_path": "app.calculators.building_demographic_calculator",
       "class_name": "BuildingDemographicCalculator",
       "methods": [
         {
@@ -261,7 +261,7 @@
         "datatype": "dict",
         "required": false
       },
-      "class_path": "cim_wizard.calculators.building_geo_lod12_calculator",
+      "class_path": "app.calculators.building_geo_lod12_calculator",
       "class_name": "BuildingGeoLod12Calculator",
       "methods": [
         {

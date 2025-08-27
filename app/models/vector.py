@@ -84,8 +84,8 @@ class BuildingProperties(Base):
     
     # Composite identification
     building_id = Column(String(100), nullable=False, index=True)
-    project_id = Column(String(100), ForeignKey('cim_vector.project_scenario.project_id'))
-    scenario_id = Column(String(100), ForeignKey('cim_vector.project_scenario.scenario_id'))
+    project_id = Column(String(100), nullable=True)
+    scenario_id = Column(String(100), nullable=True)
     lod = Column(Integer, default=0)
     
     # Foreign key to Building
@@ -148,8 +148,8 @@ class GridBus(Base):
     bus_id = Column(Integer)
     
     # Foreign keys
-    project_id = Column(String(100), ForeignKey('cim_vector.project_scenario.project_id'))
-    scenario_id = Column(String(100), ForeignKey('cim_vector.project_scenario.scenario_id'))
+    project_id = Column(String(100), nullable=True)
+    scenario_id = Column(String(100), nullable=True)
     
     # Spatial and properties
     geometry = Column(Geometry('POINT', srid=4326), nullable=True, index=True)
@@ -183,8 +183,8 @@ class GridLine(Base):
     line_id = Column(Integer)
     
     # Foreign keys
-    project_id = Column(String(100), ForeignKey('cim_vector.project_scenario.project_id'))
-    scenario_id = Column(String(100), ForeignKey('cim_vector.project_scenario.scenario_id'))
+    project_id = Column(String(100), nullable=True)
+    scenario_id = Column(String(100), nullable=True)
     
     # Spatial and properties
     geometry = Column(Geometry('LINESTRING', srid=4326), nullable=True, index=True)
