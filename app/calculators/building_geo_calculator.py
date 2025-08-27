@@ -39,7 +39,7 @@ class BuildingGeoCalculator:
         if not self.pipeline.validate_dict(scenario_census_boundary, "scenario_census_boundary", self.calculator_name):
             return None
         
-        self.pipeline.log_info(self.calculator_name, f"Creating sample building footprints for scenario: {scenario_id}")
+        self.pipeline.log_info(self.calculator_name, f"Querying OSM for building footprints in scenario: {scenario_id}")
         
         try:
             # Extract boundary geometry for building generation
@@ -56,45 +56,69 @@ class BuildingGeoCalculator:
             if not self.pipeline.validate_geometry(boundary_geom, "census_boundary_geometry", self.calculator_name):
                 return None
             
-            # Create sample buildings for testing (in real implementation, this would query OSM or database)
-            sample_buildings = []
-            for i in range(5):  # Create 5 sample buildings
-                building = {
-                    'type': 'Feature',
-                    'properties': {
-                        'building_id': f'BUILDING_{i+1:03d}',
-                        'building': 'yes',
-                        'building:type': 'residential',
-                        'height': 12.0,
-                        'levels': 4
-                    },
-                    'geometry': {
-                        'type': 'Polygon',
-                        'coordinates': [[
-                            [7.680 + i*0.001, 45.062 + i*0.001],
-                            [7.680 + i*0.001 + 0.0005, 45.062 + i*0.001],
-                            [7.680 + i*0.001 + 0.0005, 45.062 + i*0.001 + 0.0005],
-                            [7.680 + i*0.001, 45.062 + i*0.001 + 0.0005],
-                            [7.680 + i*0.001, 45.062 + i*0.001]
-                        ]]
+            # Query OSM for real buildings
+            osm_buildings = self._query_osm_buildings(boundary_geom, scenario_id)
+            
+            if not osm_buildings:
+                self.pipeline.log_warning(self.calculator_name, "No buildings found in OSM, falling back to sample buildings")
+                # Fallback to sample buildings if OSM query fails
+                sample_buildings = []
+                for i in range(5):  # Create 5 sample buildings
+                    building = {
+                        'type': 'Feature',
+                        'properties': {
+                            'building_id': f'BUILDING_{i+1:03d}',
+                            'building': 'yes',
+                            'building:type': 'residential',
+                            'height': 12.0,
+                            'levels': 4
+                        },
+                        'geometry': {
+                            'type': 'Polygon',
+                            'coordinates': [[
+                                [7.680 + i*0.001, 45.062 + i*0.001],
+                                [7.680 + i*0.001 + 0.0005, 45.062 + i*0.001],
+                                [7.680 + i*0.001 + 0.0005, 45.062 + i*0.001 + 0.0005],
+                                [7.680 + i*0.001, 45.062 + i*0.001 + 0.0005],
+                                [7.680 + i*0.001, 45.062 + i*0.001]
+                            ]]
+                        }
                     }
-                }
-                sample_buildings.append(building)
+                    sample_buildings.append(building)
+                buildings = sample_buildings
+                data_source = 'sample_buildings_for_testing'
+            else:
+                # Convert OSM buildings to GeoJSON format
+                buildings = []
+                for osm_building in osm_buildings:
+                    building = {
+                        'type': 'Feature',
+                        'properties': {
+                            'building_id': osm_building.get('building_id'),
+                            'building': 'yes',
+                            'building:type': osm_building.get('properties', {}).get('building_type', 'residential'),
+                            'osm_id': osm_building.get('properties', {}).get('osm_id'),
+                            'source': 'osm'
+                        },
+                        'geometry': osm_building.get('geometry')
+                    }
+                    buildings.append(building)
+                data_source = 'osm_overpass_api'
             
             # Build result with metadata
             building_geo = {
                 'project_id': project_id,
                 'scenario_id': scenario_id,
-                'buildings': sample_buildings,
-                'total_buildings': len(sample_buildings),
-                'data_source': 'integrated_database',
+                'buildings': buildings,
+                'total_buildings': len(buildings),
+                'data_source': data_source,
                 'lod': 0,
                 'query_boundary': boundary_geom,
-                'created_from': 'sample_buildings_for_testing'
+                'created_from': data_source
             }
             
-            self.pipeline.log_calculation_success(self.calculator_name, "sample_buildings_query", building_geo,
-                                         f"Created {len(sample_buildings)} sample buildings for testing")
+            self.pipeline.log_calculation_success(self.calculator_name, "osm_buildings_query", building_geo,
+                                         f"Retrieved {len(buildings)} buildings from {data_source}")
             return building_geo
             
         except Exception as e:
