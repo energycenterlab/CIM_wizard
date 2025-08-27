@@ -39,9 +39,7 @@ class ProjectScenario(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    building_properties = relationship("BuildingProperties", back_populates="project_scenario")
-    grid_buses = relationship("GridBus", back_populates="project_scenario")
-    grid_lines = relationship("GridLine", back_populates="project_scenario")
+    # Note: All relationships removed due to missing foreign key constraints in database schema
 
 
 class Building(Base):
@@ -128,11 +126,6 @@ class BuildingProperties(Base):
     
     # Relationships
     building = relationship("Building", back_populates="properties")
-    project_scenario = relationship("ProjectScenario", 
-                                  foreign_keys=[project_id, scenario_id],
-                                  primaryjoin="and_(BuildingProperties.project_id==ProjectScenario.project_id, "
-                                           "BuildingProperties.scenario_id==ProjectScenario.scenario_id)",
-                                  back_populates="building_properties")
 
 
 class GridBus(Base):
@@ -163,11 +156,7 @@ class GridBus(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    project_scenario = relationship("ProjectScenario",
-                                  foreign_keys=[project_id, scenario_id],
-                                  primaryjoin="and_(GridBus.project_id==ProjectScenario.project_id, "
-                                           "GridBus.scenario_id==ProjectScenario.scenario_id)",
-                                  back_populates="grid_buses")
+    # Note: project_scenario relationship removed due to missing foreign key constraints
 
 
 class GridLine(Base):
@@ -199,8 +188,4 @@ class GridLine(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    project_scenario = relationship("ProjectScenario",
-                                  foreign_keys=[project_id, scenario_id],
-                                  primaryjoin="and_(GridLine.project_id==ProjectScenario.project_id, "
-                                           "GridLine.scenario_id==ProjectScenario.scenario_id)",
-                                  back_populates="grid_lines")
+    # Note: project_scenario relationship removed due to missing foreign key constraints
