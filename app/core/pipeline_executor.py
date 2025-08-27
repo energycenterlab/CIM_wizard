@@ -46,6 +46,31 @@ class CimWizardPipelineExecutor:
         """Log debug message"""
         print(f"DEBUG {calculator_name}: {message}")
     
+    def log_calculation_failure(self, calculator_name: str, method_name: str, error_message: str):
+        """Log calculation failure with method and error details"""
+        print(f"ERROR {calculator_name}.{method_name}: {error_message}")
+    
+    def log_calculation_success(self, calculator_name: str, method_name: str, result: Any, additional_info: str = ""):
+        """Log calculation success with method and result details"""
+        print(f"SUCCESS {calculator_name}.{method_name}: {additional_info}")
+    
+    def validate_geometry(self, value: Any, name: str, calculator_name: str = "Validation") -> bool:
+        """Validate geometry value"""
+        if value is None:
+            self.log_error(calculator_name, f"Missing required geometry: {name}")
+            return False
+        
+        # Basic geometry validation - check if it has required fields
+        if isinstance(value, dict):
+            if 'type' in value and 'coordinates' in value:
+                return True
+            elif 'geometry' in value and isinstance(value['geometry'], dict):
+                if 'type' in value['geometry'] and 'coordinates' in value['geometry']:
+                    return True
+        
+        self.log_error(calculator_name, f"Invalid geometry format for {name}")
+        return False
+    
     # === VALIDATION SERVICES ===
     
     def validate_input(self, value: Any, name: str, calculator_name: str = "Validation") -> bool:
