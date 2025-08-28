@@ -40,13 +40,16 @@ class BuildingAreaCalculator:
             
             # Calculate areas for all buildings (simplified for FastAPI)
             building_areas = []
-            for building in buildings:
+            for idx, building in enumerate(buildings):
                 building_id = building.get('building_id')
                 lod = building.get('lod', 0)
 
                 if not building_id:
-                    self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
-                    continue
+                    # Generate a UUID for buildings without IDs
+                    import uuid
+                    building_id = str(uuid.uuid4())
+                    building['building_id'] = building_id
+                    self.pipeline.log_info(self.calculator_name, f"Generated building_id {building_id} for building at index {idx}")
                 
                 # Calculate area from geometry using proper geographic projection
                 geometry = building.get('geometry', {})

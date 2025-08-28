@@ -24,8 +24,15 @@ class ScenarioGeoCalculator:
         try:
             import uuid
             
-            # Generate same UUID for both project_id and scenario_id
-            shared_uuid = str(uuid.uuid4())
+            # Get project_id and scenario_id from data_manager (already set by API route)
+            project_id = getattr(self.data_manager, 'project_id', None)
+            scenario_id = getattr(self.data_manager, 'scenario_id', None)
+            
+            # If not provided, generate new ones (but this shouldn't happen with fixed API)
+            if not project_id:
+                project_id = str(uuid.uuid4())
+            if not scenario_id:
+                scenario_id = project_id  # Default to same as project for baseline
             
             # Extract geometry and properties from GeoJSON Feature
             geometry = scenario_geo_input.get('geometry', {})
@@ -56,12 +63,16 @@ class ScenarioGeoCalculator:
                         'coordinates': [center_lon, center_lat]
                     }
             
+            # Get project and scenario names from data_manager
+            project_name = getattr(self.data_manager, 'project_name', f'Project_{project_id[:8]}')
+            scenario_name = getattr(self.data_manager, 'scenario_name', 'baseline')
+            
             # Build scenario geometry result
             scenario_geo = {
-                'scenario_id': shared_uuid,
-                'project_id': shared_uuid,  # Same UUID for both
-                'project_name': properties.get('project_name', f'Project {shared_uuid[:8]}'),
-                'scenario_name': properties.get('scenario_name', 'baseline'),
+                'scenario_id': scenario_id,
+                'project_id': project_id,
+                'project_name': project_name,
+                'scenario_name': scenario_name,
                 'project_boundary': geometry,
                 'project_center': project_center,
                 'project_crs': properties.get('crs', 4326),
@@ -69,12 +80,12 @@ class ScenarioGeoCalculator:
                 'created_from': 'ui_project_boundary'
             }
             
-            # Update data manager with the generated IDs
-            self.data_manager.scenario_id = shared_uuid
-            self.data_manager.project_id = shared_uuid
+            # Ensure data manager has the IDs
+            self.data_manager.scenario_id = scenario_id
+            self.data_manager.project_id = project_id
             
             self.pipeline.log_calculation_success(self.calculator_name, "scenario_geo_from_ui", scenario_geo, 
-                                        f"Generated UUID: {shared_uuid[:8]}...")
+                                        f"Project ID: {project_id[:8]}..., Scenario ID: {scenario_id[:8]}...")
             return scenario_geo
             
         except Exception as e:

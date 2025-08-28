@@ -71,11 +71,56 @@ class ScenarioCensusBoundaryCalculator:
             }
             
             self.pipeline.log_info(self.calculator_name, f"Successfully created census boundary with 1 zone")
+            
+            # Save census boundary to database
+            if self._save_census_boundary_to_db(census_boundary, project_id, scenario_id):
+                self.pipeline.log_info(self.calculator_name, "Census boundary saved to project_scenario table")
+            
             return census_boundary
             
         except Exception as e:
             self.pipeline.log_error(self.calculator_name, f"Failed to calculate census boundary: {str(e)}")
             return None 
+    
+    def _save_census_boundary_to_db(self, census_boundary: Dict[str, Any], project_id: str, scenario_id: str) -> bool:
+        """Internal method to save census boundary to project_scenario table"""
+        try:
+            db_session = getattr(self.data_manager, 'db_session', None)
+            if not db_session:
+                self.pipeline.log_warning(self.calculator_name, "No database session available")
+                return False
+            
+            from app.models.vector import ProjectScenario
+            from shapely.geometry import shape
+            from geoalchemy2.shape import from_shape
+            
+            # Get or create project_scenario record
+            project_scenario = db_session.query(ProjectScenario).filter_by(
+                project_id=project_id,
+                scenario_id=scenario_id
+            ).first()
+            
+            if project_scenario:
+                # Update existing record
+                geometry = census_boundary.get('geometry')
+                if geometry:
+                    # Convert to shapely geometry and then to PostGIS format
+                    census_shape = shape(geometry)
+                    # Ensure it's a MultiPolygon
+                    from shapely.geometry import MultiPolygon, Polygon
+                    if isinstance(census_shape, Polygon):
+                        census_shape = MultiPolygon([census_shape])
+                    project_scenario.census_boundary = from_shape(census_shape, srid=4326)
+                    db_session.commit()
+                    self.pipeline.log_info(self.calculator_name, f"Updated census boundary for project_scenario {project_id}/{scenario_id}")
+                    return True
+            else:
+                self.pipeline.log_warning(self.calculator_name, f"Project_scenario record not found for {project_id}/{scenario_id}")
+                return False
+                
+        except Exception as e:
+            self.pipeline.log_error(self.calculator_name, f"Failed to save census boundary: {str(e)}")
+            return False
     
     def save_to_database(self, census_boundary: Dict[str, Any], project_id: str, scenario_id: str) -> bool:
         """Save scenario census boundary data to database"""

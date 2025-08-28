@@ -44,13 +44,16 @@ class BuildingPropsCalculator:
             updated_count = 0
             
             # Create building properties for each building (simplified for FastAPI)
-            for building in buildings:
+            for idx, building in enumerate(buildings):
                 building_id = building.get('building_id')
                 lod = building.get('lod', 0)
 
                 if not building_id:
-                    self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
-                    continue
+                    # Generate a UUID for buildings without IDs
+                    import uuid
+                    building_id = str(uuid.uuid4())
+                    building['building_id'] = building_id  # Update the building object
+                    self.pipeline.log_info(self.calculator_name, f"Generated building_id {building_id} for building at index {idx}")
 
                 # Create building properties object
                 building_props_obj = {

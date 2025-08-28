@@ -369,12 +369,18 @@ async def execute_building_analysis(
         
         # Set project and scenario names
         project_name = request_data.get('project_name', 'Building_Analysis')
-        scenario_name = request_data.get('scenario_name', 'Current_State')
+        scenario_name = request_data.get('scenario_name', None)  # Can be null for baseline
         save_to_db = request_data.get('save_to_db', True)
         
-        # Generate unique IDs
-        project_id = f"project_{uuid.uuid4().hex[:8]}"
-        scenario_id = f"scenario_{uuid.uuid4().hex[:8]}"
+        # Generate proper UUIDs (not truncated)
+        project_id = str(uuid.uuid4())
+        
+        # If scenario_name is null/not provided, use "baseline" with same UUID as project
+        if not scenario_name:
+            scenario_name = 'baseline'
+            scenario_id = project_id  # Same UUID for baseline scenario
+        else:
+            scenario_id = str(uuid.uuid4())  # Different UUID for named scenarios
         
         # Initialize the data manager context
         data_manager.set_context(

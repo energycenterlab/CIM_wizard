@@ -1,7 +1,7 @@
 """
 Building Volume Calculator - Independent class with pipeline executor injection
 """
-from typing import Optional
+from typing import Optional, Dict, Any
 import json
 import os
 
@@ -24,7 +24,7 @@ class BuildingVolumeCalculator:
         try:
             # Get building_geo and other required data
             building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
-            building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)
+            building_heights = self.pipeline.get_feature_safely('building_heights', calculator_name=self.calculator_name)  # Note: plural 'building_heights'
             building_area_data = self.pipeline.get_feature_safely('building_area', calculator_name=self.calculator_name)
             
             if not building_geo:
@@ -70,7 +70,7 @@ class BuildingVolumeCalculator:
                 building_id = building.get('building_id')
                 
                 # Get height and area for this building
-                height = building_heights[i] if i < len(building_heights) else 12.0  # Default height
+                height = building_heights[i] if isinstance(building_heights, list) and i < len(building_heights) else 12.0
                 area = building_areas[i] if i < len(building_areas) else 100.0  # Default area
                 
                 if height is None or height <= 0:

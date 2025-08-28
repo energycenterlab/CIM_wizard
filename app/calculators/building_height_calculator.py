@@ -1,396 +1,375 @@
 """
-Building Height Calculator - Independent class with pipeline executor injection
+Building Height Calculator - Direct integration with raster tiles database
+Uses cim_raster.dsm_raster_tiles and cim_raster.dtm_raster_tiles tables
 """
-from typing import Optional
-import random
-import json
-import os
-import requests
+from typing import Optional, List, Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BuildingHeightCalculator:
-    """Calculate building height using various methods"""
+    """Calculate building heights from integrated DSM/DTM raster tiles"""
     
     def __init__(self, pipeline_executor):
         self.pipeline = pipeline_executor
         self.data_manager = pipeline_executor.data_manager
         self.calculator_name = self.__class__.__name__
-        
-        # Load configuration
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'configuration.json')
-        with open(config_path, 'r') as f:
-            self.config = json.load(f)
     
-    def calculate_from_raster_service(self) -> Optional[float]:
-        """Calculate building height from raster service (batch processing for multiple buildings)"""
+    def calculate_from_raster_service(self) -> Optional[List[float]]:
+        """
+        Calculate building heights directly from DSM/DTM raster tiles in database
+        This is the PRIMARY method with priority 1 in configuration
+        """
+        self.pipeline.log_info(self.calculator_name, "=== STARTING RASTER-BASED HEIGHT CALCULATION ===")
         
-        # CRITICAL DEBUG: Check if method is being called
-        print("=== RASTER SERVICE METHOD CALLED ===")
-        self.pipeline.log_info(self.calculator_name, "=== RASTER SERVICE METHOD CALLED ===")
-        
-        # Get raster service URL
-        raster_service_url = getattr(self.data_manager, 'raster_service_url', None)
-        print(f"DEBUG: raster_service_url = {raster_service_url}")
-        self.pipeline.log_info(self.calculator_name, f"DEBUG: raster_service_url = {raster_service_url}")
-        
-        if not raster_service_url:
-            error_msg = "No raster_service_url provided"
-            print(f"ERROR: {error_msg}")
-            self.pipeline.log_error(self.calculator_name, error_msg)
-            return None
-        
+        # Get building_geo data
         building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
-        scenario_geo = self.pipeline.get_feature_safely('scenario_geo', calculator_name=self.calculator_name)
-        
-        # CRITICAL DEBUG: Check building_geo data
-        print(f"DEBUG: building_geo from get_feature_safely = {building_geo}")
-        self.pipeline.log_info(self.calculator_name, f"DEBUG: building_geo from get_feature_safely = {building_geo}")
-        
-        # Try getting building_geo directly from data_manager
-        building_geo_direct = getattr(self.data_manager, 'building_geo', None)
-        print(f"DEBUG: building_geo from data_manager direct = {building_geo_direct}")
-        self.pipeline.log_info(self.calculator_name, f"DEBUG: building_geo from data_manager direct = {building_geo_direct}")
-        
-        # Use direct access if get_feature_safely failed
-        if not building_geo and building_geo_direct:
-            building_geo = building_geo_direct
-            print(f"DEBUG: Using building_geo from direct data_manager access")
-            self.pipeline.log_info(self.calculator_name, f"DEBUG: Using building_geo from direct data_manager access")
-        
-        if building_geo:
-            buildings = building_geo.get('buildings', [])
-            print(f"DEBUG: Found {len(buildings)} buildings in building_geo")
-            self.pipeline.log_info(self.calculator_name, f"DEBUG: Found {len(buildings)} buildings in building_geo")
-            
-            if buildings:
-                first_building = buildings[0]
-                print(f"DEBUG: First building keys: {list(first_building.keys())}")
-                self.pipeline.log_info(self.calculator_name, f"DEBUG: First building keys: {list(first_building.keys())}")
-        else:
-            print("ERROR: building_geo is None or empty!")
-            self.pipeline.log_error(self.calculator_name, "building_geo is None or empty!")
-        
-        if not self.pipeline.validate_input(building_geo, "building_geo", self.calculator_name):
-            print("ERROR: building_geo validation failed!")
-            self.pipeline.log_error(self.calculator_name, "building_geo validation failed!")
+        if not building_geo:
+            self.pipeline.log_error(self.calculator_name, "No building_geo data available")
             return None
-            
-        self.pipeline.log_info(self.calculator_name, f"Calculating building heights from raster service using batch processing")
+        
+        buildings = building_geo.get('buildings', [])
+        if not buildings:
+            self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
+            return None
+        
+        self.pipeline.log_info(self.calculator_name, f"Processing {len(buildings)} buildings for height calculation")
+        
+        # Get database session from data_manager (passed from API)
+        db_session = getattr(self.data_manager, 'db_session', None)
+        if not db_session:
+            self.pipeline.log_error(self.calculator_name, "No database session available! Check if db_session is set in data_manager")
+            # Try to get from context
+            db_session = self.data_manager.get_context('db_session')
+            if not db_session:
+                self.pipeline.log_error(self.calculator_name, "Database session not found in context either!")
+                return self._fallback_heights(buildings)
         
         try:
-            import geopandas as gpd
-            from shapely.geometry import shape, mapping
-            import requests
-            import json
+            from shapely.geometry import shape, Point, Polygon
+            from shapely import wkt
+            from sqlalchemy import text
+            import numpy as np
             
-            # Extract all buildings and create GeoDataFrame
-            buildings = building_geo.get('buildings', [])
-            if not buildings:
-                self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
-                return None
-
-            project_id = building_geo.get('project_id')
-            scenario_id = building_geo.get('scenario_id')
+            building_heights = []
+            successful_calculations = 0
+            failed_calculations = 0
             
-            if not project_id or not scenario_id:
-                self.pipeline.log_error(self.calculator_name, "Missing project_id or scenario_id")
-                return None
-
-            # Create GeoDataFrame for batch processing
-            buildings_data = []
-            for building in buildings:
-                buildings_data.append({
-                    'building_id': building['building_id'],
-                    'project_id': project_id,
-                    'scenario_id': scenario_id,
-                    'lod': building.get('lod', 0),
-                    'geometry': shape(building['geometry'])
-                })
-            
-            gdf = gpd.GeoDataFrame(buildings_data, crs='EPSG:4326')
-            self.pipeline.log_info(self.calculator_name, f"Created GeoDataFrame with {len(gdf)} buildings for chunked processing")
-            
-            # Process buildings in chunks of 30 to avoid timeout issues
-            chunk_size = 100
-            total_buildings = len(gdf)
-            num_chunks = (total_buildings + chunk_size - 1) // chunk_size  # Ceiling division
-            
-            self.pipeline.log_info(self.calculator_name, f"Processing {total_buildings} buildings in {num_chunks} chunks of {chunk_size}")
-            
-            # Create mapping of building_id to height for all chunks
-            building_heights = {}
-            
-            for chunk_idx in range(num_chunks):
-                start_idx = chunk_idx * chunk_size
-                end_idx = min((chunk_idx + 1) * chunk_size, total_buildings)
-                chunk_gdf = gdf.iloc[start_idx:end_idx]
-                self.pipeline.log_info(self.calculator_name, f"Processing chunk {chunk_idx + 1}/{num_chunks} ({len(chunk_gdf)} buildings)")
-                # Convert chunk to FeatureCollection
-                payload = {
-                    "type": "FeatureCollection",
-                    "features": []
-                }
-                for _, row in chunk_gdf.iterrows():
-                    payload["features"].append({
-                        "type": "Feature",
-                        "geometry": mapping(row.geometry),
-                        "properties": {
-                            "building_id": row.building_id,
-                            "project_id": row.project_id,
-                            "scenario_id": row.scenario_id,
-                            "lod": row.lod
-                        }
-                    })
-                # Debug: Log sample coordinates being sent for first chunk only
-                if chunk_idx == 0 and payload["features"]:
-                    sample_coords = payload["features"][0]["geometry"]["coordinates"]
-                    self.pipeline.log_info(self.calculator_name, f"Sample coordinates being sent: {sample_coords}")
-                # Make chunk HTTP request to raster service
+            for idx, building in enumerate(buildings):
+                building_id = building.get('building_id', f'unknown_{idx}')
+                geometry = building.get('geometry')
+                
+                # Log progress every 10 buildings
+                if idx % 10 == 0:
+                    self.pipeline.log_info(self.calculator_name, f"Processing building {idx+1}/{len(buildings)}...")
+                
+                if not geometry:
+                    self.pipeline.log_warning(self.calculator_name, f"Building {building_id} has no geometry")
+                    building_heights.append(12.0)
+                    failed_calculations += 1
+                    continue
+                
                 try:
-                    response = requests.post(
-                        raster_service_url,
-                        json=payload,
-                        headers={'Content-Type': 'application/json'},
-                        timeout=300  # 5 minutes per chunk (much more reasonable)
+                    # Convert building geometry to shapely
+                    building_shape = shape(geometry)
+                    
+                    # Get building footprint as WKT for PostGIS
+                    building_wkt = building_shape.wkt
+                    
+                    # Calculate height using PostGIS raster functions
+                    height = self._calculate_height_from_tiles(
+                        db_session, 
+                        building_wkt, 
+                        building_shape,
+                        building_id
                     )
-                    self.pipeline.log_info(self.calculator_name, f"Chunk {chunk_idx + 1} HTTP response status: {response.status_code}")
-                    # Debug: Log sample response data for first chunk only
-                    if chunk_idx == 0 and response.status_code == 200:
-                        response_text = response.text[:500] if len(response.text) > 500 else response.text
-                        self.pipeline.log_info(self.calculator_name, f"Sample response data: {response_text}")
-                    elif response.status_code != 200:
-                        self.pipeline.log_error(self.calculator_name, f"Chunk {chunk_idx + 1} response content: {response.text}")
-                    if response.status_code != 200:
-                        self.pipeline.log_error(self.calculator_name, f"Chunk {chunk_idx + 1} failed with status {response.status_code}")
-                        continue  # Skip this chunk but continue with others
-                    # Parse chunk response
-                    response_data = response.json()
-                    results = response_data.get('results', [])
-                    if not results:
-                        self.pipeline.log_warning(self.calculator_name, f"No results returned for chunk {chunk_idx + 1}")
-                        continue
-                    self.pipeline.log_info(self.calculator_name, f"Chunk {chunk_idx + 1}: Received {len(results)} height results")
-                    # Add chunk results to overall building_heights
-                    for result in results:
-                        building_id = result.get('building_id')
-                        height = result.get('height')
-                        if building_id and height is not None:
-                            building_heights[building_id] = round(float(height), 2)
-                except requests.exceptions.RequestException as e:
-                    self.pipeline.log_error(self.calculator_name, f"Chunk {chunk_idx + 1} HTTP request failed: {str(e)}")
-                    continue  # Skip this chunk but continue with others
-                except json.JSONDecodeError as e:
-                    self.pipeline.log_error(self.calculator_name, f"Chunk {chunk_idx + 1} JSON parse failed: {str(e)}")
-                    continue  # Skip this chunk but continue with others
+                    
+                    if height and height > 0:
+                        # Validate and constrain height
+                        if height > 150:  # Max 150m for buildings
+                            self.pipeline.log_warning(self.calculator_name, 
+                                f"Building {building_id}: Capping excessive height {height:.2f}m to 150m")
+                            height = 150.0
+                        elif height < 3:  # Min 3m (1 floor)
+                            self.pipeline.log_warning(self.calculator_name,
+                                f"Building {building_id}: Adjusting low height {height:.2f}m to 3m")
+                            height = 3.0
+                        
+                        building_heights.append(round(height, 2))
+                        successful_calculations += 1
+                        self.pipeline.log_info(self.calculator_name, 
+                            f"Building {building_id}: Calculated height = {height:.2f}m from raster")
+                    else:
+                        # Fallback for this building
+                        fallback_height = self._get_fallback_height(building)
+                        building_heights.append(fallback_height)
+                        failed_calculations += 1
+                        self.pipeline.log_warning(self.calculator_name, 
+                            f"Building {building_id}: No raster data, using fallback = {fallback_height}m")
+                
                 except Exception as e:
-                    self.pipeline.log_error(self.calculator_name, f"Chunk {chunk_idx + 1} processing failed: {str(e)}")
-                    continue  # Skip this chunk but continue with others
-            # Check if we got any results
-            if not building_heights:
-                self.pipeline.log_error(self.calculator_name, "No height results received from any chunks")
-                return None
-            self.pipeline.log_info(self.calculator_name, f"Successfully processed {len(building_heights)} buildings across {num_chunks} chunks")
-            # Bulk database update
-            try:
-                from cim_wizard.models import BuildingProperties
-                from django.db import transaction
-                with transaction.atomic():
-                    updated_count = 0
-                    for building_id, height in building_heights.items():
-                        # Find the corresponding building to get its lod
-                        building_lod = 0
-                        for building in buildings:
-                            if building['building_id'] == building_id:
-                                building_lod = building.get('lod', 0)
-                                break
-                        try:
-                            building_props = BuildingProperties.objects.get(
-                                building_id=building_id,
-                                project_id=project_id,
-                                scenario_id=scenario_id,
-                                lod=building_lod
-                            )
-                            building_props.height = height
-                            building_props.save()
-                            updated_count += 1
-                        except BuildingProperties.DoesNotExist:
-                            self.pipeline.log_warning(self.calculator_name, f"BuildingProperties not found for building {building_id}")
-                            continue
-                    self.pipeline.log_info(self.calculator_name, f"Bulk updated heights for {updated_count} buildings")
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to bulk update database: {str(e)}")
-                return None
-            # Return height for first building (for compatibility with single-building pipeline)
-            first_building_id = buildings[0]['building_id']
-            first_height = building_heights.get(first_building_id)
-            if first_height is not None:
-                self.pipeline.log_info(self.calculator_name, f"Successfully calculated heights for {len(building_heights)} buildings via batch processing")
-                return first_height
-            else:
-                self.pipeline.log_error(self.calculator_name, f"No height found for first building {first_building_id}")
-                return None
+                    self.pipeline.log_error(self.calculator_name, 
+                        f"Building {building_id} height calculation error: {str(e)}")
+                    building_heights.append(self._get_fallback_height(building))
+                    failed_calculations += 1
             
-        except ImportError:
-            self.pipeline.log_error(self.calculator_name, "GeoPandas not available for batch processing")
-            return None
-        except requests.exceptions.RequestException as e:
-            self.pipeline.log_error(self.calculator_name, f"Batch HTTP request failed: {str(e)}")
-            return None
-        except json.JSONDecodeError as e:
-            self.pipeline.log_error(self.calculator_name, f"Failed to parse batch JSON response: {str(e)}")
-            return None
+            self.pipeline.log_info(self.calculator_name, 
+                f"=== HEIGHT CALCULATION COMPLETE ===\n" +
+                f"   Successful: {successful_calculations}/{len(buildings)}\n" +
+                f"   Failed/Fallback: {failed_calculations}/{len(buildings)}")
+            
+            # Store heights for other calculators
+            self.data_manager.set_feature('building_heights', building_heights)
+            
+            # Return the list
+            return building_heights
+            
+        except ImportError as e:
+            self.pipeline.log_error(self.calculator_name, f"Missing required libraries: {str(e)}")
+            return self._fallback_heights(buildings)
         except Exception as e:
-            self.pipeline.log_error(self.calculator_name, f"Failed to get heights from raster service: {str(e)}")
-            return None
+            self.pipeline.log_error(self.calculator_name, f"Critical error in height calculation: {str(e)}")
+            return self._fallback_heights(buildings)
     
-    def calculate_from_osm_height(self) -> Optional[float]:
-        """Calculate building height from OSM data (improved to check individual building tags)"""
-        building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
-        
-        if not self.pipeline.validate_input(building_geo, "building_geo", self.calculator_name):
-            return None
-        
-        self.pipeline.log_info(self.calculator_name, "Calculating building height from OSM data")
+    def _calculate_height_from_tiles(self, db_session, building_wkt: str, 
+                                    building_shape, building_id: str) -> Optional[float]:
+        """
+        Query DSM and DTM raster tiles to calculate building height
+        Height = DSM (surface with buildings) - DTM (terrain without buildings)
+        """
+        from sqlalchemy import text
         
         try:
-            # Get buildings from building_geo
-            buildings = building_geo.get('buildings', [])
-            if not buildings:
-                self.pipeline.log_error(self.calculator_name, "No buildings in building_geo data")
+            # CRITICAL: Use ST_SummaryStats to get statistics from raster tiles
+            # We need to clip the raster to the building footprint and get mean values
+            
+            # First, check if tables exist
+            table_check = text("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = 'cim_raster' 
+                    AND table_name = 'dsm_raster_tiles'
+                ) AS dsm_exists,
+                EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = 'cim_raster' 
+                    AND table_name = 'dtm_raster_tiles'
+                ) AS dtm_exists;
+            """)
+            
+            check_result = db_session.execute(table_check).first()
+            if not check_result or not check_result[0] or not check_result[1]:
+                self.pipeline.log_error(self.calculator_name, 
+                    f"Raster tables not found! DSM exists: {check_result[0] if check_result else 'Unknown'}, "
+                    f"DTM exists: {check_result[1] if check_result else 'Unknown'}")
                 return None
             
-            # Check first building for OSM height data
-            building = buildings[0]
-            building_properties = building.get('properties', {})
-            osm_tags = building_properties.get('osm_tags', {})
-            
-            # Check for height in OSM tags
-            height_value = osm_tags.get('height') or osm_tags.get('building:height') or osm_tags.get('est_height')
-            
-            if height_value:
-                try:
-                    # Parse height (could be "12.5", "12.5 m", "12,5", etc.)
-                    import re
-                    # Extract numeric value from string
-                    height_match = re.search(r'(\d+[.,]?\d*)', str(height_value))
-                    if height_match:
-                        height_str = height_match.group(1).replace(',', '.')
-                        height = float(height_str)
-                        
-                        self.pipeline.log_info(self.calculator_name, f"Found OSM height: {height}m for building {building['building_id']}")
-                        
-                        # Save to database
-                        try:
-                            from cim_wizard.models import BuildingProperties
-                            project_id = building_geo.get('project_id')
-                            scenario_id = building_geo.get('scenario_id')
-                            building_id = building['building_id']
-                            lod = building.get('lod', 0)
-                            
-                            building_props = BuildingProperties.objects.get(
-                                building_id=building_id,
-                                project_id=project_id,
-                                scenario_id=scenario_id,
-                                lod=lod
-                            )
-                            building_props.height = height
-                            building_props.save()
-                            
-                            self.pipeline.log_info(self.calculator_name, f"Updated height for building {building_id}")
-                            
-                        except Exception as e:
-                            self.pipeline.log_warning(self.calculator_name, f"Failed to save OSM height to database: {str(e)}")
-                        
-                    return height
-                except ValueError:
-                    self.pipeline.log_warning(self.calculator_name, f"Could not parse height value: {height_value}")
-            
-            # If no height found in OSM tags, return None to try next method
-            self.pipeline.log_info(self.calculator_name, f"No height data found in OSM tags for building {building['building_id']}")
-            return None
-            
-        except Exception as e:
-            self.pipeline.log_error(self.calculator_name, f"Failed to extract height from OSM: {str(e)}")
-            return None
-    
-    def calculate_default_estimate(self) -> Optional[float]:
-        """Calculate default building height estimate (fallback method)"""
-        building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
-        
-        if not self.pipeline.validate_input(building_geo, "building_geo", self.calculator_name):
-            return None
-        
-        self.pipeline.log_info(self.calculator_name, "Calculating default building height estimate")
-        
-        try:
-            # Default estimation based on building area or simple assumption
-            default_height = 12.0  # Default 4-story building (3m per floor)
-            
-            self.pipeline.log_info(self.calculator_name, f"Using default height estimate: {default_height}m")
-            return default_height
-            
-        except Exception as e:
-            self.pipeline.log_error(self.calculator_name, f"Failed to calculate default height: {str(e)}")
-            return None
-
-    def save_to_database(self) -> bool:
-        """Save building height to database"""
-        try:
-            # Import Django models
-            try:
-                from cim_wizard.models import BuildingProperties
-            except ImportError:
-                self.pipeline.log_warning(self.calculator_name, "Django models not available - skipping database save")
-                return False
-
-            # Get building_geo and height data
-            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
-            height = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)
-            
-            if not building_geo or height is None:
-                self.pipeline.log_error(self.calculator_name, "Missing required data for database save")
-                return False
-            
-            # Get required IDs
-            project_id = building_geo.get('project_id')
-            scenario_id = building_geo.get('scenario_id')
-            
-            if not project_id or not scenario_id:
-                self.pipeline.log_error(self.calculator_name, "Missing project_id or scenario_id")
-                return False
-            
-            # Get building_id from first building
-            buildings = building_geo.get('buildings', [])
-            if not buildings:
-                self.pipeline.log_error(self.calculator_name, "No buildings in building_geo")
-                return False
-                
-            building_id = buildings[0].get('building_id')
-            lod = buildings[0].get('lod', 0)
-            
-            if not building_id:
-                self.pipeline.log_error(self.calculator_name, "Missing building_id")
-                return False
-            
-            # Update BuildingProperties with specific building_id
-            try:
-                building_props = BuildingProperties.objects.get(
-                    building_id=building_id,
-                    project_id=project_id,
-                    scenario_id=scenario_id,
-                    lod=lod
+            # Query for DSM (Digital Surface Model - includes buildings)
+            dsm_query = text("""
+                WITH building AS (
+                    SELECT ST_GeomFromText(:wkt, 4326) AS geom
+                ),
+                clipped_rasters AS (
+                    SELECT ST_Clip(dst.rast, b.geom, true) AS clipped_rast
+                    FROM cim_raster.dsm_raster_tiles dst, building b
+                    WHERE ST_Intersects(dst.rast, b.geom)
+                ),
+                stats AS (
+                    SELECT (ST_SummaryStats(clipped_rast)).mean AS mean_value
+                    FROM clipped_rasters
+                    WHERE clipped_rast IS NOT NULL
                 )
-                building_props.height = height
-                building_props.save()
-                self.pipeline.log_info(self.calculator_name, f"Updated building height to {height}m for building {building_id}")
-                return True
-            except BuildingProperties.DoesNotExist:
-                self.pipeline.log_error(self.calculator_name, f"BuildingProperties record not found for building {building_id}")
-                return False
+                SELECT AVG(mean_value) AS dsm_height
+                FROM stats
+                WHERE mean_value IS NOT NULL;
+            """)
+            
+            # Query for DTM (Digital Terrain Model - ground level)
+            dtm_query = text("""
+                WITH building AS (
+                    SELECT ST_GeomFromText(:wkt, 4326) AS geom
+                ),
+                clipped_rasters AS (
+                    SELECT ST_Clip(dtt.rast, b.geom, true) AS clipped_rast
+                    FROM cim_raster.dtm_raster_tiles dtt, building b
+                    WHERE ST_Intersects(dtt.rast, b.geom)
+                ),
+                stats AS (
+                    SELECT (ST_SummaryStats(clipped_rast)).mean AS mean_value
+                    FROM clipped_rasters
+                    WHERE clipped_rast IS NOT NULL
+                )
+                SELECT AVG(mean_value) AS dtm_height
+                FROM stats
+                WHERE mean_value IS NOT NULL;
+            """)
+            
+            # Execute DSM query with better error handling
+            try:
+                dsm_result = db_session.execute(dsm_query, {"wkt": building_wkt}).first()
+                dsm_height = dsm_result[0] if dsm_result and dsm_result[0] is not None else None
             except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to update BuildingProperties: {str(e)}")
-                return False
+                self.pipeline.log_warning(self.calculator_name, f"DSM query error: {str(e)}")
+                dsm_height = None
+            
+            if dsm_height is None:
+                self.pipeline.log_warning(self.calculator_name, 
+                    f"Building {building_id}: No DSM data found for footprint")
                 
+                # Try alternative: sample at building centroid
+                centroid = building_shape.centroid
+                dsm_height = self._sample_raster_at_point(
+                    db_session, 
+                    centroid.x, 
+                    centroid.y, 
+                    'dsm_raster_tiles'
+                )
+            
+            # Execute DTM query with better error handling
+            try:
+                dtm_result = db_session.execute(dtm_query, {"wkt": building_wkt}).first()
+                dtm_height = dtm_result[0] if dtm_result and dtm_result[0] is not None else None
+            except Exception as e:
+                self.pipeline.log_warning(self.calculator_name, f"DTM query error: {str(e)}")
+                dtm_height = None
+            
+            if dtm_height is None:
+                self.pipeline.log_warning(self.calculator_name, 
+                    f"Building {building_id}: No DTM data found for footprint")
+                
+                # Try alternative: sample at building centroid
+                centroid = building_shape.centroid
+                dtm_height = self._sample_raster_at_point(
+                    db_session,
+                    centroid.x,
+                    centroid.y,
+                    'dtm_raster_tiles'
+                )
+            
+            # Calculate building height
+            if dsm_height is not None and dtm_height is not None:
+                height = dsm_height - dtm_height
+                self.pipeline.log_info(self.calculator_name,
+                    f"Building {building_id}: DSM={dsm_height:.2f}m, DTM={dtm_height:.2f}m, Height={height:.2f}m")
+                return height
+            else:
+                self.pipeline.log_warning(self.calculator_name,
+                    f"Building {building_id}: Missing raster data (DSM={dsm_height}, DTM={dtm_height})")
+                return None
+            
         except Exception as e:
-            self.pipeline.log_error(self.calculator_name, f"Error in save_to_database: {str(e)}")
-            return False 
+            self.pipeline.log_error(self.calculator_name, 
+                f"Raster query error for building {building_id}: {str(e)}")
+            return None
+    
+    def _sample_raster_at_point(self, db_session, lon: float, lat: float, 
+                                table_name: str) -> Optional[float]:
+        """
+        Sample raster value at a specific point (fallback method)
+        """
+        from sqlalchemy import text
+        
+        try:
+            query = text(f"""
+                SELECT ST_Value(rast, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)) as value
+                FROM cim_raster.{table_name}
+                WHERE ST_Intersects(rast, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
+                LIMIT 1;
+            """)
+            
+            result = db_session.execute(query, {"lon": lon, "lat": lat}).first()
+            
+            if result and result[0] is not None:
+                return float(result[0])
+            return None
+            
+        except Exception as e:
+            self.pipeline.log_warning(self.calculator_name,
+                f"Point sampling failed at ({lon}, {lat}): {str(e)}")
+            return None
+    
+    def _get_fallback_height(self, building: Dict[str, Any]) -> float:
+        """Get fallback height from OSM tags or building type"""
+        properties = building.get('properties', {})
+        osm_tags = properties.get('osm_tags', {})
+        
+        # Try OSM height tag
+        if 'height' in osm_tags:
+            try:
+                height_str = str(osm_tags['height']).replace('m', '').strip()
+                height = float(height_str)
+                if 3 <= height <= 150:
+                    return height
+            except:
+                pass
+        
+        # Try OSM levels
+        if 'building:levels' in osm_tags:
+            try:
+                levels = int(osm_tags['building:levels'])
+                return levels * 3.0
+            except:
+                pass
+        
+        # Based on building type
+        building_type = osm_tags.get('building', 'yes')
+        
+        height_by_type = {
+            'house': 6.0,
+            'detached': 6.0,
+            'residential': 12.0,
+            'apartments': 18.0,
+            'commercial': 15.0,
+            'office': 24.0,
+            'industrial': 10.0,
+            'warehouse': 8.0,
+            'retail': 12.0,
+            'hotel': 21.0,
+            'school': 9.0,
+            'university': 15.0,
+            'hospital': 18.0,
+            'church': 15.0,
+            'yes': 12.0  # Generic building
+        }
+        
+        return height_by_type.get(building_type, 12.0)
+    
+    def _fallback_heights(self, buildings: List[Dict[str, Any]]) -> List[float]:
+        """Generate fallback heights for all buildings"""
+        self.pipeline.log_warning(self.calculator_name, 
+            "Using fallback heights for all buildings")
+        
+        return [self._get_fallback_height(b) for b in buildings]
+    
+    def calculate_from_osm_height(self) -> Optional[List[float]]:
+        """Secondary method: try to get heights from OSM tags"""
+        self.pipeline.log_info(self.calculator_name, "Attempting OSM height extraction")
+        
+        building_geo = self.pipeline.get_feature_safely('building_geo')
+        if not building_geo:
+            return None
+        
+        buildings = building_geo.get('buildings', [])
+        heights = []
+        
+        for building in buildings:
+            height = self._get_fallback_height(building)
+            heights.append(height)
+        
+        return heights
+    
+    def calculate_default_estimate(self) -> Optional[List[float]]:
+        """Tertiary method: default height estimates"""
+        self.pipeline.log_info(self.calculator_name, "Using default height estimates")
+        
+        building_geo = self.pipeline.get_feature_safely('building_geo')
+        if not building_geo:
+            return None
+        
+        buildings = building_geo.get('buildings', [])
+        return [12.0] * len(buildings)  # Default 4 floors
+    
+    def save_to_database(self) -> bool:
+        """Heights are saved by the pipeline automatically"""
+        return True

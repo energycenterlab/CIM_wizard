@@ -290,8 +290,7 @@ export DATABASE_URL="postgresql://user:pass@host:port/db"
 export DEBUG=True
 export PORT=9000
 
-# Start the application
-./start_app.sh dev
+
 
 Method3:
 # Override settings for a single run

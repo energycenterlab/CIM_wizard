@@ -69,12 +69,12 @@
         "value_range": [0, 500],
         "required": false
       },
-      "class_path": "app.calculators.building_height_calculator_integrated",
+      "class_path": "app.calculators.building_height_calculator",
       "class_name": "BuildingHeightCalculator",
       "methods": [
         {
           "priority": 1,
-          "input_dependencies": ["building_geo", "raster_service_url"],
+          "input_dependencies": ["building_geo"],
           "method_name": "calculate_from_raster_service"
         },
         {

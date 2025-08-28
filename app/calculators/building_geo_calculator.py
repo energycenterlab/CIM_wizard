@@ -334,19 +334,14 @@ class BuildingGeoCalculator:
                 
                 self.pipeline.log_info(self.calculator_name, f"Filtered to {len(filtered_buildings)} buildings within actual boundary (from {len(buildings)} in bounding box)")
                 
-                # Use raster service to calculate heights instead of OSM estimation
-                if filtered_buildings:
-                    self.pipeline.log_info(self.calculator_name, "Calculating building heights using raster service...")
-                    filtered_buildings = self._calculate_heights_with_raster_service(filtered_buildings)
+                # Height calculation removed - handled by dedicated building_height_calculator
+                # This calculator should only focus on geometry extraction
                 
                 return filtered_buildings
                 
             except Exception as e:
                 self.pipeline.log_warning(self.calculator_name, f"Failed to filter buildings by boundary: {str(e)}, returning all buildings")
-                # Use raster service for buildings even if boundary filtering failed
-                if buildings:
-                    self.pipeline.log_info(self.calculator_name, "Calculating building heights using raster service...")
-                    buildings = self._calculate_heights_with_raster_service(buildings)
+                # Return buildings without height calculation (handled by dedicated calculator)
                 return buildings
             
         except Exception as e:
@@ -457,11 +452,7 @@ class BuildingGeoCalculator:
                 
                 self.pipeline.log_info(self.calculator_name, f"osmnx processed {processed_count} buildings successfully")
                 
-                # Use raster service to calculate heights instead of OSM estimation
-                if buildings:
-                    self.pipeline.log_info(self.calculator_name, "Calculating building heights using raster service...")
-                    buildings = self._calculate_heights_with_raster_service(buildings)
-                
+                # Return buildings without height calculation (handled by dedicated calculator)
                 return buildings
                 
             except Exception as e:
@@ -600,8 +591,13 @@ class BuildingGeoCalculator:
         # Unknown/ambiguous cases - keep as potentially residential
         return 'probably_residential_complex'
     
-    def _calculate_heights_with_raster_service(self, buildings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Calculate building heights using raster service instead of OSM tag estimation"""
+    def _calculate_heights_with_raster_service_DEPRECATED(self, buildings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """DEPRECATED - Height calculation moved to dedicated building_height_calculator"""
+        # This method is no longer used but kept for reference
+        return buildings
+    
+    def _calculate_heights_with_raster_service_OLD(self, buildings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """OLD METHOD - Calculate building heights using raster service instead of OSM tag estimation"""
         try:
             # Get raster service URL from configuration
             raster_service_url = self.data_manager.configuration.get('raster_service_url')
