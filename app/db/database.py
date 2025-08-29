@@ -7,7 +7,11 @@ Manages three schemas: cim_vector, cim_census, cim_raster
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.core.settings import settings, DATABASE_URL
+from app.core.settings import settings
+import os
+
+# Force correct database URL
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated')
 
 # Debug: Print the database URL being used
 print(f"Using database URL: {DATABASE_URL}")

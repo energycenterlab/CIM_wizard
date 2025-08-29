@@ -191,45 +191,8 @@ def save_building_to_database(
                 building_geo.building_geometry = from_shape(geom_shape, srid=4326)
             building_geo.updated_at = datetime.utcnow()
         
-        # Save or update BuildingProperties
-        building_props = db.query(BuildingProperties).filter_by(
-            building_id=building_id,
-            project_id=project_id,
-            scenario_id=scenario_id,
-            lod=lod
-        ).first()
-        
-        if not building_props:
-            building_props = BuildingProperties(
-                building_id=building_id,
-                project_id=project_id,
-                scenario_id=scenario_id,
-                lod=lod,
-                building_fk=building_geo.id if building_geo else None,
-                created_at=datetime.utcnow()
-            )
-            db.add(building_props)
-        else:
-            # Update the building_fk if it's not set
-            if not building_props.building_fk and building_geo:
-                building_props.building_fk = building_geo.id
-        
-        # Update properties if they exist in the data
-        # For GeoJSON features, properties are in the 'properties' field
-        props = building_data.get('properties', {})
-        if not props:
-            # Fallback: properties might be directly in building_data
-            props = building_data
-        if 'height' in props:
-            building_props.height = float(props['height'])
-        if 'area' in props:
-            building_props.area = float(props['area'])
-        if 'volume' in props:
-            building_props.volume = float(props['volume'])
-        if 'number_of_floors' in props:
-            building_props.number_of_floors = int(props['number_of_floors'])
-        
-        building_props.updated_at = datetime.utcnow()
+        # Don't create BuildingProperties here - let the calculators handle it
+        # This prevents duplicate records being created
         
         db.commit()
         return True
@@ -372,7 +335,7 @@ async def execute_building_analysis(
         scenario_name = request_data.get('scenario_name', None)  # Can be null for baseline
         save_to_db = request_data.get('save_to_db', True)
         
-        # Generate proper UUIDs (not truncated)
+        # Generate NEW UUIDs for each request
         project_id = str(uuid.uuid4())
         
         # If scenario_name is null/not provided, use "baseline" with same UUID as project

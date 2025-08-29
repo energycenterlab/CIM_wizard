@@ -15,7 +15,7 @@ class BuildingHeightCalculator:
         self.pipeline = pipeline_executor
         self.data_manager = pipeline_executor.data_manager
         self.calculator_name = self.__class__.__name__
-    
+        
     def calculate_from_raster_service(self) -> Optional[List[float]]:
         """
         Calculate building heights directly from DSM/DTM raster tiles in database
@@ -33,7 +33,10 @@ class BuildingHeightCalculator:
         if not buildings:
             self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
             return None
-        
+
+        project_id = building_geo.get('project_id')
+        scenario_id = building_geo.get('scenario_id')
+            
         self.pipeline.log_info(self.calculator_name, f"Processing {len(buildings)} buildings for height calculation")
         
         # Get database session from data_manager (passed from API)
@@ -56,12 +59,15 @@ class BuildingHeightCalculator:
             successful_calculations = 0
             failed_calculations = 0
             
+            # Track last 5 buildings for logging
+            last_five_logs = []
+            
             for idx, building in enumerate(buildings):
                 building_id = building.get('building_id', f'unknown_{idx}')
                 geometry = building.get('geometry')
                 
-                # Log progress every 10 buildings
-                if idx % 10 == 0:
+                # Log progress every 100 buildings
+                if idx % 100 == 0:
                     self.pipeline.log_info(self.calculator_name, f"Processing building {idx+1}/{len(buildings)}...")
                 
                 if not geometry:
@@ -98,15 +104,23 @@ class BuildingHeightCalculator:
                         
                         building_heights.append(round(height, 2))
                         successful_calculations += 1
-                        self.pipeline.log_info(self.calculator_name, 
-                            f"Building {building_id}: Calculated height = {height:.2f}m from raster")
+                        
+                        # Store in last five for summary logging
+                        log_msg = f"Building {building_id}: height = {height:.2f}m (from raster)"
+                        last_five_logs.append(log_msg)
+                        if len(last_five_logs) > 5:
+                            last_five_logs.pop(0)
                     else:
                         # Fallback for this building
                         fallback_height = self._get_fallback_height(building)
                         building_heights.append(fallback_height)
                         failed_calculations += 1
-                        self.pipeline.log_warning(self.calculator_name, 
-                            f"Building {building_id}: No raster data, using fallback = {fallback_height}m")
+                        
+                        # Store in last five for summary logging
+                        log_msg = f"Building {building_id}: height = {fallback_height}m (fallback)"
+                        last_five_logs.append(log_msg)
+                        if len(last_five_logs) > 5:
+                            last_five_logs.pop(0)
                 
                 except Exception as e:
                     self.pipeline.log_error(self.calculator_name, 
@@ -114,13 +128,24 @@ class BuildingHeightCalculator:
                     building_heights.append(self._get_fallback_height(building))
                     failed_calculations += 1
             
+            # Log last 5 samples
+            if last_five_logs:
+                self.pipeline.log_info(self.calculator_name, "Last 5 building heights:")
+                for log_msg in last_five_logs:
+                    self.pipeline.log_info(self.calculator_name, f"  {log_msg}")
+            
             self.pipeline.log_info(self.calculator_name, 
                 f"=== HEIGHT CALCULATION COMPLETE ===\n" +
-                f"   Successful: {successful_calculations}/{len(buildings)}\n" +
-                f"   Failed/Fallback: {failed_calculations}/{len(buildings)}")
+                f"   Total: {len(buildings)} buildings\n" +
+                f"   Successful (raster): {successful_calculations}\n" +
+                f"   Fallback: {failed_calculations}")
             
             # Store heights for other calculators
             self.data_manager.set_feature('building_heights', building_heights)
+            
+            # Also save to database immediately if session available
+            if db_session and project_id and scenario_id:
+                self._save_heights_to_database(db_session, buildings, building_heights, project_id, scenario_id)
             
             # Return the list
             return building_heights
@@ -250,8 +275,9 @@ class BuildingHeightCalculator:
             # Calculate building height
             if dsm_height is not None and dtm_height is not None:
                 height = dsm_height - dtm_height
-                self.pipeline.log_info(self.calculator_name,
-                    f"Building {building_id}: DSM={dsm_height:.2f}m, DTM={dtm_height:.2f}m, Height={height:.2f}m")
+                # Only log details for debugging if needed, not for every building
+                # self.pipeline.log_debug(self.calculator_name,
+                #     f"Building {building_id}: DSM={dsm_height:.2f}m, DTM={dtm_height:.2f}m, Height={height:.2f}m")
                 return height
             else:
                 self.pipeline.log_warning(self.calculator_name,
@@ -366,9 +392,73 @@ class BuildingHeightCalculator:
         building_geo = self.pipeline.get_feature_safely('building_geo')
         if not building_geo:
             return None
-        
+
         buildings = building_geo.get('buildings', [])
         return [12.0] * len(buildings)  # Default 4 floors
+    
+    def _save_heights_to_database(self, db_session, buildings, heights, project_id, scenario_id):
+        """Save calculated heights to database"""
+        try:
+            from app.models.vector import BuildingProperties
+            from sqlalchemy import and_
+            
+            updated_count = 0
+            created_count = 0
+            
+            for idx, (building, height) in enumerate(zip(buildings, heights)):
+                building_id = building.get('building_id')
+                if not building_id:
+                    continue
+                
+                lod = building.get('lod', 0)
+                
+                try:
+                    # Query with all composite key fields
+                    props = db_session.query(BuildingProperties).filter(
+                        and_(
+                            BuildingProperties.building_id == building_id,
+                            BuildingProperties.project_id == project_id,
+                            BuildingProperties.scenario_id == scenario_id,
+                            BuildingProperties.lod == lod
+                        )
+                    ).first()
+                    
+                    if props:
+                        # Update existing record
+                        if props.height != height:  # Only update if different
+                            props.height = height
+                            db_session.add(props)  # Mark as dirty
+                            updated_count += 1
+                    else:
+                        # Create new properties record if doesn't exist
+                        new_props = BuildingProperties(
+                    building_id=building_id,
+                    project_id=project_id,
+                    scenario_id=scenario_id,
+                            lod=lod,
+                            height=height
+                        )
+                        db_session.add(new_props)
+                        created_count += 1
+                
+                except Exception as e:
+                    self.pipeline.log_warning(self.calculator_name, 
+                        f"Failed to save height for building {building_id}: {str(e)}")
+                    db_session.rollback()
+                    raise
+            
+            if updated_count > 0 or created_count > 0:
+                db_session.commit()
+                db_session.flush()  # Force write
+                self.pipeline.log_info(self.calculator_name, 
+                    f"Database commit complete: {updated_count} updated, {created_count} created")
+            else:
+                self.pipeline.log_warning(self.calculator_name, "No height changes to save")
+                
+        except Exception as e:
+            db_session.rollback()
+            self.pipeline.log_error(self.calculator_name, f"Failed to save heights to database: {str(e)}")
+            raise  # Re-raise to see the actual error
     
     def save_to_database(self) -> bool:
         """Heights are saved by the pipeline automatically"""

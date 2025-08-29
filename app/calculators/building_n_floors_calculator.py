@@ -42,6 +42,7 @@ class BuildingNFloorsCalculator:
             # Calculate number of floors for all buildings
             building_floors = []
             processed_count = 0
+            last_five_logs = []  # Track last 5 for summary
             
             for i, building in enumerate(buildings):
                 building_id = building.get('building_id')
@@ -56,13 +57,23 @@ class BuildingNFloorsCalculator:
                 # Calculate number of floors
                 number_of_floors = math.floor(height / 3)
                 building_floors.append(number_of_floors)
-                
-                self.pipeline.log_info(self.calculator_name, f"Building {building_id}: {number_of_floors} floors (height: {height}m)")
                 processed_count += 1
+                
+                # Track last 5 for logging
+                log_msg = f"Building {building_id}: {number_of_floors} floors (height: {height:.1f}m)"
+                last_five_logs.append(log_msg)
+                if len(last_five_logs) > 5:
+                    last_five_logs.pop(0)
             
             if processed_count == 0:
                 self.pipeline.log_error(self.calculator_name, "No buildings were processed successfully")
                 return None
+            
+            # Log last 5 samples
+            if last_five_logs:
+                self.pipeline.log_info(self.calculator_name, "Last 5 building floor counts:")
+                for log_msg in last_five_logs:
+                    self.pipeline.log_info(self.calculator_name, f"  {log_msg}")
 
             # Create result
             result = {
@@ -74,6 +85,12 @@ class BuildingNFloorsCalculator:
 
             # Store result in data manager
             self.data_manager.set_feature('building_n_floors', result)
+            self.data_manager.set_feature('building_floors', building_floors)  # Also store list
+            
+            # Save to database immediately
+            db_session = getattr(self.data_manager, 'db_session', None)
+            if db_session and project_id and scenario_id:
+                self._save_floors_to_database(db_session, buildings, building_floors, project_id, scenario_id)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} buildings")
             return result
@@ -82,6 +99,69 @@ class BuildingNFloorsCalculator:
             self.pipeline.log_calculation_failure(self.calculator_name, 'estimate_by_height', str(e))
             return None
 
+    def _save_floors_to_database(self, db_session, buildings, floors, project_id, scenario_id):
+        """Save calculated floor counts to database"""
+        try:
+            from app.models.vector import BuildingProperties
+            from sqlalchemy import and_
+            
+            updated_count = 0
+            created_count = 0
+            
+            for building, n_floors in zip(buildings, floors):
+                building_id = building.get('building_id')
+                if not building_id:
+                    continue
+                
+                lod = building.get('lod', 0)
+                
+                try:
+                    # Query with all composite key fields
+                    props = db_session.query(BuildingProperties).filter(
+                        and_(
+                            BuildingProperties.building_id == building_id,
+                            BuildingProperties.project_id == project_id,
+                            BuildingProperties.scenario_id == scenario_id,
+                            BuildingProperties.lod == lod
+                        )
+                    ).first()
+                    
+                    if props:
+                        if props.number_of_floors != n_floors:  # Only update if different
+                            props.number_of_floors = n_floors
+                            db_session.add(props)  # Mark as dirty
+                            updated_count += 1
+                    else:
+                        # Create if doesn't exist
+                        new_props = BuildingProperties(
+                            building_id=building_id,
+                            project_id=project_id,
+                            scenario_id=scenario_id,
+                            lod=lod,
+                            number_of_floors=n_floors
+                        )
+                        db_session.add(new_props)
+                        created_count += 1
+                
+                except Exception as e:
+                    self.pipeline.log_warning(self.calculator_name, 
+                        f"Failed to save floors for building {building_id}: {str(e)}")
+                    db_session.rollback()
+                    raise
+            
+            if updated_count > 0 or created_count > 0:
+                db_session.commit()
+                db_session.flush()  # Force write
+                self.pipeline.log_info(self.calculator_name, 
+                    f"Database commit complete: {updated_count} updated, {created_count} created")
+            else:
+                self.pipeline.log_warning(self.calculator_name, "No floor count changes to save")
+            
+        except Exception as e:
+            db_session.rollback()
+            self.pipeline.log_error(self.calculator_name, f"Failed to save floors to database: {str(e)}")
+            raise
+    
     def save_to_database(self) -> bool:
         """Save building number of floors to database"""
         try:

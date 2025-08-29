@@ -2,8 +2,6 @@
 Building Volume Calculator - Independent class with pipeline executor injection
 """
 from typing import Optional, Dict, Any
-import json
-import os
 
 
 class BuildingVolumeCalculator:
@@ -13,11 +11,6 @@ class BuildingVolumeCalculator:
         self.pipeline = pipeline_executor
         self.data_manager = pipeline_executor.data_manager
         self.calculator_name = self.__class__.__name__
-        
-        # Load configuration
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'configuration.json')
-        with open(config_path, 'r') as f:
-            self.config = json.load(f)
     
     def calculate_from_height_and_area(self) -> Optional[Dict[str, Any]]:
         """Calculate building volumes from height and area"""
@@ -66,6 +59,9 @@ class BuildingVolumeCalculator:
             building_volumes = []
             processed_count = 0
             
+            # Track last 5 buildings for logging
+            last_five_logs = []
+            
             for i, building in enumerate(buildings):
                 building_id = building.get('building_id')
                 
@@ -84,13 +80,23 @@ class BuildingVolumeCalculator:
                 # Calculate volume
                 volume = height * area
                 building_volumes.append(volume)
-                
-                self.pipeline.log_info(self.calculator_name, f"Building {building_id}: volume = {volume:.2f}m³ ({height}m × {area}m²)")
                 processed_count += 1
+                
+                # Track last 5 for logging
+                log_msg = f"Building {building_id}: volume = {volume:.2f}m³ ({height:.1f}m × {area:.1f}m²)"
+                last_five_logs.append(log_msg)
+                if len(last_five_logs) > 5:
+                    last_five_logs.pop(0)
             
             if processed_count == 0:
                 self.pipeline.log_error(self.calculator_name, "No buildings were processed successfully")
                 return None
+            
+            # Log last 5 samples
+            if last_five_logs:
+                self.pipeline.log_info(self.calculator_name, "Last 5 building volumes:")
+                for log_msg in last_five_logs:
+                    self.pipeline.log_info(self.calculator_name, f"  {log_msg}")
 
             # Create result
             result = {
@@ -102,6 +108,12 @@ class BuildingVolumeCalculator:
 
             # Store result in data manager
             self.data_manager.set_feature('building_volume', result)
+            self.data_manager.set_feature('building_volumes', building_volumes)  # Also store list
+            
+            # Save to database immediately
+            db_session = getattr(self.data_manager, 'db_session', None)
+            if db_session and project_id and scenario_id:
+                self._save_volumes_to_database(db_session, buildings, building_volumes, project_id, scenario_id)
             
             self.pipeline.log_info(self.calculator_name, f"Successfully calculated volumes for {processed_count} buildings")
             return result
@@ -114,6 +126,69 @@ class BuildingVolumeCalculator:
             self.pipeline.log_error(self.calculator_name, f"Failed to calculate volume: {str(e)}")
             return None
         
+    def _save_volumes_to_database(self, db_session, buildings, volumes, project_id, scenario_id):
+        """Save calculated volumes to database"""
+        try:
+            from app.models.vector import BuildingProperties
+            from sqlalchemy import and_
+            
+            updated_count = 0
+            created_count = 0
+            
+            for building, volume in zip(buildings, volumes):
+                building_id = building.get('building_id')
+                if not building_id:
+                    continue
+                
+                lod = building.get('lod', 0)
+                
+                try:
+                    # Query with all composite key fields
+                    props = db_session.query(BuildingProperties).filter(
+                        and_(
+                            BuildingProperties.building_id == building_id,
+                            BuildingProperties.project_id == project_id,
+                            BuildingProperties.scenario_id == scenario_id,
+                            BuildingProperties.lod == lod
+                        )
+                    ).first()
+                    
+                    if props:
+                        if props.volume != volume:  # Only update if different
+                            props.volume = volume
+                            db_session.add(props)  # Mark as dirty
+                            updated_count += 1
+                    else:
+                        # Create if doesn't exist
+                        new_props = BuildingProperties(
+                            building_id=building_id,
+                            project_id=project_id,
+                            scenario_id=scenario_id,
+                            lod=lod,
+                            volume=volume
+                        )
+                        db_session.add(new_props)
+                        created_count += 1
+                
+                except Exception as e:
+                    self.pipeline.log_warning(self.calculator_name, 
+                        f"Failed to save volume for building {building_id}: {str(e)}")
+                    db_session.rollback()
+                    raise
+            
+            if updated_count > 0 or created_count > 0:
+                db_session.commit()
+                db_session.flush()  # Force write
+                self.pipeline.log_info(self.calculator_name, 
+                    f"Database commit complete: {updated_count} updated, {created_count} created")
+            else:
+                self.pipeline.log_warning(self.calculator_name, "No volume changes to save")
+            
+        except Exception as e:
+            db_session.rollback()
+            self.pipeline.log_error(self.calculator_name, f"Failed to save volumes to database: {str(e)}")
+            raise
+    
     def save_to_database(self) -> bool:
         """Save building volume data to database"""
         try:

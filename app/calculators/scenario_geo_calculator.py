@@ -28,7 +28,7 @@ class ScenarioGeoCalculator:
             project_id = getattr(self.data_manager, 'project_id', None)
             scenario_id = getattr(self.data_manager, 'scenario_id', None)
             
-            # If not provided, generate new ones (but this shouldn't happen with fixed API)
+            # If not provided, generate new ones
             if not project_id:
                 project_id = str(uuid.uuid4())
             if not scenario_id:

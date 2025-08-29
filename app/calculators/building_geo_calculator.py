@@ -60,33 +60,18 @@ class BuildingGeoCalculator:
             osm_buildings = self._query_osm_buildings(boundary_geom, scenario_id)
             
             if not osm_buildings:
-                self.pipeline.log_warning(self.calculator_name, "No buildings found in OSM, falling back to sample buildings")
-                # Fallback to sample buildings if OSM query fails
-                sample_buildings = []
-                for i in range(5):  # Create 5 sample buildings
-                    building = {
-                        'type': 'Feature',
-                        'properties': {
-                            'building_id': f'BUILDING_{i+1:03d}',
-                            'building': 'yes',
-                            'building:type': 'residential',
-                            'height': 12.0,
-                            'levels': 4
-                        },
-                        'geometry': {
-                            'type': 'Polygon',
-                            'coordinates': [[
-                                [7.680 + i*0.001, 45.062 + i*0.001],
-                                [7.680 + i*0.001 + 0.0005, 45.062 + i*0.001],
-                                [7.680 + i*0.001 + 0.0005, 45.062 + i*0.001 + 0.0005],
-                                [7.680 + i*0.001, 45.062 + i*0.001 + 0.0005],
-                                [7.680 + i*0.001, 45.062 + i*0.001]
-                            ]]
-                        }
-                    }
-                    sample_buildings.append(building)
-                buildings = sample_buildings
-                data_source = 'sample_buildings_for_testing'
+                self.pipeline.log_error(self.calculator_name, "No buildings found in OSM query!")
+                # Return empty result instead of fake buildings
+                return {
+                    'project_id': project_id,
+                    'scenario_id': scenario_id,
+                    'buildings': [],
+                    'total_buildings': 0,
+                    'data_source': 'osm_query_failed',
+                    'lod': 0,
+                    'query_boundary': boundary_geom,
+                    'created_from': 'osm_query_failed'
+                }
             else:
                 # Convert OSM buildings to GeoJSON format
                 buildings = []
@@ -299,6 +284,7 @@ class BuildingGeoCalculator:
                                 building_coords.append(building_coords[0])
                             # Classify building usage based on OSM tags
                             osm_usage = self._classify_building_usage_from_osm(tags)
+                            osm_id = f"way/{element['id']}"
                             
                             building = {
                                 'building_id': str(uuid.uuid4()),
@@ -310,7 +296,7 @@ class BuildingGeoCalculator:
                                 'properties': {
                                     'building_type': building_value if building_value != 'yes' else 'residential',
                                     'source': 'osm',
-                                    'osm_id': f"way/{element['id']}",
+                                    'osm_id': osm_id,
                                     'osm_tags': tags,
                                     'osm_usage': osm_usage
                                 },
@@ -422,6 +408,9 @@ class BuildingGeoCalculator:
                         # Classify building usage based on OSM tags (don't filter out)
                         osm_usage = self._classify_building_usage_from_osm(osm_tags)
                         
+                        # Get OSM ID from the index
+                        osm_id = f"{idx[0]}/{idx[1]}" if isinstance(idx, tuple) else str(idx)
+                        
                         # Check if building is within the actual boundary (not just bounding box)
                         if not boundary_shape.contains(geom.centroid):
                             continue
@@ -436,7 +425,7 @@ class BuildingGeoCalculator:
                             'properties': {
                                 'building_type': building_value if building_value != 'yes' else 'residential',
                                 'source': 'osmnx',
-                                'osm_id': f"{idx[0]}/{idx[1]}" if isinstance(idx, tuple) else str(idx),
+                                'osm_id': osm_id,
                                 'osm_tags': osm_tags,
                                 'estimated_area': area_sqm,
                                 'osm_usage': osm_usage

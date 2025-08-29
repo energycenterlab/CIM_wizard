@@ -40,6 +40,8 @@ class BuildingAreaCalculator:
             
             # Calculate areas for all buildings (simplified for FastAPI)
             building_areas = []
+            last_five_logs = []  # Track last 5 for summary
+            
             for idx, building in enumerate(buildings):
                 building_id = building.get('building_id')
                 lod = building.get('lod', 0)
@@ -65,6 +67,18 @@ class BuildingAreaCalculator:
                 
                 building_areas.append(area)
                 updated_count += 1
+                
+                # Track last 5 for logging
+                log_msg = f"Building {building_id}: area = {area:.2f}m²"
+                last_five_logs.append(log_msg)
+                if len(last_five_logs) > 5:
+                    last_five_logs.pop(0)
+            
+            # Log last 5 samples
+            if last_five_logs:
+                self.pipeline.log_info(self.calculator_name, "Last 5 building areas:")
+                for log_msg in last_five_logs:
+                    self.pipeline.log_info(self.calculator_name, f"  {log_msg}")
             
             self.pipeline.log_info(self.calculator_name, f"Calculated areas for {updated_count} buildings")
 
@@ -80,6 +94,11 @@ class BuildingAreaCalculator:
             self.data_manager.set_feature('building_area', result)
             # Also store the areas list directly for easier access
             self.data_manager.set_feature('building_areas', building_areas)
+            
+            # Save to database immediately
+            db_session = getattr(self.data_manager, 'db_session', None)
+            if db_session and project_id and scenario_id:
+                self._save_areas_to_database(db_session, building_properties_list, project_id, scenario_id)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'calculate_from_geometry', f"Calculated areas for {len(building_properties_list)} buildings")
             return result
@@ -87,6 +106,67 @@ class BuildingAreaCalculator:
         except Exception as e:
             self.pipeline.log_calculation_failure(self.calculator_name, 'calculate_from_geometry', str(e))
             return None
+    
+    def _save_areas_to_database(self, db_session, building_props_list, project_id, scenario_id):
+        """Save calculated areas to database"""
+        try:
+            from app.models.vector import BuildingProperties
+            from sqlalchemy import and_
+            
+            updated_count = 0
+            created_count = 0
+            
+            for prop_data in building_props_list:
+                building_id = prop_data['building_id']
+                area = prop_data['area']
+                lod = prop_data.get('lod', 0)
+                
+                try:
+                    # Query with all composite key fields
+                    props = db_session.query(BuildingProperties).filter(
+                        and_(
+                            BuildingProperties.building_id == building_id,
+                            BuildingProperties.project_id == project_id,
+                            BuildingProperties.scenario_id == scenario_id,
+                            BuildingProperties.lod == lod
+                        )
+                    ).first()
+                    
+                    if props:
+                        if props.area != area:  # Only update if different
+                            props.area = area
+                            db_session.add(props)  # Mark as dirty
+                            updated_count += 1
+                    else:
+                        # Create new properties record
+                        new_props = BuildingProperties(
+                            building_id=building_id,
+                            project_id=project_id,
+                            scenario_id=scenario_id,
+                            lod=lod,
+                            area=area
+                        )
+                        db_session.add(new_props)
+                        created_count += 1
+                
+                except Exception as e:
+                    self.pipeline.log_warning(self.calculator_name, 
+                        f"Failed to save area for building {building_id}: {str(e)}")
+                    db_session.rollback()
+                    raise
+            
+            if updated_count > 0 or created_count > 0:
+                db_session.commit()
+                db_session.flush()  # Force write
+                self.pipeline.log_info(self.calculator_name, 
+                    f"Database commit complete: {updated_count} updated, {created_count} created")
+            else:
+                self.pipeline.log_warning(self.calculator_name, "No area changes to save")
+            
+        except Exception as e:
+            db_session.rollback()
+            self.pipeline.log_error(self.calculator_name, f"Failed to save areas to database: {str(e)}")
+            raise
     
     def save_to_database(self):
         """Save building area data to database - required by pipeline"""
@@ -118,7 +198,8 @@ class BuildingAreaCalculator:
             # Calculate area in square meters
             area = geom_utm.area
             
-            self.pipeline.log_info(self.calculator_name, f"Used UTM projection for accurate area calculation")
+            # Only log once, not for every building
+            # self.pipeline.log_debug(self.calculator_name, f"Used UTM projection for accurate area calculation")
             return area
             
         except ImportError:

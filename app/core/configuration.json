@@ -38,13 +38,13 @@
       "methods": [
         {
           "priority": 1,
-          "input_dependencies": ["building_geo"],
-          "method_name": "calculate_from_building_geo"
+          "input_dependencies": ["project_id", "scenario_id", "scenario_census_boundary"],
+          "method_name": "calculate_from_scenario_census_geo"
         },
         {
           "priority": 2,
-          "input_dependencies": ["project_id", "scenario_id", "scenario_census_boundary"],
-          "method_name": "calculate_from_scenario_census_geo"
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_from_building_geo"
         }
       ]
     },

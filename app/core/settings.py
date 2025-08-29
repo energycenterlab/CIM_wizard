@@ -111,12 +111,13 @@ settings = Settings()
 def get_database_url() -> str:
     """Get database URL with proper fallback logic"""
     
-    # If DATABASE_URL is explicitly set, use it
-    if settings.DATABASE_URL and settings.DATABASE_URL != "postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated":
-        return settings.DATABASE_URL
+    # Check environment variable first
+    env_url = os.getenv('DATABASE_URL')
+    if env_url:
+        return env_url
     
-    # Otherwise, construct from individual components
-    return f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+    # Use the dockerized database settings
+    return "postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated"
 
 
 # Export the constructed database URL
