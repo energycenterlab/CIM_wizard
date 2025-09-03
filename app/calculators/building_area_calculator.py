@@ -47,11 +47,8 @@ class BuildingAreaCalculator:
                 lod = building.get('lod', 0)
 
                 if not building_id:
-                    # Generate a UUID for buildings without IDs
-                    import uuid
-                    building_id = str(uuid.uuid4())
-                    building['building_id'] = building_id
-                    self.pipeline.log_info(self.calculator_name, f"Generated building_id {building_id} for building at index {idx}")
+                    self.pipeline.log_error(self.calculator_name, f"Building at index {idx} has no building_id - this should have been set by building_geo_calculator")
+                    continue  # Skip buildings without IDs instead of generating new ones
                 
                 # Calculate area from geometry using proper geographic projection
                 geometry = building.get('geometry', {})

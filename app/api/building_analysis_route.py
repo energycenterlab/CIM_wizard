@@ -246,27 +246,24 @@ def update_building_properties_in_database(
                 print(f"No building_id found in building {i}: {building.keys()}")
                 continue
             
+            # Extract lod from building data  
+            lod = building.get('lod', 0)
+            
             # Get or create BuildingProperties
             building_props = db.query(BuildingProperties).filter_by(
                 building_id=building_id,
+                lod=lod,
                 project_id=project_id,
-                scenario_id=scenario_id,
-                lod=0
+                scenario_id=scenario_id
             ).first()
             
             if not building_props:
-                # Need to get the building record for the foreign key
-                building_record = db.query(Building).filter_by(
-                    building_id=building_id,
-                    lod=0
-                ).first()
-                
+                # Create new building properties record
                 building_props = BuildingProperties(
                     building_id=building_id,
+                    lod=lod,
                     project_id=project_id,
                     scenario_id=scenario_id,
-                    lod=0,
-                    building_fk=building_record.id if building_record else None,
                     created_at=datetime.utcnow()
                 )
                 db.add(building_props)

@@ -50,16 +50,8 @@ class BuildingPropsCalculator:
                 lod = building.get('lod', 0)
 
                 if not building_id:
-                    # Generate a UUID for buildings without IDs
-                    import uuid
-                    building_id = str(uuid.uuid4())
-                    building['building_id'] = building_id  # Update the building object
-                    
-                    # Track in last five
-                    log_msg = f"Generated building_id {building_id} for building at index {idx}"
-                    last_five_logs.append(log_msg)
-                    if len(last_five_logs) > 5:
-                        last_five_logs.pop(0)
+                    self.pipeline.log_error(self.calculator_name, f"Building at index {idx} has no building_id - this should have been set by building_geo_calculator")
+                    continue  # Skip buildings without IDs instead of generating new ones
 
                 # Create building properties object
                 building_props_obj = {

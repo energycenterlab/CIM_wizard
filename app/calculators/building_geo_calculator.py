@@ -286,8 +286,11 @@ class BuildingGeoCalculator:
                             osm_usage = self._classify_building_usage_from_osm(tags)
                             osm_id = f"way/{element['id']}"
                             
+                            # Generate consistent building_id based on OSM ID
+                            building_id = f"osm_way_{element['id']}"
+                            
                             building = {
-                                'building_id': str(uuid.uuid4()),
+                                'building_id': building_id,
                                 'scenario_id': scenario_id,
                                 'geometry': {
                                     'type': 'Polygon',
@@ -418,8 +421,12 @@ class BuildingGeoCalculator:
                         # Convert geometry to GeoJSON format
                         geom_json = mapping(geom)
                         
+                        # Generate a consistent building_id based on OSM ID
+                        # This ensures the same building always gets the same ID
+                        building_id = f"osm_{osm_id.replace('/', '_')}"
+                        
                         building = {
-                            'building_id': str(uuid.uuid4()),
+                            'building_id': building_id,
                             'scenario_id': scenario_id,
                             'geometry': geom_json,
                             'properties': {
