@@ -96,7 +96,7 @@ class BuildingProperties(Base):
     number_of_floors = Column(Float, nullable=True)
     
     # Building characteristics
-    type = Column(String(50), nullable=True)
+    filter_res = Column(String(50), nullable=True)
     const_period_census = Column(String(10), nullable=True)
     const_year = Column(Integer, nullable=True)
     const_TABULA = Column(String(15), nullable=True)

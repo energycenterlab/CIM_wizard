@@ -280,6 +280,8 @@ def update_building_properties_in_database(
                 building_props.volume = float(property_values[i])
             elif property_name == 'number_of_floors':
                 building_props.number_of_floors = int(property_values[i])
+            elif property_name == 'filter_res':
+                building_props.filter_res = bool(property_values[i])
             
             building_props.updated_at = datetime.utcnow()
             updated_count += 1
@@ -301,7 +303,7 @@ async def execute_building_analysis(
     """
     Execute building analysis calculator chain.
     
-    This endpoint focuses on physical building properties:
+    This endpoint focuses on physical building properties and filtering:
     1. scenario_geo - Initialize scenario geometry from project boundary
     2. scenario_census_boundary - Get census boundary (simplified)
     3. building_geo - Extract buildings from the area
@@ -310,6 +312,7 @@ async def execute_building_analysis(
     6. building_area - Calculate building footprint areas
     7. building_volume - Calculate building volumes
     8. building_n_floors - Estimate number of floors from height
+    9. filter_res - Filter residential vs non-residential buildings
     
     Input:
     - project_boundary: GeoJSON FeatureCollection or Feature with the project boundary
@@ -320,6 +323,7 @@ async def execute_building_analysis(
     Returns:
     - Analysis results from the calculator chain
     - Database update status for each step
+    - Building classification (residential/non-residential)
     """
     try:
         # Get executor and data manager with DB session
@@ -409,6 +413,11 @@ async def execute_building_analysis(
                 "feature_name": "building_n_floors",
                 "method_name": "estimate_by_height",
                 "description": "Estimate number of floors from height"
+            },
+            {
+                "feature_name": "filter_res",
+                "method_name": "calculate_filter_res",
+                "description": "Filter residential vs non-residential buildings based on area, height and OSM tags"
             }
         ]
         
@@ -561,6 +570,28 @@ async def execute_building_analysis(
                                 db_update_status["updated_records"] = updated
                                 db_update_status["status"] = "success"
                         
+                        elif feature_name == "filter_res":
+                            # Update filter_res (residential filter) in database
+                            # Result is a dictionary with filter_res list
+                            if result and 'filter_res' in result:
+                                filter_values = result['filter_res']
+                                if filter_values:
+                                    building_geo_result = results.get('building_geo', {})
+                                    updated = update_building_properties_in_database(
+                                        db, project_id, scenario_id,
+                                        building_geo_result, 'filter_res', filter_values
+                                    )
+                                    db_update_status["updated_records"] = updated
+                                    db_update_status["status"] = "success"
+                                else:
+                                    db_update_status["updated_records"] = 0
+                                    db_update_status["status"] = "success"
+                                    db_update_status["note"] = "No filter_res values to update"
+                            else:
+                                db_update_status["updated_records"] = 0
+                                db_update_status["status"] = "success"
+                                db_update_status["note"] = "No filter_res data in result"
+                        
                         database_updates.append(db_update_status)
                         
                     except Exception as e:
@@ -601,7 +632,9 @@ async def execute_building_analysis(
                 "buildings_with_height": len(results.get('building_height', [])) if isinstance(results.get('building_height'), list) else 0,
                 "buildings_with_area": len(results.get('building_area', {}).get('building_properties', [])),
                 "buildings_with_volume": len(results.get('building_volume', {}).get('building_volumes', [])),
-                "buildings_with_floors": len(results.get('building_n_floors', {}).get('building_floors', []))
+                "buildings_with_floors": len(results.get('building_n_floors', {}).get('building_floors', [])),
+                "buildings_with_filter_res": results.get('filter_res', {}).get('total_buildings', 0) if results.get('filter_res') else 0,
+                "residential_buildings": results.get('filter_res', {}).get('residential_count', 0) if results.get('filter_res') else 0
             },
             "metadata": {
                 "total_steps": len(calculation_chain),

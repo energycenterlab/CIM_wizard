@@ -1,1 +1,3 @@
 # Calculator Classes Package
+
+from .building_residential_filter_calculator import BuildingResidentialFilterCalculator

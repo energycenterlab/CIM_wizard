@@ -780,7 +780,7 @@ class BuildingDemographicCalculator:
                             'area': float(building['area']) if pd.notnull(building['area']) else None,
                             'volume': float(building['volume']) if pd.notnull(building['volume']) else None,
                             'number_of_floors': int(building['number_of_floors']) if pd.notnull(building['number_of_floors']) else None,
-                            'type': building['building_type'],
+                            'filter_res': building['building_type'],
                             'const_period_census': building['const_period_census'] if pd.notnull(building['const_period_census']) else None,
                             'const_year': int(building['const_year']) if pd.notnull(building['const_year']) else None,
                             'const_TABULA': building['const_TABULA'] if pd.notnull(building['const_TABULA']) else None,
@@ -795,7 +795,7 @@ class BuildingDemographicCalculator:
                         props_obj.area = float(building['area']) if pd.notnull(building['area']) else None
                         props_obj.volume = float(building['volume']) if pd.notnull(building['volume']) else None
                         props_obj.number_of_floors = int(building['number_of_floors']) if pd.notnull(building['number_of_floors']) else None
-                        props_obj.type = building['building_type']
+                        props_obj.filter_res = building['building_type']
                         props_obj.const_period_census = building['const_period_census'] if pd.notnull(building['const_period_census']) else None
                         props_obj.const_year = int(building['const_year']) if pd.notnull(building['const_year']) else None
                         props_obj.const_TABULA = building['const_TABULA'] if pd.notnull(building['const_TABULA']) else None

@@ -204,6 +204,21 @@
         }
       ]
     },
+    "filter_res": {
+      "constraints": {
+        "datatype": "boolean",
+        "required": false
+      },
+      "class_path": "app.calculators.building_residential_filter_calculator",
+      "class_name": "BuildingResidentialFilterCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo", "building_area", "building_height"],
+          "method_name": "calculate_filter_res"
+        }
+      ]
+    },
     "building_construction_year": {
       "constraints": {
         "datatype": "int",
