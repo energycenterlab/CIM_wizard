@@ -116,7 +116,7 @@
       "methods": [
         {
           "priority": 1,
-          "input_dependencies": ["building_height", "building_area"],
+          "input_dependencies": ["building_height", "building_area", "filter_res"],
           "method_name": "calculate_from_height_and_area"
         }
       ]
@@ -132,7 +132,7 @@
       "methods": [
         {
           "priority": 1,
-          "input_dependencies": ["building_props"],
+          "input_dependencies": ["building_height", "filter_res"],
           "method_name": "estimate_by_height"
         }
       ]

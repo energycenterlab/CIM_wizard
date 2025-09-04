@@ -43,14 +43,16 @@ class BuildingAreaCalculator:
             last_five_logs = []  # Track last 5 for summary
             
             for idx, building in enumerate(buildings):
-                building_id = building.get('building_id')
-                lod = building.get('lod', 0)
+                # Extract building_id and lod from properties (GeoJSON format)
+                properties = building.get('properties', {})
+                building_id = properties.get('building_id')
+                lod = properties.get('lod', 0)
 
                 if not building_id:
                     self.pipeline.log_error(self.calculator_name, f"Building at index {idx} has no building_id - this should have been set by building_geo_calculator")
                     continue  # Skip buildings without IDs instead of generating new ones
                 
-                # Calculate area from geometry using proper geographic projection
+                # Calculate area from geometry using proper geographic projection (GeoJSON format)
                 geometry = building.get('geometry', {})
                 area = self._calculate_polygon_area(geometry)
                 

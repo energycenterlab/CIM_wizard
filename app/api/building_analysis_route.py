@@ -307,9 +307,9 @@ async def execute_building_analysis(
     4. building_props - Initialize building properties
     5. building_height - Calculate building heights
     6. building_area - Calculate building footprint areas
-    7. building_volume - Calculate building volumes
-    8. building_n_floors - Estimate number of floors from height
-    9. filter_res - Filter residential vs non-residential buildings
+    7. filter_res - Filter residential vs non-residential buildings
+    8. building_volume - Calculate building volumes (residential only)
+    9. building_n_floors - Estimate number of floors from height (residential only)
     
     Input:
     - project_boundary: GeoJSON FeatureCollection or Feature with the project boundary
@@ -402,19 +402,19 @@ async def execute_building_analysis(
                 "description": "Calculate building footprint areas"
             },
             {
+                "feature_name": "filter_res",
+                "method_name": "calculate_filter_res",
+                "description": "Filter residential vs non-residential buildings based on area, height and OSM tags"
+            },
+            {
                 "feature_name": "building_volume",
                 "method_name": "calculate_from_height_and_area",
-                "description": "Calculate building volumes"
+                "description": "Calculate building volumes (residential buildings only)"
             },
             {
                 "feature_name": "building_n_floors",
                 "method_name": "estimate_by_height",
-                "description": "Estimate number of floors from height"
-            },
-            {
-                "feature_name": "filter_res",
-                "method_name": "calculate_filter_res",
-                "description": "Filter residential vs non-residential buildings based on area, height and OSM tags"
+                "description": "Estimate number of floors from height (residential buildings only)"
             }
         ]
         

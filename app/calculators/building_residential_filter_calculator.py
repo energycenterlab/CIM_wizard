@@ -74,12 +74,14 @@ class BuildingResidentialFilterCalculator:
             buildings_data = []
             for i, building in enumerate(buildings):
                 if i < len(building_heights) and i < len(building_areas):
+                    # Extract properties from GeoJSON format
+                    properties = building.get('properties', {})
                     building_data = {
-                        'building_id': building.get('building_id'),
+                        'building_id': properties.get('building_id'),
                         'area': building_areas[i] if i < len(building_areas) else 0,
                         'height': building_heights[i] if i < len(building_heights) else 0,
-                        'building': building.get('properties', {}).get('building', 'yes'),
-                        'amenity': building.get('properties', {}).get('amenity', None)
+                        'building': properties.get('building', 'yes'),
+                        'amenity': properties.get('amenity', None)
                     }
                     buildings_data.append(building_data)
             

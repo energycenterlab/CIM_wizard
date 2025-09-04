@@ -19,6 +19,7 @@ class BuildingNFloorsCalculator:
             # Get building_geo and building_height data
             building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
             building_heights = self.pipeline.get_feature_safely('building_heights', calculator_name=self.calculator_name)  # Note: plural 'building_heights'
+            filter_res_data = self.pipeline.get_feature_safely('filter_res', calculator_name=self.calculator_name)
             
             if not building_geo:
                 self.pipeline.log_error(self.calculator_name, "No building_geo data available")
@@ -28,24 +29,46 @@ class BuildingNFloorsCalculator:
                 self.pipeline.log_error(self.calculator_name, "No building_height data available")
                 return None
             
+            if not filter_res_data:
+                self.pipeline.log_error(self.calculator_name, "No filter_res data available - floor calculation requires residential filter first")
+                return None
+            
             # Get buildings from building_geo
             buildings = building_geo.get('buildings', [])
             if not buildings:
                 self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
                 return None
             
+            # Get filter_res values (residential filter)
+            filter_res_values = filter_res_data.get('filter_res', [])
+            if not filter_res_values:
+                self.pipeline.log_error(self.calculator_name, "No filter_res values found in data")
+                return None
+            
             project_id = building_geo.get('project_id')
             scenario_id = building_geo.get('scenario_id')
             
-            self.pipeline.log_info(self.calculator_name, f"Estimating number of floors for {len(buildings)} buildings")
+            # Count residential buildings
+            residential_count = sum(1 for f in filter_res_values if f is True)
+            self.pipeline.log_info(self.calculator_name, f"Estimating number of floors for {residential_count} residential buildings (out of {len(buildings)} total)")
             
-            # Calculate number of floors for all buildings
+            # Calculate number of floors only for residential buildings
             building_floors = []
             processed_count = 0
+            skipped_count = 0
             last_five_logs = []  # Track last 5 for summary
             
             for i, building in enumerate(buildings):
                 building_id = building.get('building_id')
+                
+                # Check if this building is residential (filter_res = True)
+                is_residential = filter_res_values[i] if i < len(filter_res_values) else False
+                
+                if not is_residential:
+                    # Skip non-residential buildings - set floors to None
+                    building_floors.append(None)
+                    skipped_count += 1
+                    continue
                 
                 # Get height for this building
                 height = building_heights[i] if isinstance(building_heights, list) and i < len(building_heights) else 12.0
@@ -92,7 +115,7 @@ class BuildingNFloorsCalculator:
             if db_session and project_id and scenario_id:
                 self._save_floors_to_database(db_session, buildings, building_floors, project_id, scenario_id)
 
-            self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} buildings")
+            self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} residential buildings (skipped {skipped_count} non-residential)")
             return result
 
         except Exception as e:

@@ -287,7 +287,8 @@ class BuildingGeoCalculator:
                             osm_id = f"way/{element['id']}"
                             
                             # Generate consistent building_id based on OSM ID
-                            building_id = f"osm_way_{element['id']}"
+                            # Generate UUID for building_id (source-independent)
+                            building_id = str(uuid.uuid4())
                             
                             building = {
                                 'building_id': building_id,
@@ -423,7 +424,8 @@ class BuildingGeoCalculator:
                         
                         # Generate a consistent building_id based on OSM ID
                         # This ensures the same building always gets the same ID
-                        building_id = f"osm_{osm_id.replace('/', '_')}"
+                        # Generate UUID for building_id (source-independent)
+                        building_id = str(uuid.uuid4())
                         
                         building = {
                             'building_id': building_id,

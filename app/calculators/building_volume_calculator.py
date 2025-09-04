@@ -19,6 +19,7 @@ class BuildingVolumeCalculator:
             building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
             building_heights = self.pipeline.get_feature_safely('building_heights', calculator_name=self.calculator_name)  # Note: plural 'building_heights'
             building_area_data = self.pipeline.get_feature_safely('building_area', calculator_name=self.calculator_name)
+            filter_res_data = self.pipeline.get_feature_safely('filter_res', calculator_name=self.calculator_name)
             
             if not building_geo:
                 self.pipeline.log_error(self.calculator_name, "No building_geo data available")
@@ -32,6 +33,10 @@ class BuildingVolumeCalculator:
                 self.pipeline.log_error(self.calculator_name, "No building_area data available")
                 return None
             
+            if not filter_res_data:
+                self.pipeline.log_error(self.calculator_name, "No filter_res data available - volume calculation requires residential filter first")
+                return None
+            
             # Extract areas list from building_area_data
             building_areas = building_area_data.get('building_areas', [])
             if not building_areas:
@@ -43,6 +48,12 @@ class BuildingVolumeCalculator:
             if not building_areas:
                 self.pipeline.log_error(self.calculator_name, "No building areas found in data")
                 return None
+                
+            # Get filter_res values (residential filter)
+            filter_res_values = filter_res_data.get('filter_res', [])
+            if not filter_res_values:
+                self.pipeline.log_error(self.calculator_name, "No filter_res values found in data")
+                return None
             
             # Get buildings from building_geo
             buildings = building_geo.get('buildings', [])
@@ -53,17 +64,29 @@ class BuildingVolumeCalculator:
             project_id = building_geo.get('project_id')
             scenario_id = building_geo.get('scenario_id')
             
-            self.pipeline.log_info(self.calculator_name, f"Calculating building volumes for {len(buildings)} buildings")
+            # Count residential buildings
+            residential_count = sum(1 for f in filter_res_values if f is True)
+            self.pipeline.log_info(self.calculator_name, f"Calculating building volumes for {residential_count} residential buildings (out of {len(buildings)} total)")
             
-            # Calculate volumes for all buildings
+            # Calculate volumes only for residential buildings
             building_volumes = []
             processed_count = 0
+            skipped_count = 0
             
             # Track last 5 buildings for logging
             last_five_logs = []
             
             for i, building in enumerate(buildings):
                 building_id = building.get('building_id')
+                
+                # Check if this building is residential (filter_res = True)
+                is_residential = filter_res_values[i] if i < len(filter_res_values) else False
+                
+                if not is_residential:
+                    # Skip non-residential buildings - set volume to None
+                    building_volumes.append(None)
+                    skipped_count += 1
+                    continue
                 
                 # Get height and area for this building
                 height = building_heights[i] if isinstance(building_heights, list) and i < len(building_heights) else 12.0
@@ -115,7 +138,7 @@ class BuildingVolumeCalculator:
             if db_session and project_id and scenario_id:
                 self._save_volumes_to_database(db_session, buildings, building_volumes, project_id, scenario_id)
             
-            self.pipeline.log_info(self.calculator_name, f"Successfully calculated volumes for {processed_count} buildings")
+            self.pipeline.log_info(self.calculator_name, f"Successfully calculated volumes for {processed_count} residential buildings (skipped {skipped_count} non-residential)")
             return result
             
         except Exception as e:
