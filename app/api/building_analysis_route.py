@@ -393,8 +393,8 @@ async def execute_building_analysis(
             },
             {
                 "feature_name": "building_height",
-                "method_name": "calculate_from_raster_service",
-                "description": "Calculate building heights from integrated DSM/DTM rasters"
+                "method_name": "calculate_from_raster_tiles",
+                "description": "Calculate building heights from DSM-DTM raster tiles"
             },
             {
                 "feature_name": "building_area",

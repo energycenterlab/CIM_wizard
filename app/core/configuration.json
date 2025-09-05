@@ -75,17 +75,7 @@
         {
           "priority": 1,
           "input_dependencies": ["building_geo"],
-          "method_name": "calculate_from_raster_service"
-        },
-        {
-          "priority": 2,
-          "input_dependencies": ["building_geo"],
-          "method_name": "calculate_from_osm_height"
-        },
-        {
-          "priority": 3,
-          "input_dependencies": ["building_geo"],
-          "method_name": "calculate_default_estimate"
+          "method_name": "calculate_from_raster_tiles"
         }
       ]
     },

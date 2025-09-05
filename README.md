@@ -252,6 +252,7 @@ MIT
 
 install environment:
 pip install -r requirements.txt
+conda activate webgis
 
 sudo docker-compose -f docker-compose.db.yml up -d
 

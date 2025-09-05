@@ -126,8 +126,8 @@ async def execute_complete_chain(
             # === STEP 5: Calculate physical attributes (using integrated services) ===
             {
                 "feature_name": "building_height",
-                "method_name": "calculate_from_raster_service",  # Use the correct method name
-                "description": "Calculate building heights from integrated DSM/DTM rasters"
+                "method_name": "calculate_from_raster_tiles",
+                "description": "Calculate building heights from DSM-DTM raster tiles"
             },
             {
                 "feature_name": "building_area",
@@ -135,47 +135,54 @@ async def execute_complete_chain(
                 "description": "Calculate building footprint areas"
             },
             
-            # === STEP 6: Calculate derived attributes ===
+            # === STEP 6: Filter residential buildings ===
+            {
+                "feature_name": "filter_res",
+                "method_name": "calculate_filter_res",
+                "description": "Filter residential vs non-residential buildings based on area, height and OSM tags"
+            },
+            
+            # === STEP 7: Calculate derived attributes ===
             {
                 "feature_name": "building_volume",
                 "method_name": "calculate_from_height_and_area",
-                "description": "Calculate building volumes"
+                "description": "Calculate building volumes (residential buildings only)"
             },
             {
                 "feature_name": "building_n_floors",
                 "method_name": "estimate_by_height",
-                "description": "Estimate number of floors from height"
+                "description": "Estimate number of floors from height (residential buildings only)"
             },
             
-            # === STEP 7: Get census population ===
+            # === STEP 8: Get census population ===
             {
                 "feature_name": "census_population",
                 "method_name": "calculate_from_census_boundary",
                 "description": "Get total population from census zones"
             },
             
-            # === STEP 8: Building classification ===
+            # === STEP 9: Building classification ===
             {
                 "feature_name": "building_type",
                 "method_name": "by_tabula",  # Using Tabula typology
                 "description": "Determine building types using Tabula classification"
             },
             
-            # === STEP 9: Population distribution (uses ALL buildings in census) ===
+            # === STEP 10: Population distribution (uses ALL buildings in census) ===
             {
                 "feature_name": "building_population",
                 "method_name": "calculate_from_volume_distribution",
                 "description": "Distribute population based on building volume ratios"
             },
             
-            # === STEP 10: Family calculation ===
+            # === STEP 11: Family calculation ===
             {
                 "feature_name": "building_n_families",
                 "method_name": "calculate_from_population",
                 "description": "Calculate number of families per building"
             },
             
-            # === STEP 11: Additional attributes ===
+            # === STEP 12: Additional attributes ===
             {
                 "feature_name": "building_construction_year",
                 "method_name": "by_census_osm",

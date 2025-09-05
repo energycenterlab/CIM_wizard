@@ -18,7 +18,7 @@ class BuildingNFloorsCalculator:
         try:
             # Get building_geo and building_height data
             building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
-            building_heights = self.pipeline.get_feature_safely('building_heights', calculator_name=self.calculator_name)  # Note: plural 'building_heights'
+            building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)  # Note: singular 'building_height'
             filter_res_data = self.pipeline.get_feature_safely('filter_res', calculator_name=self.calculator_name)
             
             if not building_geo:
@@ -71,7 +71,16 @@ class BuildingNFloorsCalculator:
                     continue
                 
                 # Get height for this building
-                height = building_heights[i] if isinstance(building_heights, list) and i < len(building_heights) else 12.0
+                # Handle both list and dict structures for building_heights
+                if isinstance(building_heights, list) and i < len(building_heights):
+                    height = building_heights[i]
+                elif isinstance(building_heights, dict) and str(i) in building_heights:
+                    height = building_heights[str(i)]
+                elif isinstance(building_heights, dict) and i in building_heights:
+                    height = building_heights[i]
+                else:
+                    height = 12.0  # Default height
+                    self.pipeline.log_warning(self.calculator_name, f"Using default height for building {i}: {type(building_heights)}")
                 
                 if height is None or height <= 0:
                     self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_id} - invalid height: {height}")

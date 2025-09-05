@@ -669,7 +669,7 @@ async def execute_sansa_complete_chain(
             # === MILESTONE 2: Calculate physical attributes ===
             {
                 "feature_name": "building_height",
-                "method_name": "calculate_from_raster_service",
+                "method_name": "calculate_from_raster_tiles",
                 "description": "Calculate building heights from DSM/DTM rasters"
             },
             {
