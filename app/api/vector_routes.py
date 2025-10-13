@@ -177,7 +177,7 @@ async def get_buildings_geojson(
                     "height": props.height,
                     "area": props.area,
                     "volume": props.volume,
-                    "type": props.type,
+                    "filter_res": props.filter_res,
                     "n_people": props.n_people,
                     "n_family": props.n_family
                 }

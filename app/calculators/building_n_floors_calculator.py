@@ -16,92 +16,184 @@ class BuildingNFloorsCalculator:
     def estimate_by_height(self) -> Optional[Dict[str, Any]]:
         """Estimate number of floors by dividing height by 3 and rounding down"""
         try:
-            # Use the general context enrichment system
-            required_inputs = ['project_id', 'scenario_id', 'lod']
-            enriched_context = self.pipeline.enrich_context_from_inputs_or_database(required_inputs, self.calculator_name)
+            # Get building_geo and building_height data
+            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
+            building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)  # Note: singular 'building_height'
+            filter_res_data = self.pipeline.get_feature_safely('filter_res', calculator_name=self.calculator_name)
             
-            # Check if we have the critical inputs
-            if 'project_id' not in enriched_context or 'scenario_id' not in enriched_context:
-                self.pipeline.log_error(self.calculator_name, "Missing required project_id or scenario_id after context enrichment")
+            if not building_geo:
+                self.pipeline.log_error(self.calculator_name, "No building_geo data available")
                 return None
             
-            project_id = enriched_context['project_id']
-            scenario_id = enriched_context['scenario_id']
-            lod = enriched_context.get('lod', 0)
-
-            # Use the general database query method
-            building_props_queryset = self.pipeline.get_enriched_building_properties_from_database(
-                project_id=project_id,
-                scenario_id=scenario_id,
-                lod=lod,
-                required_fields=['height'],
-                calculator_name=self.calculator_name
-            )
-            
-            if not building_props_queryset or not building_props_queryset.exists():
-                self.pipeline.log_error(self.calculator_name, f"No BuildingProperties with height data found for project_id={project_id}, scenario_id={scenario_id}, lod={lod}")
+            if not building_heights:
+                self.pipeline.log_error(self.calculator_name, "No building_height data available")
                 return None
-
-            # Process ALL buildings instead of just the first one
-            building_properties_list = []
+            
+            if not filter_res_data:
+                self.pipeline.log_error(self.calculator_name, "No filter_res data available - floor calculation requires residential filter first")
+                return None
+            
+            # Get buildings from building_geo
+            buildings = building_geo.get('buildings', [])
+            if not buildings:
+                self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
+                return None
+            
+            # Get filter_res values (residential filter)
+            filter_res_values = filter_res_data.get('filter_res', [])
+            if not filter_res_values:
+                self.pipeline.log_error(self.calculator_name, "No filter_res values found in data")
+                return None
+            
+            project_id = building_geo.get('project_id')
+            scenario_id = building_geo.get('scenario_id')
+            
+            # Count residential buildings
+            residential_count = sum(1 for f in filter_res_values if f is True)
+            self.pipeline.log_info(self.calculator_name, f"Estimating number of floors for {residential_count} residential buildings (out of {len(buildings)} total)")
+            
+            # Calculate number of floors only for residential buildings
+            building_floors = []
             processed_count = 0
+            skipped_count = 0
+            last_five_logs = []  # Track last 5 for summary
             
-            try:
-                from django.db import transaction
+            for i, building in enumerate(buildings):
+                building_id = building.get('building_id')
                 
-                with transaction.atomic():
-                    for building_props_obj in building_props_queryset:
-                        height = building_props_obj.height
-                        
-                        if height is None or height <= 0:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_props_obj.building_id} - invalid height: {height}")
-                            continue
+                # Check if this building is residential (filter_res = True)
+                is_residential = filter_res_values[i] if i < len(filter_res_values) else False
+                
+                if not is_residential:
+                    # Skip non-residential buildings - set floors to None
+                    building_floors.append(None)
+                    skipped_count += 1
+                    continue
+                
+                # Get height for this building
+                # Handle both list and dict structures for building_heights
+                if isinstance(building_heights, list) and i < len(building_heights):
+                    height = building_heights[i]
+                elif isinstance(building_heights, dict) and str(i) in building_heights:
+                    height = building_heights[str(i)]
+                elif isinstance(building_heights, dict) and i in building_heights:
+                    height = building_heights[i]
+                else:
+                    height = 12.0  # Default height
+                    self.pipeline.log_warning(self.calculator_name, f"Using default height for building {i}: {type(building_heights)}")
+                
+                if height is None or height <= 0:
+                    self.pipeline.log_warning(self.calculator_name, f"Skipping building {building_id} - invalid height: {height}")
+                    continue
 
-                        # Calculate number of floors
-                        number_of_floors = math.floor(height / 3)
-                        
-                        # Update the database record
-                        building_props_obj.number_of_floors = number_of_floors
-                        building_props_obj.save()
-                        
-                        # Add to result list
-                        building_properties_list.append({
-                            'building_id': building_props_obj.building_id,
-                            'scenario_id': scenario_id,
-                            'lod': building_props_obj.lod,
-                            'number_of_floors': number_of_floors,
-                            'height': height  # Include height for reference
-                        })
-                        
-                        processed_count += 1
-                    
-                    self.pipeline.log_info(self.calculator_name, f"Processed number of floors for {processed_count} buildings")
-                    
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to process buildings from database: {str(e)}")
-                return None
-
+                # Calculate number of floors
+                number_of_floors = math.floor(height / 3)
+                building_floors.append(number_of_floors)
+                processed_count += 1
+                
+                # Track last 5 for logging
+                log_msg = f"Building {building_id}: {number_of_floors} floors (height: {height:.1f}m)"
+                last_five_logs.append(log_msg)
+                if len(last_five_logs) > 5:
+                    last_five_logs.pop(0)
+            
             if processed_count == 0:
                 self.pipeline.log_error(self.calculator_name, "No buildings were processed successfully")
                 return None
+            
+            # Log last 5 samples
+            if last_five_logs:
+                self.pipeline.log_info(self.calculator_name, "Last 5 building floor counts:")
+                for log_msg in last_five_logs:
+                    self.pipeline.log_info(self.calculator_name, f"  {log_msg}")
 
             # Create result
             result = {
                 'project_id': project_id,
                 'scenario_id': scenario_id,
-                'building_properties': building_properties_list
+                'building_floors': building_floors,
+                'processed_count': processed_count
             }
 
-            # Store result
-            self.pipeline.store_result('building_n_floors', result)
+            # Store result in data manager
+            self.data_manager.set_feature('building_n_floors', result)
+            self.data_manager.set_feature('building_floors', building_floors)  # Also store list
+            
+            # Save to database immediately
+            db_session = getattr(self.data_manager, 'db_session', None)
+            if db_session and project_id and scenario_id:
+                self._save_floors_to_database(db_session, buildings, building_floors, project_id, scenario_id)
 
-            self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} buildings")
+            self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} residential buildings (skipped {skipped_count} non-residential)")
             return result
 
         except Exception as e:
             self.pipeline.log_calculation_failure(self.calculator_name, 'estimate_by_height', str(e))
             return None
 
+    def _save_floors_to_database(self, db_session, buildings, floors, project_id, scenario_id):
+        """Save calculated floor counts to database"""
+        try:
+            from app.models.vector import BuildingProperties
+            from sqlalchemy import and_
+            
+            updated_count = 0
+            created_count = 0
+            
+            for building, n_floors in zip(buildings, floors):
+                building_id = building.get('building_id')
+                if not building_id:
+                    continue
+                
+                lod = building.get('lod', 0)
+                
+                try:
+                    # Query with all composite key fields
+                    props = db_session.query(BuildingProperties).filter(
+                        and_(
+                            BuildingProperties.building_id == building_id,
+                            BuildingProperties.project_id == project_id,
+                            BuildingProperties.scenario_id == scenario_id,
+                            BuildingProperties.lod == lod
+                        )
+                    ).first()
+                    
+                    if props:
+                        if props.number_of_floors != n_floors:  # Only update if different
+                            props.number_of_floors = n_floors
+                            db_session.add(props)  # Mark as dirty
+                            updated_count += 1
+                    else:
+                        # Create if doesn't exist
+                        new_props = BuildingProperties(
+                            building_id=building_id,
+                            project_id=project_id,
+                            scenario_id=scenario_id,
+                            lod=lod,
+                            number_of_floors=n_floors
+                        )
+                        db_session.add(new_props)
+                        created_count += 1
+                
+                except Exception as e:
+                    self.pipeline.log_warning(self.calculator_name, 
+                        f"Failed to save floors for building {building_id}: {str(e)}")
+                    db_session.rollback()
+                    raise
+            
+            if updated_count > 0 or created_count > 0:
+                db_session.commit()
+                db_session.flush()  # Force write
+                self.pipeline.log_info(self.calculator_name, 
+                    f"Database commit complete: {updated_count} updated, {created_count} created")
+            else:
+                self.pipeline.log_warning(self.calculator_name, "No floor count changes to save")
+            
+        except Exception as e:
+            db_session.rollback()
+            self.pipeline.log_error(self.calculator_name, f"Failed to save floors to database: {str(e)}")
+            raise
+    
     def save_to_database(self) -> bool:
         """Save building number of floors to database"""
         try:

@@ -46,6 +46,31 @@ class CimWizardPipelineExecutor:
         """Log debug message"""
         print(f"DEBUG {calculator_name}: {message}")
     
+    def log_calculation_failure(self, calculator_name: str, method_name: str, error_message: str):
+        """Log calculation failure with method and error details"""
+        print(f"ERROR {calculator_name}.{method_name}: {error_message}")
+    
+    def log_calculation_success(self, calculator_name: str, method_name: str, result: Any, additional_info: str = ""):
+        """Log calculation success with method and result details"""
+        print(f"SUCCESS {calculator_name}.{method_name}: {additional_info}")
+    
+    def validate_geometry(self, value: Any, name: str, calculator_name: str = "Validation") -> bool:
+        """Validate geometry value"""
+        if value is None:
+            self.log_error(calculator_name, f"Missing required geometry: {name}")
+            return False
+        
+        # Basic geometry validation - check if it has required fields
+        if isinstance(value, dict):
+            if 'type' in value and 'coordinates' in value:
+                return True
+            elif 'geometry' in value and isinstance(value['geometry'], dict):
+                if 'type' in value['geometry'] and 'coordinates' in value['geometry']:
+                    return True
+        
+        self.log_error(calculator_name, f"Invalid geometry format for {name}")
+        return False
+    
     # === VALIDATION SERVICES ===
     
     def validate_input(self, value: Any, name: str, calculator_name: str = "Validation") -> bool:
@@ -128,8 +153,8 @@ class CimWizardPipelineExecutor:
             
             calculator_class = getattr(module, class_name)
             
-            # Create instance with executor and data_manager
-            calculator_instance = calculator_class(self, self.data_manager)
+            # Create instance with executor only (data_manager is accessed through executor)
+            calculator_instance = calculator_class(self)
             
             # Cache the instance
             self.calculator_cache[feature_name] = calculator_instance
@@ -151,6 +176,46 @@ class CimWizardPipelineExecutor:
             if value is None:
                 return False
         return True
+    
+    def get_feature_safely(self, feature_name: str, calculator_name: str = "PipelineExecutor"):
+        """Safely get a feature from the data manager with error handling"""
+        try:
+            return self.data_manager.get_feature(feature_name)
+        except Exception as e:
+            self.log_warning(calculator_name, f"Failed to get feature {feature_name}: {str(e)}")
+            return None
+    
+    def enrich_context_from_inputs_or_database(self, required_inputs: List[str], calculator_name: str = "PipelineExecutor") -> Dict[str, Any]:
+        """Enrich context with required inputs from data manager or database"""
+        enriched_context = {}
+        
+        for input_name in required_inputs:
+            # Try to get from data manager first
+            value = self.data_manager.get_feature(input_name)
+            if value is not None:
+                enriched_context[input_name] = value
+                continue
+            
+            # Try to get from context
+            value = getattr(self.data_manager, input_name, None)
+            if value is not None:
+                enriched_context[input_name] = value
+                continue
+            
+            # Try to get from database if we have a session
+            if hasattr(self.data_manager, 'db_session') and self.data_manager.db_session:
+                try:
+                    # This is a simplified version - you might need to implement specific database queries
+                    # based on your models
+                    self.log_warning(calculator_name, f"Database lookup for {input_name} not implemented")
+                except Exception as e:
+                    self.log_warning(calculator_name, f"Database lookup failed for {input_name}: {str(e)}")
+            
+            # If still not found, log warning
+            if input_name not in enriched_context:
+                self.log_warning(calculator_name, f"Required input {input_name} not found")
+        
+        return enriched_context
     
     def get_required_features(self, target_features: List[str]) -> Set[str]:
         """Get all features required (including dependencies) for target features"""

@@ -42,55 +42,49 @@ class BuildingPropsCalculator:
             building_properties_list = []
             created_count = 0
             updated_count = 0
+            last_five_logs = []  # Track last 5 for summary
             
-            try:
-                from cim_wizard.models import BuildingProperties
-                from django.db import transaction
+            # Create building properties for each building (simplified for FastAPI)
+            for idx, building in enumerate(buildings):
+                building_id = building.get('building_id')
+                lod = building.get('lod', 0)
+
+                if not building_id:
+                    self.pipeline.log_error(self.calculator_name, f"Building at index {idx} has no building_id - this should have been set by building_geo_calculator")
+                    continue  # Skip buildings without IDs instead of generating new ones
+
+                # Create building properties object
+                building_props_obj = {
+                    'building_id': building_id,
+                    'scenario_id': scenario_id,
+                    'lod': lod,
+                    'height': None,
+                    'area': None,
+                    'volume': None,
+                    'number_of_floors': None
+                }
                 
-                with transaction.atomic():
-                    for building in buildings:
-                        building_id = building.get('building_id')
-                        lod = building.get('lod', 0)
+                created_count += 1
+                
+                # Add to result list
+                building_properties_list.append(building_props_obj)
+            
+            # Log last 5 samples
+            if last_five_logs:
+                self.pipeline.log_info(self.calculator_name, "Last 5 generated building IDs:")
+                for log_msg in last_five_logs:
+                    self.pipeline.log_info(self.calculator_name, f"  {log_msg}")
+            
+            self.pipeline.log_info(self.calculator_name, f"Created {created_count} building properties")
 
-                        if not building_id:
-                            self.pipeline.log_warning(self.calculator_name, f"Skipping building with missing building_id")
-                            continue
-
-                        # Create or get BuildingProperties for each building
-                        building_props_obj, created = BuildingProperties.objects.update_or_create(
-                            building_id=building_id,
-                            project_id=project_id,
-                            scenario_id=scenario_id,
-                            lod=lod,
-                            defaults={
-                                'height': None,
-                                'area': None,
-                                'volume': None,
-                                'number_of_floors': None
-                            }
-                        )
-                        
-                        if created:
-                            created_count += 1
-                        else:
-                            updated_count += 1
-                        
-                        # Add to result list
-                        building_properties_list.append({
-                            'building_id': building_id,
-                            'scenario_id': scenario_id,
-                            'lod': lod,
-                            'height': None,
-                            'area': None,
-                            'volume': None,
-                            'number_of_floors': None
-                        })
-                    
-                    self.pipeline.log_info(self.calculator_name, f"Created {created_count} new BuildingProperties, updated {updated_count} existing")
-                    
-            except Exception as e:
-                self.pipeline.log_error(self.calculator_name, f"Failed to save to database: {str(e)}")
-                return None
+            # Save to database if we have a db session
+            db_session = self.data_manager.db_session
+            if db_session:
+                self.pipeline.log_info(self.calculator_name, f"Database session available, saving {len(building_properties_list)} properties")
+                saved_count = self._save_props_to_database(db_session, project_id, scenario_id, building_properties_list)
+                self.pipeline.log_info(self.calculator_name, f"Saved {saved_count} building properties to database")
+            else:
+                self.pipeline.log_warning(self.calculator_name, "No database session available, skipping database save")
 
             # Create result with all building properties
             building_props = {
@@ -99,8 +93,8 @@ class BuildingPropsCalculator:
                 'building_properties': building_properties_list
             }
 
-            # Store result
-            self.pipeline.store_result('building_props', building_props)
+            # Store result in data manager
+            self.data_manager.set_feature('building_props', building_props)
 
             self.pipeline.log_calculation_success(self.calculator_name, 'init', f"Initialized {len(building_properties_list)} building properties")
             return building_props
@@ -108,6 +102,51 @@ class BuildingPropsCalculator:
         except Exception as e:
             self.pipeline.log_calculation_failure(self.calculator_name, 'init', str(e))
             return None
+
+    def _save_props_to_database(self, db_session, project_id, scenario_id, building_properties_list):
+        """Save building properties to database"""
+        from app.models.vector import BuildingProperties
+        from sqlalchemy import and_
+        from datetime import datetime
+        
+        saved_count = 0
+        for building_data in building_properties_list:
+            building_id = building_data['building_id']
+            lod = building_data.get('lod', 0)
+            
+            try:
+                # Check if record exists
+                props = db_session.query(BuildingProperties).filter(
+                    and_(
+                        BuildingProperties.building_id == building_id,
+                        BuildingProperties.project_id == project_id,
+                        BuildingProperties.scenario_id == scenario_id,
+                        BuildingProperties.lod == lod
+                    )
+                ).first()
+                
+                if not props:
+                    # Create new record
+                    props = BuildingProperties(
+                        building_id=building_id,
+                        project_id=project_id,
+                        scenario_id=scenario_id,
+                        lod=lod,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    db_session.add(props)
+                    saved_count += 1
+            except Exception as e:
+                self.pipeline.log_error(self.calculator_name, f"Failed to save properties for building {building_id}: {str(e)}")
+                db_session.rollback()
+                raise
+        
+        if saved_count > 0:
+            db_session.commit()
+            db_session.flush()
+        
+        return saved_count
 
     def save_to_database(self) -> bool:
         """Save building properties to database"""

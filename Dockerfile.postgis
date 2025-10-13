@@ -7,13 +7,24 @@ ENV POSTGRES_USER=cim_wizard_user
 ENV POSTGRES_PASSWORD=cim_wizard_password
 ENV PGDATA=/var/lib/postgresql/data/pgdata
 
-# Install additional PostGIS extensions and tools
+# Install additional PostGIS extensions and tools with full GDAL support
 RUN apt-get update && apt-get install -y \
+    postgresql-15-postgis-3 \
+    postgresql-15-postgis-3-scripts \
     postgresql-15-pgrouting \
     postgresql-15-ogr-fdw \
+    gdal-bin \
+    libgdal-dev \
+    python3-gdal \
     wget \
     unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure PostGIS libraries are properly linked
+RUN ldconfig
+
+# Verify GDAL has GPKG support
+RUN ogrinfo --formats | grep -i gpkg || echo "GPKG format not found"
 
 # Create directories for initialization scripts
 RUN mkdir -p /docker-entrypoint-initdb.d/

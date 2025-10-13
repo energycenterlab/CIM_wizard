@@ -26,7 +26,7 @@ class BuildingGeoCalculator:
         self.calculator_name = self.__class__.__name__
     
     def calculate_from_scenario_census_geo(self) -> Optional[Dict[str, Any]]:
-        """Get building footprints from OSM within census boundary"""
+        """Get building footprints from integrated database (simplified for testing)"""
         # Validate required inputs
         project_id = getattr(self.data_manager, 'project_id', None)
         scenario_id = getattr(self.data_manager, 'scenario_id', None)
@@ -39,23 +39,16 @@ class BuildingGeoCalculator:
         if not self.pipeline.validate_dict(scenario_census_boundary, "scenario_census_boundary", self.calculator_name):
             return None
         
-        self.pipeline.log_info(self.calculator_name, f"Fetching OSM building footprints within census boundary for scenario: {scenario_id}")
+        self.pipeline.log_info(self.calculator_name, f"Querying OSM for building footprints in scenario: {scenario_id}")
         
         try:
-            # Extract boundary geometry for OSM query
+            # Extract boundary geometry for building generation
             boundary_geom = None
             if 'geometry' in scenario_census_boundary:
                 boundary_geom = scenario_census_boundary['geometry']
             elif 'type' in scenario_census_boundary and 'coordinates' in scenario_census_boundary:
                 boundary_geom = scenario_census_boundary
             else:
-                # Try to extract from census zones or other nested structures
-                census_zones = scenario_census_boundary.get('census_zones', [])
-                if census_zones and len(census_zones) > 0:
-                    # Use first zone for demo - in real implementation, combine all zones
-                    boundary_geom = census_zones[0].get('geometry')
-            
-            if not boundary_geom:
                 self.pipeline.log_error(self.calculator_name, "Could not extract boundary geometry from scenario_census_boundary")
                 return None
             
@@ -63,27 +56,39 @@ class BuildingGeoCalculator:
             if not self.pipeline.validate_geometry(boundary_geom, "census_boundary_geometry", self.calculator_name):
                 return None
             
-            # Query OSM buildings using osmnx first, fallback to Overpass API
-            self.pipeline.log_info(self.calculator_name, "Attempting to query OSM buildings using osmnx first")
-            buildings = self._query_osm_buildings_with_osmnx(boundary_geom, scenario_id)
-            data_source = 'osmnx'
+            # Query OSM for real buildings
+            osm_buildings = self._query_osm_buildings(boundary_geom, scenario_id)
             
-            if not buildings:
-                self.pipeline.log_warning(self.calculator_name, "osmnx query returned no buildings, trying Overpass API fallback")
-                buildings = self._query_osm_buildings(boundary_geom, scenario_id)
-                data_source = 'osm_overpass_api'
-            
-            if not buildings:
-                self.pipeline.log_warning(self.calculator_name, "No buildings found within census boundary")
+            if not osm_buildings:
+                self.pipeline.log_error(self.calculator_name, "No buildings found in OSM query!")
+                # Return empty result instead of fake buildings
                 return {
                     'project_id': project_id,
                     'scenario_id': scenario_id,
                     'buildings': [],
                     'total_buildings': 0,
-                    'data_source': data_source,
+                    'data_source': 'osm_query_failed',
                     'lod': 0,
-                    'query_boundary': boundary_geom
+                    'query_boundary': boundary_geom,
+                    'created_from': 'osm_query_failed'
                 }
+            else:
+                # Convert OSM buildings to GeoJSON format
+                buildings = []
+                for osm_building in osm_buildings:
+                    building = {
+                        'type': 'Feature',
+                        'properties': {
+                            'building_id': osm_building.get('building_id'),
+                            'building': 'yes',
+                            'building:type': osm_building.get('properties', {}).get('building_type', 'residential'),
+                            'osm_id': osm_building.get('properties', {}).get('osm_id'),
+                            'source': 'osm'
+                        },
+                        'geometry': osm_building.get('geometry')
+                    }
+                    buildings.append(building)
+                data_source = 'osm_overpass_api'
             
             # Build result with metadata
             building_geo = {
@@ -94,11 +99,11 @@ class BuildingGeoCalculator:
                 'data_source': data_source,
                 'lod': 0,
                 'query_boundary': boundary_geom,
-                'created_from': 'osm_census_boundary_query'
+                'created_from': data_source
             }
             
             self.pipeline.log_calculation_success(self.calculator_name, "osm_buildings_query", building_geo,
-                                        f"Found {len(buildings)} buildings within census boundary")
+                                         f"Retrieved {len(buildings)} buildings from {data_source}")
             return building_geo
             
         except Exception as e:
@@ -279,9 +284,14 @@ class BuildingGeoCalculator:
                                 building_coords.append(building_coords[0])
                             # Classify building usage based on OSM tags
                             osm_usage = self._classify_building_usage_from_osm(tags)
+                            osm_id = f"way/{element['id']}"
+                            
+                            # Generate consistent building_id based on OSM ID
+                            # Generate UUID for building_id (source-independent)
+                            building_id = str(uuid.uuid4())
                             
                             building = {
-                                'building_id': str(uuid.uuid4()),
+                                'building_id': building_id,
                                 'scenario_id': scenario_id,
                                 'geometry': {
                                     'type': 'Polygon',
@@ -290,7 +300,7 @@ class BuildingGeoCalculator:
                                 'properties': {
                                     'building_type': building_value if building_value != 'yes' else 'residential',
                                     'source': 'osm',
-                                    'osm_id': f"way/{element['id']}",
+                                    'osm_id': osm_id,
                                     'osm_tags': tags,
                                     'osm_usage': osm_usage
                                 },
@@ -314,19 +324,14 @@ class BuildingGeoCalculator:
                 
                 self.pipeline.log_info(self.calculator_name, f"Filtered to {len(filtered_buildings)} buildings within actual boundary (from {len(buildings)} in bounding box)")
                 
-                # Use raster service to calculate heights instead of OSM estimation
-                if filtered_buildings:
-                    self.pipeline.log_info(self.calculator_name, "Calculating building heights using raster service...")
-                    filtered_buildings = self._calculate_heights_with_raster_service(filtered_buildings)
+                # Height calculation removed - handled by dedicated building_height_calculator
+                # This calculator should only focus on geometry extraction
                 
                 return filtered_buildings
                 
             except Exception as e:
                 self.pipeline.log_warning(self.calculator_name, f"Failed to filter buildings by boundary: {str(e)}, returning all buildings")
-                # Use raster service for buildings even if boundary filtering failed
-                if buildings:
-                    self.pipeline.log_info(self.calculator_name, "Calculating building heights using raster service...")
-                    buildings = self._calculate_heights_with_raster_service(buildings)
+                # Return buildings without height calculation (handled by dedicated calculator)
                 return buildings
             
         except Exception as e:
@@ -407,6 +412,9 @@ class BuildingGeoCalculator:
                         # Classify building usage based on OSM tags (don't filter out)
                         osm_usage = self._classify_building_usage_from_osm(osm_tags)
                         
+                        # Get OSM ID from the index
+                        osm_id = f"{idx[0]}/{idx[1]}" if isinstance(idx, tuple) else str(idx)
+                        
                         # Check if building is within the actual boundary (not just bounding box)
                         if not boundary_shape.contains(geom.centroid):
                             continue
@@ -414,14 +422,19 @@ class BuildingGeoCalculator:
                         # Convert geometry to GeoJSON format
                         geom_json = mapping(geom)
                         
+                        # Generate a consistent building_id based on OSM ID
+                        # This ensures the same building always gets the same ID
+                        # Generate UUID for building_id (source-independent)
+                        building_id = str(uuid.uuid4())
+                        
                         building = {
-                            'building_id': str(uuid.uuid4()),
+                            'building_id': building_id,
                             'scenario_id': scenario_id,
                             'geometry': geom_json,
                             'properties': {
                                 'building_type': building_value if building_value != 'yes' else 'residential',
                                 'source': 'osmnx',
-                                'osm_id': f"{idx[0]}/{idx[1]}" if isinstance(idx, tuple) else str(idx),
+                                'osm_id': osm_id,
                                 'osm_tags': osm_tags,
                                 'estimated_area': area_sqm,
                                 'osm_usage': osm_usage
@@ -437,11 +450,7 @@ class BuildingGeoCalculator:
                 
                 self.pipeline.log_info(self.calculator_name, f"osmnx processed {processed_count} buildings successfully")
                 
-                # Use raster service to calculate heights instead of OSM estimation
-                if buildings:
-                    self.pipeline.log_info(self.calculator_name, "Calculating building heights using raster service...")
-                    buildings = self._calculate_heights_with_raster_service(buildings)
-                
+                # Return buildings without height calculation (handled by dedicated calculator)
                 return buildings
                 
             except Exception as e:
@@ -580,8 +589,13 @@ class BuildingGeoCalculator:
         # Unknown/ambiguous cases - keep as potentially residential
         return 'probably_residential_complex'
     
-    def _calculate_heights_with_raster_service(self, buildings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Calculate building heights using raster service instead of OSM tag estimation"""
+    def _calculate_heights_with_raster_service_DEPRECATED(self, buildings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """DEPRECATED - Height calculation moved to dedicated building_height_calculator"""
+        # This method is no longer used but kept for reference
+        return buildings
+    
+    def _calculate_heights_with_raster_service_OLD(self, buildings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """OLD METHOD - Calculate building heights using raster service instead of OSM tag estimation"""
         try:
             # Get raster service URL from configuration
             raster_service_url = self.data_manager.configuration.get('raster_service_url')

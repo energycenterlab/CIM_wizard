@@ -1,28 +1,34 @@
 """
-Census Population Calculator
+Census Population Calculator - Independent class with pipeline executor injection
 """
-from typing import Optional
-from ..simplified_base_feature import CimWizardBaseFeature
+from typing import Optional, Dict, Any
 
 
-class CensusPopulationCalculator(CimWizardBaseFeature):
+class CensusPopulationCalculator:
     """Calculate census population"""
+    
+    def __init__(self, pipeline_executor):
+        self.pipeline = pipeline_executor
+        self.data_manager = pipeline_executor.data_manager
+        self.calculator_name = self.__class__.__name__
     
     def calculate_from_census_boundary(self) -> Optional[float]:
         """Calculate total population from census boundary data"""
-        if not self._validate_input(self.context.scenario_census_boundary, "scenario_census_boundary"):
-            return None
-        
-        self._log_info("Calculating population from census boundary")
-        
         try:
-            census_boundary = self.context.scenario_census_boundary
+            # Get scenario_census_boundary from data manager
+            census_boundary = self.pipeline.get_feature_safely('scenario_census_boundary', calculator_name=self.calculator_name)
+            
+            if not census_boundary:
+                self.pipeline.log_error(self.calculator_name, "No scenario_census_boundary data available")
+                return None
+            
+            self.pipeline.log_info(self.calculator_name, "Calculating population from census boundary")
             
             # Get total population from census boundary
             total_population = census_boundary.get('total_population', 0)
             
             if total_population > 0:
-                self._log_info(f"Found total population: {total_population}")
+                self.pipeline.log_info(self.calculator_name, f"Found total population: {total_population}")
                 return float(total_population)
             
             # If no total population, sum from zones
@@ -30,12 +36,12 @@ class CensusPopulationCalculator(CimWizardBaseFeature):
             zone_population = sum(zone.get('population', 0) for zone in census_zones)
             
             if zone_population > 0:
-                self._log_info(f"Calculated population from zones: {zone_population}")
+                self.pipeline.log_info(self.calculator_name, f"Calculated population from zones: {zone_population}")
                 return float(zone_population)
             
-            self._log_error("No population data found in census boundary")
+            self.pipeline.log_error(self.calculator_name, "No population data found in census boundary")
             return None
             
         except Exception as e:
-            self._log_error(f"Failed to calculate census population: {str(e)}")
+            self.pipeline.log_error(self.calculator_name, f"Failed to calculate census population: {str(e)}")
             return None 

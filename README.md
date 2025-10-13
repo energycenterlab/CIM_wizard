@@ -244,4 +244,75 @@ This approach prioritizes **clarity and simplicity** over robustness, making the
 
 ## License
 
-[Your License Here]
+MIT
+
+
+
+
+
+install environment:
+pip install -r requirements.txt
+conda activate webgis
+
+sudo docker-compose -f docker-compose.db.yml up -d
+
+docker compose -f docker-compose.db.yml down
+
+
+export DATABASE_URL="postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated"
+
+export POSTGRES_HOST="localhost"
+export POSTGRES_PORT="5433"
+export POSTGRES_DB="cim_wizard_integrated"
+export POSTGRES_USER="cim_wizard_user"
+export POSTGRES_PASSWORD="cim_wizard_password"
+
+# Then run uvicorn
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+
+
+
+
+DATABASE_URL=postgresql://cim_wizard_user:cim_wizard_password@localhost:5433/cim_wizard_integrated uvicorn main:app --host 0.0.0.0 --port 8000
+
+
+
+
+method1:
+# Copy the development environment
+cp env.development .env
+
+# Start the application
+./start_app.sh dev
+
+method2:
+# Set environment variables
+export DATABASE_URL="postgresql://user:pass@host:port/db"
+export DEBUG=True
+export PORT=9000
+
+
+
+Method3:
+# Override settings for a single run
+DATABASE_URL="postgresql://user:pass@host:port/db" PORT=9000 ./start_app.sh dev
+
+for closing the dockerized database session
+sudo docker compose -f docker-compose.db.yml down
+
+
+# Basic shutdown (stops and removes containers)
+docker compose -f docker-compose.db.yml down
+
+# Remove volumes as well (⚠️ This will delete your database data!)
+docker compose -f docker-compose.db.yml down -v
+
+# Remove images as well
+docker compose -f docker-compose.db.yml down --rmi all
+
+# Force remove (doesn't wait for graceful shutdown)
+docker compose -f docker-compose.db.yml down --timeout 0
+
+# Remove orphaned containers
+docker compose -f docker-compose.db.yml down --remove-orphans

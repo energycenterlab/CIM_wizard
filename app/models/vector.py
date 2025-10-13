@@ -3,7 +3,7 @@ Vector data models for CIM Wizard Integrated
 Uses cim_vector schema
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger, func
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger, func, ForeignKeyConstraint
 from sqlalchemy.orm import relationship
 from geoalchemy2 import Geometry
 from app.db.database import Base
@@ -39,9 +39,7 @@ class ProjectScenario(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    building_properties = relationship("BuildingProperties", back_populates="project_scenario")
-    grid_buses = relationship("GridBus", back_populates="project_scenario")
-    grid_lines = relationship("GridLine", back_populates="project_scenario")
+    # Note: All relationships removed due to missing foreign key constraints in database schema
 
 
 class Building(Base):
@@ -49,12 +47,9 @@ class Building(Base):
     __tablename__ = 'building'
     __table_args__ = {'schema': 'cim_vector'}
     
-    # Primary key
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    
-    # Building identification
-    building_id = Column(String(100), nullable=False, index=True)
-    lod = Column(Integer, default=0)
+    # Primary key (using building_id as natural key)
+    building_id = Column(String(100), primary_key=True)
+    lod = Column(Integer, default=0, primary_key=True)
     
     # Spatial data
     building_geometry = Column(Geometry('GEOMETRY', srid=4326), index=True)
@@ -70,26 +65,30 @@ class Building(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationships
-    properties = relationship("BuildingProperties", back_populates="building")
+    # Relationships (using building_id instead of foreign key)
+    # properties = relationship("BuildingProperties", back_populates="building")
 
 
 class BuildingProperties(Base):
     """Building properties model"""
     __tablename__ = 'building_properties'
-    __table_args__ = {'schema': 'cim_vector'}
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['building_id', 'lod'],
+            ['cim_vector.building.building_id', 'cim_vector.building.lod']
+        ),
+        ForeignKeyConstraint(
+            ['project_id', 'scenario_id'],
+            ['cim_vector.project_scenario.project_id', 'cim_vector.project_scenario.scenario_id']
+        ),
+        {'schema': 'cim_vector'}
+    )
     
-    # Primary key
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    
-    # Composite identification
-    building_id = Column(String(100), nullable=False, index=True)
-    project_id = Column(String(100), ForeignKey('cim_vector.project_scenario.project_id'))
-    scenario_id = Column(String(100), ForeignKey('cim_vector.project_scenario.scenario_id'))
-    lod = Column(Integer, default=0)
-    
-    # Foreign key to Building
-    building_fk = Column(Integer, ForeignKey('cim_vector.building.id'))
+    # Composite primary key with foreign key constraints
+    building_id = Column(String(100), primary_key=True)
+    lod = Column(Integer, default=0, primary_key=True)  
+    project_id = Column(String(100), primary_key=True)
+    scenario_id = Column(String(100), primary_key=True)
     
     # Physical properties
     height = Column(Float, nullable=True)
@@ -98,7 +97,7 @@ class BuildingProperties(Base):
     number_of_floors = Column(Float, nullable=True)
     
     # Building characteristics
-    type = Column(String(50), nullable=True)
+    filter_res = Column(Boolean, nullable=True)
     const_period_census = Column(String(10), nullable=True)
     const_year = Column(Integer, nullable=True)
     const_TABULA = Column(String(15), nullable=True)
@@ -126,13 +125,8 @@ class BuildingProperties(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationships
-    building = relationship("Building", back_populates="properties")
-    project_scenario = relationship("ProjectScenario", 
-                                  foreign_keys=[project_id, scenario_id],
-                                  primaryjoin="and_(BuildingProperties.project_id==ProjectScenario.project_id, "
-                                           "BuildingProperties.scenario_id==ProjectScenario.scenario_id)",
-                                  back_populates="building_properties")
+    # Relationships (using building_id instead of foreign key)
+    # building = relationship("Building", back_populates="properties")
 
 
 class GridBus(Base):
@@ -148,8 +142,8 @@ class GridBus(Base):
     bus_id = Column(Integer)
     
     # Foreign keys
-    project_id = Column(String(100), ForeignKey('cim_vector.project_scenario.project_id'))
-    scenario_id = Column(String(100), ForeignKey('cim_vector.project_scenario.scenario_id'))
+    project_id = Column(String(100), nullable=True)
+    scenario_id = Column(String(100), nullable=True)
     
     # Spatial and properties
     geometry = Column(Geometry('POINT', srid=4326), nullable=True, index=True)
@@ -163,11 +157,7 @@ class GridBus(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    project_scenario = relationship("ProjectScenario",
-                                  foreign_keys=[project_id, scenario_id],
-                                  primaryjoin="and_(GridBus.project_id==ProjectScenario.project_id, "
-                                           "GridBus.scenario_id==ProjectScenario.scenario_id)",
-                                  back_populates="grid_buses")
+    # Note: project_scenario relationship removed due to missing foreign key constraints
 
 
 class GridLine(Base):
@@ -183,8 +173,8 @@ class GridLine(Base):
     line_id = Column(Integer)
     
     # Foreign keys
-    project_id = Column(String(100), ForeignKey('cim_vector.project_scenario.project_id'))
-    scenario_id = Column(String(100), ForeignKey('cim_vector.project_scenario.scenario_id'))
+    project_id = Column(String(100), nullable=True)
+    scenario_id = Column(String(100), nullable=True)
     
     # Spatial and properties
     geometry = Column(Geometry('LINESTRING', srid=4326), nullable=True, index=True)
@@ -199,8 +189,4 @@ class GridLine(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    project_scenario = relationship("ProjectScenario",
-                                  foreign_keys=[project_id, scenario_id],
-                                  primaryjoin="and_(GridLine.project_id==ProjectScenario.project_id, "
-                                           "GridLine.scenario_id==ProjectScenario.scenario_id)",
-                                  back_populates="grid_lines")
+    # Note: project_scenario relationship removed due to missing foreign key constraints

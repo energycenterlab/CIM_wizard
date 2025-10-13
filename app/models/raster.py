@@ -3,7 +3,7 @@ Raster data models for CIM Wizard Integrated
 Uses cim_raster schema
 """
 
-from sqlalchemy import Column, String, Integer, DateTime, func, LargeBinary
+from sqlalchemy import Column, String, Integer, DateTime, func, LargeBinary, Float
 from sqlalchemy.dialects.postgresql import BYTEA
 from app.db.database import Base
 
@@ -97,8 +97,6 @@ class DSMRaster(Base):
     def __str__(self):
         return f"DSM: {self.filename}"
 
-
-from sqlalchemy import Float
 
 class BuildingHeightCache(Base):
     """Cache for calculated building heights from raster data"""

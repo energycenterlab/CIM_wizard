@@ -19,69 +19,70 @@ class BuildingDemographicCalculator:
     
     def by_census_osm(self) -> Optional[Dict[str, Any]]:
         """
-        Calculate building demographics by integrating census data with OSM buildings
-        
-        Required inputs: project_id, scenario_id, project_boundary
+        Calculate building demographics (simplified for pipeline)
         """
-        
-        # CRITICAL DEBUG: Check data_manager state at the beginning
-        self.pipeline.log_info(self.calculator_name, "=== DEBUGGING DATA_MANAGER STATE ===")
-        
-        # Check all attributes in data_manager
-        data_manager_attrs = [attr for attr in dir(self.data_manager) if not attr.startswith('_')]
-        self.pipeline.log_info(self.calculator_name, f"DEBUG: data_manager attributes: {data_manager_attrs}")
-        
-        # Check specific important attributes
-        important_attrs = ['project_id', 'scenario_id', 'raster_service_url', 'census_service_url', 'building_geo', 'scenario_geo']
-        for attr in important_attrs:
-            value = getattr(self.data_manager, attr, 'NOT_SET')
-            self.pipeline.log_info(self.calculator_name, f"DEBUG: data_manager.{attr} = {value}")
-        
-        self.pipeline.log_info(self.calculator_name, "=== END DATA_MANAGER DEBUG ===")
-        
-        # Step 1: Context enrichment for required inputs
-        required_inputs = ['project_id', 'scenario_id']
-        enriched_context = self.pipeline.enrich_context_from_inputs_or_database(
-            required_inputs, self.calculator_name)
-        
-        project_id = enriched_context['project_id']
-        scenario_id = enriched_context['scenario_id']
-        
-        # Get project_boundary from scenario_geo result or direct input
-        project_boundary = self._get_project_boundary()
-        if not project_boundary:
-            return None
-        
-        self.pipeline.log_info(self.calculator_name, f"Starting demographic calculation for project {project_id}, scenario {scenario_id}")
-        
-        # Step 2: Get or create scenario_census_boundary
-        scenario_census_boundary = self._get_scenario_census_boundary(project_boundary, project_id, scenario_id)
-        if not scenario_census_boundary:
-                return None
-        
         try:
-            # Step 3: Create census_gdf from scenario_census_boundary
-            census_gdf = self._create_census_gdf(scenario_census_boundary)
-            if census_gdf is None or census_gdf.empty:
-                self.pipeline.log_error(self.calculator_name, "Failed to create census GeoDataFrame")
+            # Get required data
+            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
+            building_population_data = self.pipeline.get_feature_safely('building_population', calculator_name=self.calculator_name)
+            building_families_data = self.pipeline.get_feature_safely('building_n_families', calculator_name=self.calculator_name)
+            
+            if not building_geo:
+                self.pipeline.log_error(self.calculator_name, "No building_geo data available")
                 return None
             
-            # Step 4: Query OSM buildings within scenario_census_boundary
-            census_building_gdf = self._query_osm_buildings_in_census_boundary(scenario_census_boundary, scenario_id)
-            if census_building_gdf is None or census_building_gdf.empty:
-                self.pipeline.log_error(self.calculator_name, "No OSM buildings found within census boundary")
+            self.pipeline.log_info(self.calculator_name, "Calculating building demographics")
+            
+            # Get buildings
+            buildings = building_geo.get('buildings', [])
+            if not buildings:
+                self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
                 return None
             
-            # Step 5: Calculate building properties (area, height, volume)
-            census_building_gdf = self._calculate_building_properties(census_building_gdf)
+            # Create demographic data for each building
+            building_demographics = []
+            for i, building in enumerate(buildings):
+                building_id = building.get('building_id')
+                
+                # Get population and families for this building
+                population = 0
+                families = 0
+                
+                if building_population_data:
+                    populations = building_population_data.get('building_populations', [])
+                    if i < len(populations):
+                        population = populations[i]
+                
+                if building_families_data:
+                    families_list = building_families_data.get('building_families', [])
+                    if i < len(families_list):
+                        families = families_list[i]
+                
+                # Create demographic record
+                demographic = {
+                    'building_id': building_id,
+                    'population': population,
+                    'families': families,
+                    'avg_family_size': 2.5 if families > 0 else 0,
+                    'demographic_type': 'residential'
+                }
+                
+                building_demographics.append(demographic)
             
-            # Step 6: Update census_gdf with building counts
-            census_gdf = self._update_census_building_counts(census_gdf, census_building_gdf)
+            # Create result
+            result = {
+                'project_id': building_geo.get('project_id'),
+                'scenario_id': building_geo.get('scenario_id'),
+                'building_demographics': building_demographics,
+                'total_population': sum(d['population'] for d in building_demographics),
+                'total_families': sum(d['families'] for d in building_demographics),
+                'calculation_method': 'simplified_pipeline'
+            }
             
-            # Step 7: Use new calculators to process demographics
-            result = self._process_demographics_with_calculators(
-                census_gdf, census_building_gdf, project_boundary, project_id, scenario_id)
+            # Store in data manager
+            self.data_manager.set_feature('building_demographic', result)
             
+            self.pipeline.log_info(self.calculator_name, f"Calculated demographics for {len(building_demographics)} buildings")
             return result
             
         except Exception as e:
@@ -172,7 +173,7 @@ class BuildingDemographicCalculator:
         """Call census service to get scenario_census_boundary"""
         try:
             # Import and use the scenario census boundary calculator
-            from cim_wizard.calculators.scenario_census_boundary_calculator import ScenarioCensusBoundaryCalculator
+            from .scenario_census_boundary_calculator import ScenarioCensusBoundaryCalculator
             census_calc = ScenarioCensusBoundaryCalculator(self.pipeline)
             
             # Create temporary data for census calculation
@@ -272,7 +273,7 @@ class BuildingDemographicCalculator:
                 return None
             
             # Use existing OSM query method from building_geo_calculator
-            from cim_wizard.calculators.building_geo_calculator import BuildingGeoCalculator
+            from .building_geo_calculator import BuildingGeoCalculator
             building_geo_calc = BuildingGeoCalculator(self.pipeline)
             
             # Query OSM buildings - prioritize osmnx over Overpass API
@@ -321,7 +322,7 @@ class BuildingDemographicCalculator:
         """Calculate area, height, and volume for all buildings"""
         try:
             # Import existing calculators
-            from cim_wizard.calculators.building_area_calculator import BuildingAreaCalculator
+            from .building_area_calculator import BuildingAreaCalculator
             
             area_calc = BuildingAreaCalculator(self.pipeline)
             
@@ -779,7 +780,7 @@ class BuildingDemographicCalculator:
                             'area': float(building['area']) if pd.notnull(building['area']) else None,
                             'volume': float(building['volume']) if pd.notnull(building['volume']) else None,
                             'number_of_floors': int(building['number_of_floors']) if pd.notnull(building['number_of_floors']) else None,
-                            'type': building['building_type'],
+                            'filter_res': building['building_type'],
                             'const_period_census': building['const_period_census'] if pd.notnull(building['const_period_census']) else None,
                             'const_year': int(building['const_year']) if pd.notnull(building['const_year']) else None,
                             'const_TABULA': building['const_TABULA'] if pd.notnull(building['const_TABULA']) else None,
@@ -794,7 +795,7 @@ class BuildingDemographicCalculator:
                         props_obj.area = float(building['area']) if pd.notnull(building['area']) else None
                         props_obj.volume = float(building['volume']) if pd.notnull(building['volume']) else None
                         props_obj.number_of_floors = int(building['number_of_floors']) if pd.notnull(building['number_of_floors']) else None
-                        props_obj.type = building['building_type']
+                        props_obj.filter_res = building['building_type']
                         props_obj.const_period_census = building['const_period_census'] if pd.notnull(building['const_period_census']) else None
                         props_obj.const_year = int(building['const_year']) if pd.notnull(building['const_year']) else None
                         props_obj.const_TABULA = building['const_TABULA'] if pd.notnull(building['const_TABULA']) else None

@@ -13,10 +13,11 @@ services:
     ports:
       - "5433:5432"
 
-    # Persist data in cim_db folder (portable) and mount init scripts
+    # Persist data in cim_db folder (portable) and mount init scripts and raw data
     volumes:
       - ./cim_db:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d:ro
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./rawdata:/rawdata:ro
 
     # Database configuration
     environment:
