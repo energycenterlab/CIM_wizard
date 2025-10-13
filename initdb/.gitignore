@@ -1,0 +1,19 @@
+# Ignore all files in initdb folder except the template files
+# This allows you to have local initialization scripts without committing them
+
+# Ignore all SQL files by default
+*.sql
+
+# But keep the template files (uncomment the ones you want to track)
+# !01-init-database.sql
+# !02-create-sample-data.sql
+
+# Ignore any temporary files
+*.tmp
+*.bak
+*.log
+
+# Ignore any data files
+*.csv
+*.json
+*.xml
