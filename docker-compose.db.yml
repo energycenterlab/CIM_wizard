@@ -16,7 +16,7 @@ services:
     # Persist data in cim_db folder (portable) and mount init scripts and raw data
     volumes:
       - ./cim_db:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./initdb:/docker-entrypoint-initdb.d:ro
       - ./rawdata:/rawdata:ro
 
     # Database configuration
