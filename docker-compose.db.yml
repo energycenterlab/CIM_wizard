@@ -1,22 +1,20 @@
-# CIM Wizard PostGIS Database - Portable Setup
-# This configuration creates a PostGIS database with persistent data in cim_db folder
-# Easy to move between servers by copying the docker-compose file and cim_db folder
+# CIM Wizard PostGIS Database - Clean Setup for Manual Configuration
+# This configuration creates a clean PostGIS database for manual setup
+# No pgAdmin included - use local pgAdmin or QGIS for database management
 
 services:
   db:
     # Use standard PostGIS image for better portability
     image: postgis/postgis:15-3.4
-    container_name: integrateddb
+    container_name: cim_wizard_integrated
     restart: unless-stopped
 
     # Publish DB on host port 5433
     ports:
       - "5433:5432"
 
-    # Persist data in cim_db folder (portable) and mount init scripts and raw data
+    # Mount raw data for access (no init scripts - manual setup)
     volumes:
-      - ./cim_db:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d:ro
       - ./rawdata:/rawdata:ro
 
     # Database configuration
@@ -37,33 +35,6 @@ services:
     # Network configuration
     networks:
       - cim_network
-
-  # pgAdmin for database management
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: cim_wizard_pgadmin
-    restart: unless-stopped
-    
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@cimwizard.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    
-    ports:
-      - "5050:80"
-    
-    depends_on:
-      - db
-    
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    
-    networks:
-      - cim_network
-
-volumes:
-  pgadmin_data:
-    name: cim_wizard_pgadmin_data
 
 networks:
   cim_network:
