@@ -1,0 +1,43 @@
+# CIM Wizard Database Image
+# This Dockerfile extends the pre-loaded CIM database image
+# Base image contains all data: DSM (Sansalva), DTM (Torino), Building Vector (Sansalva), Census (Torino)
+
+FROM taherdoust/cim:vector-census-raster-sansalva-purged
+
+# Set database credentials
+ENV POSTGRES_DB=cim_wizard_integrated
+ENV POSTGRES_USER=cim_wizard_user
+ENV POSTGRES_PASSWORD=cim_wizard_password
+ENV PGDATA=/var/lib/postgresql/data/pgdata
+
+# All data and schemas are already loaded in the base image
+# This Dockerfile can be used to add additional configurations or tools if needed
+
+# Example: Add additional tools or configurations
+# RUN apt-get update && apt-get install -y additional-tool && rm -rf /var/lib/apt/lists/*
+
+# Example: Add custom initialization scripts
+# COPY custom-scripts/ /docker-entrypoint-initdb.d/
+
+# The base image already includes:
+# - All CIM data pre-loaded
+# - PostGIS extensions
+# - Optimized PostgreSQL configuration
+# - GDAL support
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+
+# Add labels for documentation
+LABEL maintainer="CIM Wizard Team"
+LABEL description="PostGIS database with pre-loaded CIM data: DSM (Sansalva), DTM (Torino), Building Vector (Sansalva), Census (Torino)"
+LABEL version="1.0"
+LABEL data.dsm="Sansalva region"
+LABEL data.dtm="Torino region" 
+LABEL data.buildings="Sansalva region"
+LABEL data.census="Torino region"
+LABEL data.network="With and without PV configurations"
