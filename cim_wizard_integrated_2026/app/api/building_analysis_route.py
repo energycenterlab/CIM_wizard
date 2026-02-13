@@ -295,6 +295,8 @@ def update_building_properties_in_database(
                     building_props.const_period_census = str(value)
                 elif property_name == 'const_tabula':
                     building_props.const_tabula = str(value)
+                elif property_name == 'filter_res':
+                    building_props.filter_res = bool(value)
             except (ValueError, TypeError) as e:
                 print(f"Warning: Skipping invalid value for {property_name} on building {building_id}: {value} ({e})")
                 continue

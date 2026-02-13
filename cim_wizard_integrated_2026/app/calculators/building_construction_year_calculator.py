@@ -49,20 +49,96 @@ class BuildingConstructionYearCalculator:
     def by_census_osm(self, census_gdf: gpd.GeoDataFrame = None, buildings_gdf: gpd.GeoDataFrame = None) -> Optional[Dict[str, Any]]:
         """Distribute construction years E8-E16 to residential buildings and calculate related features"""
         
-        # If called without arguments (from pipeline), return a simplified result
+        # If called without arguments (from pipeline), distribute using census data
         if census_gdf is None or buildings_gdf is None:
-            self.pipeline.log_info(self.calculator_name, "Called without arguments - returning default construction year data")
+            self.pipeline.log_info(self.calculator_name, "Pipeline mode: distributing construction years from census E8-E16 data")
             
-            # Return default construction year data
-            default_data = {
-                'const_period_census': 'E12',  # Default to 1971-1980
-                'const_year': 1975,            # Default year
-                'const_TABULA': 'TABULA_5'     # Default TABULA period
+            census_boundary = self.pipeline.get_feature_safely('scenario_census_boundary', calculator_name=self.calculator_name)
+            filter_res_data = self.pipeline.get_feature_safely('filter_res', calculator_name=self.calculator_name)
+            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
+            
+            if not census_boundary or not filter_res_data or not building_geo:
+                self.pipeline.log_error(self.calculator_name,
+                    "Required data not available (need scenario_census_boundary, filter_res, building_geo)")
+                return None
+            
+            filter_values = filter_res_data.get('filter_res', [])
+            buildings = building_geo.get('buildings', [])
+            num_buildings = len(buildings)
+            
+            # Extract E8-E16 counts from census zones
+            props = census_boundary.get('properties', {})
+            census_zones = (
+                census_boundary.get('census_zones', [])
+                or props.get('census_zones', [])
+            )
+            
+            period_keys = ['E8', 'E9', 'E10', 'E11', 'E12', 'E13', 'E14', 'E15', 'E16']
+            total_by_period = {k: 0 for k in period_keys}
+            for zone in census_zones:
+                zone_props = zone.get('properties', {})
+                for period in period_keys:
+                    total_by_period[period] += (zone_props.get(period, 0) or 0)
+            
+            total_census_buildings = sum(total_by_period.values())
+            self.pipeline.log_info(self.calculator_name,
+                f"Census E8-E16 totals: {total_by_period} (sum={total_census_buildings})")
+            
+            # Calculate percentage distribution
+            if total_census_buildings > 0:
+                percentages = {p: c / total_census_buildings for p, c in total_by_period.items() if c > 0}
+            else:
+                percentages = {'E12': 1.0}  # Default to 1971-1980
+            
+            # Identify residential building indices
+            residential_indices = [i for i in range(num_buildings) if i < len(filter_values) and filter_values[i]]
+            num_residential = len(residential_indices)
+            
+            self.pipeline.log_info(self.calculator_name,
+                f"Distributing construction years to {num_residential} residential buildings")
+            
+            # Create assignments for residential buildings based on census proportions
+            building_assignments = []
+            for period, pct in percentages.items():
+                count = round(pct * num_residential)
+                year_range = self.construction_year_ranges.get(period, (1970, 1980))
+                for _ in range(count):
+                    rand_year = random.randint(year_range[0], year_range[1])
+                    tabula_period = self._get_tabula_period(rand_year)
+                    building_assignments.append((period, rand_year, tabula_period))
+            
+            # Handle rounding discrepancies
+            while len(building_assignments) < num_residential:
+                rand_year = random.randint(1971, 1980)
+                building_assignments.append(('E12', rand_year, self._get_tabula_period(rand_year)))
+            building_assignments = building_assignments[:num_residential]
+            random.shuffle(building_assignments)
+            
+            # Build per-building lists (None for non-residential)
+            const_years = [None] * num_buildings
+            const_periods = [None] * num_buildings
+            const_tabulas = [None] * num_buildings
+            
+            for assign_idx, building_idx in enumerate(residential_indices):
+                if assign_idx < len(building_assignments):
+                    period, year, tabula = building_assignments[assign_idx]
+                    const_years[building_idx] = year
+                    const_periods[building_idx] = period
+                    const_tabulas[building_idx] = tabula
+            
+            assigned_count = sum(1 for y in const_years if y is not None)
+            self.pipeline.log_info(self.calculator_name,
+                f"Assigned construction year data to {assigned_count} residential buildings")
+            
+            result = {
+                'const_years': const_years,
+                'const_periods': const_periods,
+                'const_tabulas': const_tabulas,
+                'total_assigned': assigned_count,
             }
             
-            # Store in data manager
-            self.pipeline.data_manager.set_feature('building_construction_year', default_data)
-            return default_data
+            self.pipeline.data_manager.set_feature('building_construction_year', result)
+            return result
         
         # Original implementation for when called with arguments
         """Distribute construction years E8-E16 to residential buildings and calculate related features"""

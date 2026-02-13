@@ -17,19 +17,46 @@ class BuildingTypeCalculator:
     def by_census_osm(self, census_gdf: gpd.GeoDataFrame = None, buildings_gdf: gpd.GeoDataFrame = None) -> Optional[Dict[str, Any]]:
         """Determine building types using Tabula classification"""
         
-        # If called without arguments (from pipeline), return a simplified result
+        # If called without arguments (from pipeline), derive types from filter_res
         if census_gdf is None or buildings_gdf is None:
-            self.pipeline.log_info(self.calculator_name, "Called without arguments - returning default building type data")
+            self.pipeline.log_info(self.calculator_name, "Pipeline mode: deriving building types from filter_res")
             
-            # Return default building type data
-            default_data = {
-                'building_type': 'residential',  # Default type
-                'tabula_type': 'SFH'            # Default Tabula type
+            filter_res_data = self.pipeline.get_feature_safely('filter_res', calculator_name=self.calculator_name)
+            building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
+            
+            if not filter_res_data or not building_geo:
+                self.pipeline.log_error(self.calculator_name, "filter_res or building_geo not available")
+                return None
+            
+            filter_values = filter_res_data.get('filter_res', [])
+            buildings = building_geo.get('buildings', [])
+            num_buildings = len(buildings)
+            
+            # Build per-building type list from filter_res boolean values
+            building_types = []
+            for i in range(num_buildings):
+                if i < len(filter_values) and filter_values[i]:
+                    building_types.append('residential')
+                else:
+                    building_types.append('non-residential')
+            
+            residential_count = sum(1 for t in building_types if t == 'residential')
+            non_residential_count = num_buildings - residential_count
+            
+            self.pipeline.log_info(self.calculator_name,
+                f"Assigned building types: {residential_count} residential, "
+                f"{non_residential_count} non-residential out of {num_buildings} buildings")
+            
+            result = {
+                'building_types': building_types,
+                'total_buildings': num_buildings,
+                'residential_count': residential_count,
+                'non_residential_count': non_residential_count,
             }
             
             # Store in data manager
-            self.pipeline.data_manager.set_feature('building_type', default_data)
-            return default_data
+            self.pipeline.data_manager.set_feature('building_type', result)
+            return result
         
         # Original implementation for when called with arguments
         """Assign building types based on OSM usage + strict criteria: exclude non-residential OSM buildings, then height > 8 AND area > 100 = residential"""
