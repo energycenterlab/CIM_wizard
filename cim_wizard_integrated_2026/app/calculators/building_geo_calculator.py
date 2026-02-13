@@ -56,8 +56,8 @@ class BuildingGeoCalculator:
             if not self.pipeline.validate_geometry(boundary_geom, "census_boundary_geometry", self.calculator_name):
                 return None
             
-            # Query OSM for real buildings
-            osm_buildings = self._query_osm_buildings(boundary_geom, scenario_id)
+            # Query OSM for real buildings: try osmnx first (caching, more reliable), fall back to Overpass
+            osm_buildings = self._query_osm_buildings_with_osmnx(boundary_geom, scenario_id)
             
             if not osm_buildings:
                 self.pipeline.log_error(self.calculator_name, "No buildings found in OSM query!")
@@ -77,7 +77,10 @@ class BuildingGeoCalculator:
                 # Do NOT re-wrap into GeoJSON Feature format (that moves building_id into properties
                 # and downstream calculators like building_props_calculator expect it at top level)
                 buildings = osm_buildings
-                data_source = 'osm_overpass_api'
+                data_source = (
+                    'osmnx' if buildings and buildings[0].get('properties', {}).get('source') == 'osmnx'
+                    else 'osm_overpass_api'
+                )
             
             # Build result with metadata
             building_geo = {
@@ -223,14 +226,11 @@ class BuildingGeoCalculator:
             min_lon, max_lon = min(lons), max(lons)
             min_lat, max_lat = min(lats), max(lats)
             
-            # Construct Overpass QL query with better building filtering
+            # Construct Overpass QL query - buildings only (no building:part or
+            # relation to keep the payload small and avoid timeouts)
             overpass_query = f"""
-            [out:json][timeout:25];
-            (
-              way["building"]({min_lat},{min_lon},{max_lat},{max_lon});
-              way["building:part"]({min_lat},{min_lon},{max_lat},{max_lon});
-              relation["building"]({min_lat},{min_lon},{max_lat},{max_lon});
-            );
+            [out:json][timeout:120];
+            way["building"]({min_lat},{min_lon},{max_lat},{max_lon});
             out body;
             >;
             out skel qt;
@@ -252,7 +252,7 @@ class BuildingGeoCalculator:
                     try:
                         server_name = overpass_url.split("//")[1].split("/")[0]
                         self.pipeline.log_info(self.calculator_name, f"Attempt {attempt + 1}/{max_retries} via {server_name}")
-                        response = requests.post(overpass_url, data=overpass_query, timeout=60)
+                        response = requests.post(overpass_url, data=overpass_query, timeout=180)
                         
                         if response.status_code == 200:
                             osm_data = response.json()
@@ -457,6 +457,8 @@ class BuildingGeoCalculator:
                             'geometry': geom_json,
                             'properties': {
                                 'building_type': building_value if building_value != 'yes' else 'residential',
+                                'building': osm_tags.get('building', 'yes'),
+                                'amenity': osm_tags.get('amenity'),
                                 'source': 'osmnx',
                                 'osm_id': osm_id,
                                 'osm_tags': osm_tags,
