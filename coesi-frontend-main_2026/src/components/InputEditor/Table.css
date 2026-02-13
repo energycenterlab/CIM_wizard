@@ -1,0 +1,28 @@
+.table-buttons {
+  display: flex;
+  justify-content: flex-start; 
+  gap: 12px;
+  padding: 12px 24px;
+  flex-wrap: wrap;
+}
+
+.table-buttons button {
+  background-color: #fff;
+  color: #1e1e1e;
+  border: #1e1e1e;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.table-buttons button:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+.table-buttons button:disabled {
+  background-color: #777;
+  cursor: not-allowed;
+}

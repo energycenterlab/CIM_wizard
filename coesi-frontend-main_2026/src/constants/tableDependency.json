@@ -1,0 +1,23 @@
+{
+  "building_id": ["neighbours_ids"],
+  "census_id": ["usage", "tot_area_per_cens_id", "year_of_construction", "n_family"],
+  "height": ["volume", "n_floor"],
+  "volume": [],
+  "usage": [],
+  "area": ["volume", "gross_floor_area", "tot_area_per_cens_id"],
+  "n_floor": ["gross_floor_area"],
+  "gross_floor_area": ["net_leased_area"],
+  "net_leased_area": [],
+  "tot_area_per_cens_id": [],
+  "year_of_construction": ["construction_type", "tabula_id"],
+  "n_family": [],
+  "construction_type": [],
+  "w2w": [],
+  "cooling": [],
+  "heating": [],
+  "hvac_type": [],
+  "tabula_type": ["tabula_id"],
+  "tabula_id": [],
+  "neighbours_ids": ["neighbours_surfaces"],
+  "neighbours_surfaces": []
+}

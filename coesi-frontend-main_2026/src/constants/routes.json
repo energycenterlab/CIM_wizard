@@ -1,0 +1,14 @@
+{
+  "LOGIN": "/login",
+  "LANDING": "/*",
+  "PROJECTSDEMO": "/projects/userid",
+  "SCENARIOSDEMO": "/scenarios/projid==projname",
+  "SCENARIOS": "/scenarios",
+  "COSIMO": "/cosimo",
+  "PROFILE": "/profile",
+  "NODES": "/configuration",
+  "SIGNUP": "/signup",
+  "SHELPER": "http://192.168.177.23:8080",
+  "INPUTEDITORDEMO": "/projid==projname-sceid==scename-inputeditordemo",
+  "INPUTEDITOR": "/input-editor"
+}

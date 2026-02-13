@@ -1,0 +1,13 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+<mask id="mask0_247_1340" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="40" height="40">
+<rect width="40" height="40" fill="#D9D9D9"/>
+</mask>
+<g mask="url(#mask0_247_1340)">
+<mask id="mask1_247_1340" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="8" y="8" width="24" height="24">
+<rect x="8" y="8" width="24" height="24" fill="#D9D9D9"/>
+</mask>
+<g mask="url(#mask1_247_1340)">
+<path d="M13 29V13C13 12.45 13.1958 11.9792 13.5875 11.5875C13.9792 11.1958 14.45 11 15 11H25C25.55 11 26.0208 11.1958 26.4125 11.5875C26.8042 11.9792 27 12.45 27 13V29L20 26L13 29ZM15 25.95L20 23.8L25 25.95V13H15V25.95Z" fill="#1C1B1F"/>
+</g>
+</g>
+</svg>

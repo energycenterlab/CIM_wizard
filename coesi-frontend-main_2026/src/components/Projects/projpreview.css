@@ -1,0 +1,82 @@
+.project-card {
+  width: 260px!important;
+  height: 350px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: sans-serif;
+  overflow:auto;
+  margin: 5px!important;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.card-header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+
+.description {
+  font-size: 0.75rem;
+  color: #444;
+  margin-bottom: 6px;
+  max-height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.map-container {
+  height: 140px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.footer {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  height: 5px;
+  background-color: #eee;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #a4e244;
+  transition: width 0.4s ease;
+}
+
+.simulation-info {
+  display: flex;
+  justify-content: space-between;
+}
+
+.no-sim {
+  color: #aaa;
+  margin-top: 4px;
+}

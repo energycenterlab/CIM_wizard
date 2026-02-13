@@ -1,0 +1,20 @@
+{
+  "Buildings file": {
+      "type": [
+          "json",
+          "geojson"
+      ],
+      "prompt": "A json or geojson file for building information",
+      "config": {
+          "building id": null,
+          "census id": null,
+          "building height": null,
+          "number of floors": null,
+          "building usage": null,
+          "year of construction": null,
+          "number of family": null,
+          "construction type": null,
+          "population": null
+      }
+  }
+}

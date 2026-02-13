@@ -1,0 +1,304 @@
+.scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+  width: 100%;
+  justify-items: start;
+  justify-content: start;
+  align-items: flex-start;
+}
+
+.scenario-upload-row {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.scenario-upload-inner {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.scenario-upload-label-wrapper {
+  margin-right: 50px;
+  width: 100%;
+}
+
+.scenario-upload-label-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 7px;
+}
+
+.scenario-upload-label {
+  min-width: 100px;
+  text-align: left;
+}
+
+.scenario-upload-prompt {
+  color: #888;
+}
+
+.scenario-upload-file {
+  display: none;
+}
+
+.scenario-delete-btn {
+  margin-left: 10px;
+  padding: 5px;
+  background-color: red;
+  color: white;
+  border: none;
+  cursor: pointer;
+  max-height: 50px;
+  border-radius: 4px;
+}
+
+.scenario-file-configer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+}
+
+.scenario-file-configer-title {
+  font-weight: bold;
+}
+
+.scenario-file-configer-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.scenario-file-configer-select {
+  margin-left: 10px;
+}
+
+.scenario-generate-title {
+  margin-top: 5px;
+  margin-bottom: 3px;
+  font-weight: 500;
+}
+
+.scenario-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.scenario-checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* ========== NEW & UPDATED: SCENARIO NAME & TITLE ========== */
+.scenario-form-title, h3 {
+  margin-top: 0 !important;
+  margin-bottom: 18px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #25334d;
+  width: 100%;
+  text-align: left;
+}
+
+.scenario-name-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 28px;
+  /* Ensures scenario name area is on same alignment as upload box */
+}
+
+.scenario-name-label {
+  font-weight: normal;
+  color: #243146;
+  font-size: 1.05rem;
+  margin-bottom: 2px;
+}
+
+.scenario-name-input,
+.scenario-upload-dropbox {
+  width: 100%;
+  max-width: 600px;   /* keep both same max width */
+  margin-left: 0;
+  margin-right: 0;
+  display: block;
+  box-sizing: border-box;
+}
+
+.scenario-name-input {
+  font-size: 1.22rem;
+  border-radius: 12px;
+  border: 2px solid #ededed;
+  padding: 12px 18px;
+  background: #fafbfc;
+  color: #222;
+  outline: none;
+  transition: border 0.2s;
+  margin-bottom: 0;
+}
+.scenario-name-input:focus {
+  border: 2px solid #bbb;
+}
+
+/* ========== BUTTON BAR CENTERED BELOW FORM ========== */
+.scenario-form-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  margin-top: 22px;
+}
+
+.cancel-button {
+  background: white;
+  color: black;
+  border: 2px solid #777;
+  border-radius: 9px;
+  font-size: 1.07rem;
+  padding: 10px 34px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.cancel-button:hover,
+.cancel-button:focus {
+  background: #f0f0f0;
+  color: black;
+  border-color: #777;
+}
+.create-button {
+  background: #111;
+  color: #fff;
+  border-radius: 9px;
+  font-size: 1.07rem;
+  border: 2px solid #111;
+  padding: 10px 34px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.create-button:hover,
+.create-button:focus {
+  background: #444;
+  border-color: #111;
+}
+
+/* ========== DRAG-AND-DROP UPLOAD BOX ========== */
+.scenario-upload-dropbox {
+  height: 120px;
+  background: #f3f3f3;
+  border-radius: 20px;
+  margin: 4px 0 20px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #555;
+  font-size: 1.15rem;
+  text-align: center;
+  border: 2px dashed #bbb;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.18s, background 0.18s;
+}
+.scenario-upload-dropbox:hover {
+  border-color: #888;
+  background: #f7faff;
+}
+
+/* Optionally: center the entire form area */
+.scenario-form-wrapper {
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+
+.scenario-form-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 0 28px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.scenario-form-label {
+  font-weight: normal;
+  color: #243146;
+  font-size: 1.07rem;
+  padding-top: 4px;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.scenario-form-label small {
+  color: #888;
+  font-size: 0.97em;
+  font-weight: 400;
+  display: block;
+}
+
+.scenario-form-content {
+  width: 100%;
+  max-width: 600px;
+}
+
+.scenario-name-input {
+  width: 100%;
+  font-size: 1.22rem;
+  border-radius: 12px;
+  border: 2px solid #ededed;
+  padding: 12px 18px;
+  background: #fafbfc;
+  color: #222;
+  outline: none;
+  transition: border 0.2s;
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+.scenario-name-input:focus {
+  border: 2px solid #bbb;
+}
+
+.scenario-upload-dropbox {
+  width: 100%;
+  height: 120px;
+  background: #f3f3f3;
+  border-radius: 20px;
+  margin: 4px 0 20px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #555;
+  font-size: 1.15rem;
+  text-align: center;
+  border: 2px dashed #bbb;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.18s, background 0.18s;
+  max-width: 100%;
+}
+.scenario-upload-dropbox:hover {
+  border-color: #888;
+  background: #f7faff;
+}
+
+
+
+.scenario-name-input::placeholder {
+  font-size: 1.01rem;  /* Or whatever size you want */
+  color: #999;         /* Optional: makes placeholder a bit lighter */
+  opacity: 1;          /* Optional: fixes opacity in Firefox */
+}
+

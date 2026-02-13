@@ -1,0 +1,29 @@
+{
+"geometry_attributes": [
+    "building_id",
+    "area",
+    "height",
+    "n_floor",
+    "net_leased_area",
+    "gross_floor_area",
+    "neighbours_ids"
+],
+"demographic_attributes": [
+    "building_id",
+    "census_id",
+    "n_family",
+    "usage",
+    "year_of_construction",
+    "tot_area_per_cens_id"
+],
+"energy_attributes": [
+    "building_id",
+    "construction_type",
+    "w2w",
+    "cooling",
+    "heating",
+    "hvac_type",
+    "tabula_type",
+    "tabula_id"
+]
+}

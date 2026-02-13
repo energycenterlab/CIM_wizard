@@ -1,0 +1,47 @@
+.maplibregl-ctrl-attrib {
+  position: absolute; /* Ensures positioning relative to the map container */
+  bottom: 10px;       /* Adjust the spacing from the bottom */
+ right: 10px;  
+  padding: 4px 8px;   /* Add padding for better visibility */
+  border-radius: 4px; /* Optional: rounded corners */
+  z-index: 1;        /* Ensures it's above the map layers */
+}
+
+.mapboxgl-ctrl-top-left {
+  top: 10px;
+  left: 50%; 
+  transform: translateX(-50%);
+}
+
+.mapbox-gl-draw_ctrl-draw-btn {
+  background-color: orange; 
+  color: white;            
+  border-radius: 4px;      
+  border: 1px solid #ccc;   
+  padding: 5px;
+}
+
+.mapbox-gl-draw_ctrl-draw-btn:hover {
+  background-color: red; /* Change hover color */
+}
+
+.mapboxgl-ctrl-group {
+  position: relative;
+  bottom: 80px;
+  left: 0px;
+  width: 30px;
+  margin: 10px; /* Adjust spacing around the toolbox */
+}
+
+.deck-tooltip {
+  background-color:transparent !important
+}
+
+.deck-tooltip span {
+  background-color:transparent !important
+}
+
+/* For input elements inside the tooltip (if used) */
+.deck-tooltip input {
+  background-color:transparent !important
+}

@@ -1,0 +1,114 @@
+/* ================================
+   MapLibre & Draw control styling
+   ================================ */
+
+/* attribution control */
+.maplibregl-ctrl-attrib {
+  position: absolute; /* relative to map container */
+  bottom: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  z-index: 1;
+}
+
+/* reposition draw toolbox */
+.mapboxgl-ctrl-top-left {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* custom draw‑button styling */
+.mapbox-gl-draw_ctrl-draw-btn {
+  background-color: orange;
+  color: white;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  padding: 5px;
+}
+
+.mapbox-gl-draw_ctrl-draw-btn:hover {
+  background-color: red;
+}
+
+/* draw toolbox group wrapper */
+.mapboxgl-ctrl-group {
+  position: relative;
+  bottom: 80px;
+  left: 0;
+  width: 30px;
+  margin: 10px;
+}
+
+/* deck.gl tooltip transparency */
+.deck-tooltip {
+  background-color: transparent !important;
+}
+.deck-tooltip span {
+  background-color: transparent !important;
+}
+.deck-tooltip input {
+  background-color: transparent !important;
+}
+
+/* ================================
+   Responsive light‑border wrapper
+   around header + map canvas
+   ================================ */
+
+.map-wrapper {
+  border: 2px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 12;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  margin-top: 10px;
+}
+
+.map-wrapper__header {
+  padding: 5px 7px;
+  font-size: 12px;
+  font-weight: 400;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  flex: 0 0 auto;
+}
+
+.map-wrapper__map {
+  flex: 1 1 auto;
+  position: relative;
+}
+
+/* force the MapLibre canvas (#interactivemap) to fill the wrapper */
+.map-wrapper__map > #interactivemap {
+  position: absolute !important;
+  top:    0 !important;
+  left:   0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ===== Fallback for older browsers (no aspect-ratio) ===== */
+/*
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%;  / * 16:9 fallback * /
+}
+
+.map-wrapper__header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+}
+
+.map-wrapper__map {
+  position: absolute;
+  top: 40px;  / * adjust to header height * /
+  left: 0; right: 0; bottom: 0;
+}
+*/

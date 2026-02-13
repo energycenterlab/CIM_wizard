@@ -1,0 +1,223 @@
+/* Define default right sidebar width variable on :root scope fallback */
+:root {
+  --rightSidebarWidth: 370px;
+}
+
+/* Floating Toolbar - Positioned on the right side with margin from right sidebar */
+.floating-toolbar-container {
+  position: fixed;
+  bottom: 16px;
+  right: calc(var(--rightSidebarWidth) - 50px);
+  z-index: 15000;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.floating-toolbar-container .control-bar {
+  pointer-events: auto;
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.control-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.control-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-width: 40px;
+}
+
+.control-button:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.control-button.active {
+  background-color: #e0e0e0;
+  transform: scale(1.1);
+}
+
+.control-button img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.control-button.run {
+  background-color: #eeff00;
+  border-radius: 20px;
+  padding: 0 16px;
+  font-weight: bold;
+  color: black;
+  height: 35px;
+  width: auto; /* Override the fixed width from .control-button */
+  min-width: auto;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-button.run:hover {
+  background-color: #d4e600;
+  transform: scale(1.05);
+}
+
+.control-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 32px;
+  background-color: #ccc;
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+.vertical-divider img {
+  width: 1px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .floating-toolbar-container {
+    bottom: 15px;
+    max-width: 95vw;
+  }
+  
+  .control-bar {
+    gap: 6px;
+    padding: 6px 12px;
+  }
+  
+  .control-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+  
+  .control-button img {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .control-button.run {
+    height: 32px;
+    width: auto; /* Override fixed width */
+    padding: 0 12px;
+    font-size: 14px;
+  }
+  
+  .vertical-divider {
+    height: 28px;
+    margin: 0 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .floating-toolbar-container {
+    bottom: 10px;
+    max-width: 98vw;
+  }
+  
+  .control-bar {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+  
+  .control-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+  
+  .control-button img {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .control-button.run {
+    height: 28px;
+    width: auto; /* Override fixed width */
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  
+  .vertical-divider {
+    height: 24px;
+    margin: 0 2px;
+  }
+}
+
+/* Ensure toolbar is always visible and accessible */
+@media (max-height: 600px) {
+  .floating-toolbar-container {
+    bottom: 10px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .control-bar {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .control-bar {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+  
+  .control-button:hover {
+    background-color: #404040;
+  }
+  
+  .control-button.active {
+    background-color: #555;
+  }
+  
+  .vertical-divider {
+    background-color: #555;
+  }
+}
+
+@media (max-width: 1280px) {
+  .floating-toolbar-container {
+    right: calc(var(--rightSidebarWidth) - 50px); /* Maintain consistent margin */
+  }
+}

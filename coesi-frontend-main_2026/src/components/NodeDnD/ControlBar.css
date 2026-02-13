@@ -1,0 +1,57 @@
+.control-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.control-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.control-button:hover {
+  background-color: #f0f0f0;
+}
+
+.control-button.active {
+  background-color: #e0e0e0;
+}
+
+.control-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.control-button.run {
+  background-color: #eeff00;
+  border-radius: 20px;
+  padding: 0 16px;
+  font-weight: bold;
+  color: black;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 32px;
+  background-color: #ccc;
+  margin-left: 6px;
+  margin-right: 6px;
+}

@@ -1,0 +1,107 @@
+.pagecontainer {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mainbody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  display: block;
+}
+
+/* keep this */
+.main-content { 
+  padding: 20px 20px 0 20px; 
+}
+
+/* widths stay 100% */
+.pagecontainer,
+.mainbody,
+.landing-mainbody,
+.main-content { 
+  width: 100%; 
+}
+
+.landing-mainbody { 
+  display: block; 
+}
+
+/* Create a safe, centered container for landing pages */
+.landing-container {
+  display: block;
+  width: 100%;
+  max-width: 1280px;   /* adjust 1200–1440px as desired */
+  margin: 0 auto;      /* center horizontally */
+  padding-left: 24px;  /* side gutters */
+  padding-right: 24px;
+  box-sizing: border-box;
+}
+
+/* Full-bleed section wrapper: background spans screen width */
+.full-bleed {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  box-sizing: border-box;
+}
+
+/* Ensure all landing sections fill the container width */
+#hero-section,
+#intro-section,
+#publication-section,
+#details-section,
+#green-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Keep images inside the container */
+.landing-mainbody img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.project-container {
+  height: 100vh;
+  width: 100%; /* was 100vw */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.project-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.project-content {
+  height: 100%;
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 0 20px;
+}
+
+.project-drawer {
+  height: 100%;
+  overflow-y: auto;
+  background: #fff;
+  box-sizing: border-box;
+  transition: width 0.3s, min-width 0.3s, padding 0.3s, border 0.3s;
+  will-change: width, min-width, padding, border;
+}
+
+html, body { 
+  overflow-x: hidden; /* safety */
+}

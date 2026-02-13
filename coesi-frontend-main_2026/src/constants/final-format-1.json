@@ -1,0 +1,1130 @@
+{
+  "models": [
+    {
+      "name": "schedule",
+      "description": "Schedule for the internal setpoint temperature for building energy simulation",
+      "tags": [
+        "model",
+        "scheduler"
+      ],
+      "solver": "TimeBased_Solver",
+      "model_execution_cmd": "python mk_scheduler.py",
+      "simulator_names": [
+        "mk_scheduler.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "days",
+          "unit": "-",
+          "value": "2015-01-01 00:00:00",
+          "description": "total days of scheduling",
+          "tags": [],
+          "data_type": "datetime",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        }
+      ],
+      "input_variables": [],
+      "output_variables": [
+        {
+          "name": "Tset",
+          "description": "The Temperature Setpoint of the thermal zone",
+          "unit": "\u00b0C",
+          "start_value": "16",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [
+        {
+          "name": "schedule",
+          "description": "for each day, the schedule is a list of time and temperature set, with the format of 'hour:temperature'",
+          "unit": "-",
+          "default_value": "['0:16','6:20', '22:16']",
+          "data_type": "List(String)",
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "components": [],
+      "connections": []
+    },
+    {
+      "name": "battery",
+      "description": "battery simulator in FMU from Matlab/Simulink",
+      "tags": [
+        "model",
+        "battery system"
+      ],
+      "solver": "DAE_Solver",
+      "model_execution_cmd": "python mk_fmu_pyfmi.py",
+      "simulator_names": [
+        "mk_fmu_pyfmi.py",
+        "mk_fmu_fmpy.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "step_size",
+          "unit": "s",
+          "value": "600",
+          "description": "step-size (can be changed but depends on the solver, should be consistent and verified the convergence)",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "60",
+            "max": "-"
+          }
+        },
+        {
+          "name": "fmu_log",
+          "unit": "-",
+          "value": "0",
+          "description": "logging level of the FMU, from 0 to 7",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "0",
+            "max": "7"
+          }
+        }
+      ],
+      "input_variables": [
+        {
+          "name": "LoadINW",
+          "description": "load to the battery",
+          "unit": "Watt",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "GenINW",
+          "description": "generation to the battery",
+          "unit": "Watt",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "I",
+          "description": "Current of the battery",
+          "unit": "Amper",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "V",
+          "description": "Voltage of the battery",
+          "unit": "Voltage",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "SOC",
+          "description": "SOC of the battery",
+          "unit": "-",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "100"
+          },
+          "tags": []
+        },
+        {
+          "name": "PnetBatt",
+          "description": "Actual power from/to the battery (positive for load)",
+          "unit": "Watt",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "None",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [
+        {
+          "name": "fmu_name",
+          "description": "name of the fmu file",
+          "unit": "-",
+          "default_value": "batterysystem",
+          "data_type": "string",
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "SOCinit",
+          "description": "inital SOC value",
+          "unit": "-",
+          "default_value": "50",
+          "data_type": "float",
+          "range": {
+            "min": "0",
+            "max": "100"
+          },
+          "tags": []
+        }
+      ],
+      "components": [],
+      "connections": []
+    },
+    {
+      "name": "heat_pump",
+      "description": "heat pump simulator in FMU from Modelica",
+      "tags": [
+        "model",
+        "heat pump"
+      ],
+      "solver": "DAE_Solver",
+      "model_execution_cmd": "python mk_fmu_pyfmi.py",
+      "simulator_names": [
+        "mk_fmu_pyfmi.py",
+        "mk_fmu_fmpy.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "step_size",
+          "unit": "s",
+          "value": "300",
+          "description": "step-size (can be changed but depends on the solver, should be consistent and verified the convergence)",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "60",
+            "max": "-"
+          }
+        },
+        {
+          "name": "fmu_log",
+          "unit": "-",
+          "value": "0",
+          "description": "logging level of the FMU, from 0 to 7",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "0",
+            "max": "7"
+          }
+        }
+      ],
+      "input_variables": [
+        {
+          "name": "Tamb",
+          "description": "ambient temperature",
+          "unit": "\u00b0C",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        },
+        {
+          "name": "TroomSens",
+          "description": "Temperature of the room from sensor",
+          "unit": "\u00b0C",
+          "start_value": "15",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        },
+        {
+          "name": "Tset",
+          "description": "Temperature setpoint",
+          "unit": "\u00b0C",
+          "start_value": "20",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "COP",
+          "description": "Coefficient of performance",
+          "unit": "-",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "MV",
+          "description": "Manipulated Variable",
+          "unit": "-",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "Power",
+          "description": "Electrical Power",
+          "unit": "Watt",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "Qsensible",
+          "description": "Sensible Thermal Power",
+          "unit": "Watt",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [
+        {
+          "name": "fmu_name",
+          "description": "name of the fmu file",
+          "unit": "-",
+          "default_value": "HeatPump",
+          "data_type": "string",
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "contr_type",
+          "description": "control type",
+          "unit": "-",
+          "default_value": "PID",
+          "data_type": "string",
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "AW",
+          "description": "final value only with HeatPumpv12aw",
+          "unit": "-",
+          "default_value": 1.5,
+          "data_type": "float",
+          "range": {
+            "min": 1.5,
+            "max": 1.5
+          },
+          "tags": []
+        },
+        {
+          "name": "Td",
+          "description": "final value, at least 10 times the timestep 0.125*Tc",
+          "unit": "ms",
+          "default_value": 3000,
+          "data_type": "int",
+          "range": {
+            "min": 2800,
+            "max": 3000
+          },
+          "tags": []
+        },
+        {
+          "name": "Ti",
+          "description": "final value, 0.5*Tc",
+          "unit": "ms",
+          "default_value": 1500,
+          "data_type": "int",
+          "range": {
+            "min": 2200,
+            "max": 2800
+          },
+          "tags": []
+        },
+        {
+          "name": "k",
+          "description": "tuned using Ziegler\u2013Nichols method",
+          "unit": "-",
+          "default_value": 0.003,
+          "data_type": "float",
+          "range": {
+            "min": 0.001,
+            "max": 0.008
+          },
+          "tags": []
+        }
+      ],
+      "components": [],
+      "connections": []
+    },
+    {
+      "name": "building",
+      "description": "Building envelope simulator in FMU from EnergyPlus",
+      "tags": [
+        "model",
+        "building"
+      ],
+      "solver": "DAE_Solver",
+      "model_execution_cmd": "python mk_fmu_pyfmi.py",
+      "simulator_names": [
+        "mk_fmu_pyfmi.py",
+        "mk_fmu_fmpy.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "step_size",
+          "unit": "s",
+          "value": "600",
+          "description": "step-size (can be changed but depends on the solver, should be consistent and verified the convergence)",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "60",
+            "max": "-"
+          }
+        },
+        {
+          "name": "stop_time",
+          "unit": "s",
+          "value": "31536000",
+          "description": "fixed for Energyplus",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        },
+        {
+          "name": "fmu_log",
+          "unit": "-",
+          "value": "0",
+          "description": "logging level of the FMU, from 0 to 7",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "0",
+            "max": "7"
+          }
+        }
+      ],
+      "input_variables": [
+        {
+          "name": "Tbulb",
+          "description": "Temperature of the bulb",
+          "unit": "\u00b0C",
+          "start_value": "20",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        },
+        {
+          "name": "Tdew",
+          "description": "temperature of the dew",
+          "unit": "\u00b0C",
+          "start_value": "20",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        },
+        {
+          "name": "RH",
+          "description": "Relative Humidity",
+          "unit": "%",
+          "start_value": "50",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        },
+        {
+          "name": "Peo",
+          "description": "Number of People",
+          "unit": "-",
+          "start_value": "0",
+          "data_type": "int",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        },
+        {
+          "name": "Q",
+          "description": "Thermal Power input",
+          "unit": "Watt",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "-",
+            "max": "-"
+          },
+          "tags": []
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "Tamb",
+          "description": "ambient temperature",
+          "unit": "\u00b0C",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "TRooMea",
+          "description": "mean Temperature of the room",
+          "unit": "\u00b0C",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [
+        {
+          "name": "fmu_name",
+          "description": "name of the fmu file",
+          "unit": "-",
+          "default_value": "building_tia",
+          "data_type": "string",
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "components": [],
+      "connections": []
+    },
+    {
+      "name": "pv",
+      "description": "PV model based on pvsim",
+      "tags": [
+        "model",
+        "PV"
+      ],
+      "solver": "TimeBased_Solver",
+      "model_execution_cmd": "python mk_pvsim.py",
+      "simulator_names": [
+        "mk_pvsim.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "start_date",
+          "unit": "-",
+          "value": "2015-01-01 00:00:00",
+          "description": "start date",
+          "tags": [],
+          "data_type": "datetime",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        },
+        {
+          "name": "step_size",
+          "unit": "s",
+          "value": "900",
+          "description": "simulation step-size",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        }
+      ],
+      "input_variables": [
+        {
+          "name": "ghi",
+          "description": "global horizontal irradiance",
+          "unit": "W/m2",
+          "start_value": "100",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "T_ext",
+          "description": "The external temperature",
+          "unit": "\u00b0C",
+          "start_value": "25",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "power_dc",
+          "description": "Power DC output",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [
+        {
+          "name": "P_system",
+          "description": "System power",
+          "unit": "W",
+          "default_value": 5000,
+          "data_type": "int",
+          "range": {},
+          "tags": []
+        },
+        {
+          "name": "slope",
+          "description": "Surface slope",
+          "unit": "degrees",
+          "default_value": 35,
+          "data_type": "int",
+          "range": {},
+          "tags": []
+        }
+      ],
+      "components": [],
+      "connections": []
+    },
+    {
+      "name": "powernode",
+      "description": "a meter node to calculate the electrical balance",
+      "tags": [
+        "model",
+        "powernode"
+      ],
+      "solver": "TimeBased_Solver",
+      "model_execution_cmd": "python mk_metersim.py",
+      "simulator_names": [
+        "mk_metersim.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "collect_data",
+          "unit": "-",
+          "value": "false",
+          "description": "collect data flag",
+          "tags": [],
+          "data_type": "bool",
+          "range": {
+            "min": "0",
+            "max": "1"
+          }
+        },
+        {
+          "name": "step_size",
+          "unit": "s",
+          "value": "600",
+          "description": "simulation step-size",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        }
+      ],
+      "input_variables": [
+        {
+          "name": "Load",
+          "description": "load",
+          "unit": "W",
+          "start_value": "100",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "Prod",
+          "description": "Prod",
+          "unit": "W",
+          "start_value": "100",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "NetBatt",
+          "description": "actual Power Net from Battery",
+          "unit": "W",
+          "start_value": "100",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "Pnet",
+          "description": "Net power",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "Pprod",
+          "description": "Produced power",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "Pload",
+          "description": "Load power",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "Pnetbatt",
+          "description": "Net battery power",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [],
+      "components": [],
+      "connections": []
+    },
+    {
+      "name": "weather",
+      "description": "Timeseries of weather",
+      "tags": [
+        "model",
+        "timeseries"
+      ],
+      "solver": "TimeBased_Solver",
+      "model_execution_cmd": "python mk_timeseries.py",
+      "simulator_names": [
+        "mk_timeseries.py"
+      ],
+      "simulation_parameters": [
+        {
+          "name": "start_date",
+          "unit": "-",
+          "value": "2015-01-01 00:00:00",
+          "description": "initial date from the dataset",
+          "tags": [],
+          "data_type": "datetime",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        },
+        {
+          "name": "datafile",
+          "unit": "-",
+          "value": "meteo_mosaik.csv",
+          "description": "datasource to be used (csv)",
+          "tags": [],
+          "data_type": "string",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        },
+        {
+          "name": "stepsize",
+          "unit": "s",
+          "value": "900",
+          "description": "step size of the simulation",
+          "tags": [],
+          "data_type": "int",
+          "range": {
+            "min": "none",
+            "max": "none"
+          }
+        }
+      ],
+      "input_variables": [],
+      "output_variables": [
+        {
+          "name": "ghi",
+          "description": "global horizontal irradiance",
+          "unit": "W/m2",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        },
+        {
+          "name": "T_ext",
+          "description": "External temperature",
+          "unit": "\u00b0C",
+          "start_value": "20",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": []
+        }
+      ],
+      "model_parameters": [],
+      "components": [],
+      "connections": []
+    }
+  ],
+  "composite-models": [
+    {
+      "name": "building-hvac-system",
+      "description": "A complete building HVAC system with heat pump control",
+      "tags": [
+        "composite-model",
+        "building",
+        "hvac",
+        "control"
+      ],
+      "solver": null,
+      "model_execution_cmd": null,
+      "simulator_names": [],
+      "simulation_parameters": [],
+      "input_variables": [
+        {
+          "name": "target_temperature",
+          "description": "Desired temperature setpoint",
+          "unit": "°C",
+          "start_value": "22",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "15",
+            "max": "30"
+          },
+          "tags": [
+            "setpoint"
+          ]
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "room_temperature",
+          "description": "Actual room temperature",
+          "unit": "°C",
+          "start_value": "20",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "50"
+          },
+          "tags": [
+            "output"
+          ]
+        },
+        {
+          "name": "power_consumption",
+          "description": "Heat pump power consumption",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "none"
+          },
+          "tags": [
+            "energy"
+          ]
+        }
+      ],
+      "model_parameters": [],
+      "components": [
+        "schedule",
+        "weather",
+        "heat_pump",
+        "building"
+      ],
+      "connections": [
+        "schedule.Tset:heat_pump.Tset",
+        "weather.T_ext:heat_pump.Tamb",
+        "building.TRooMea:heat_pump.TroomSens",
+        "heat_pump.Qsensible:building.Q"
+      ]
+    },
+    {
+      "name": "pv-battery-system",
+      "description": "PV generation system with battery storage",
+      "tags": [
+        "composite-model",
+        "energy",
+        "renewable",
+        "storage"
+      ],
+      "solver": null,
+      "model_execution_cmd": null,
+      "simulator_names": [],
+      "simulation_parameters": [],
+      "input_variables": [],
+      "output_variables": [
+        {
+          "name": "battery_soc",
+          "description": "Battery state of charge",
+          "unit": "%",
+          "start_value": "50",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "100"
+          },
+          "tags": [
+            "status"
+          ]
+        },
+        {
+          "name": "net_power",
+          "description": "Net power to/from grid",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": [
+            "energy"
+          ]
+        }
+      ],
+      "model_parameters": [],
+      "components": [
+        "weather",
+        "powernode",
+        "battery",
+        "pv"
+      ],
+      "connections": [
+        "weather.ghi:pv.ghi",
+        "weather.T_ext:pv.T_ext",
+        "pv.power_dc:powernode.Prod",
+        "battery.PnetBatt:powernode.NetBatt",
+        "powernode.Pnet:battery.LoadINW"
+      ]
+    },
+    {
+      "name": "complete-energy-system",
+      "description": "Complete energy system with building, HVAC, PV and battery",
+      "tags": [
+        "composite-model",
+        "energy",
+        "building",
+        "hvac"
+      ],
+      "input_variables": [
+        {
+          "name": "temperature_setpoint",
+          "description": "Building temperature setpoint",
+          "unit": "°C",
+          "start_value": "22",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "15",
+            "max": "30"
+          },
+          "tags": [
+            "control"
+          ]
+        }
+      ],
+      "output_variables": [
+        {
+          "name": "grid_power",
+          "description": "Net power exchange with grid",
+          "unit": "W",
+          "start_value": "0",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "none",
+            "max": "none"
+          },
+          "tags": [
+            "energy"
+          ]
+        },
+        {
+          "name": "room_temperature",
+          "description": "Building room temperature",
+          "unit": "°C",
+          "start_value": "20",
+          "data_type": "float",
+          "hidden": false,
+          "range": {
+            "min": "0",
+            "max": "50"
+          },
+          "tags": [
+            "comfort"
+          ]
+        }
+      ],
+      "components": [
+        "schedule",
+        "weather",
+        "heat_pump",
+        "building",
+        "pv",
+        "battery",
+        "powernode"
+      ],
+      "connections": [
+        "schedule.Tset:heat_pump.Tset",
+        "weather.T_ext:heat_pump.Tamb",
+        "building.TRooMea:heat_pump.TroomSens",
+        "heat_pump.Qsensible:building.Q",
+        "heat_pump.Power:powernode.Load",
+        "weather.ghi:pv.ghi",
+        "weather.T_ext:pv.T_ext",
+        "pv.power_dc:powernode.Prod",
+        "battery.PnetBatt:powernode.NetBatt",
+        "powernode.Pnet:battery.LoadINW"
+      ]
+    }
+  ]
+}

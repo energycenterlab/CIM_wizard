@@ -1,0 +1,394 @@
+/* HDF5Visualization.css */
+.hdf5-visualization {
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.hdf5-visualization h3 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* No Data State */
+.no-data {
+  text-align: center;
+  padding: 40px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+}
+
+.no-data h3 {
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.no-data p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* File Selection */
+.file-selection {
+  margin-bottom: 24px;
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.file-selection h4 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.file-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+}
+
+.file-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* File Information */
+.file-info {
+  margin-bottom: 24px;
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.file-info h4 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.info-value {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+/* Group Selection */
+.group-selection {
+  margin-bottom: 24px;
+}
+
+.group-selection h4 {
+  margin: 0 0 8px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.group-selection p {
+  margin: 0 0 16px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.groups-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.group-container {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.group-container:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.group-item {
+  cursor: pointer;
+  position: relative;
+  color: #334155;
+  font-weight: 400;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  min-height: 60px;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.group-item.selected {
+  background: #f0f7ff;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.group-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.group-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: inherit;
+  margin: 0;
+}
+
+.group-info {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.group-info span {
+  color: #334155;
+  font-weight: 500;
+}
+
+.group-item.selected .group-info span {
+  color: #1e293b;
+}
+
+.group-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: none;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.toggle-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.group-visualization {
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 16px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.group-visualization .simple-chart {
+  background: white;
+  margin-bottom: 16px;
+}
+
+.group-visualization .stats-summary {
+  background: white;
+}
+
+.visualize-btn {
+  padding: 8px 16px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.15);
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.visualize-btn:hover:not(:disabled) {
+  background-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+.visualize-btn:disabled {
+  background-color: #e5e7eb;
+  color: #334155;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Chart Visualization */
+.simple-chart {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.chart-header h4 {
+  margin: 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.no-chart {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+}
+
+/* Statistical Summary */
+.stats-summary {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.stats-summary h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stats-table {
+  overflow-x: auto;
+}
+
+.stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.stats-table th {
+  background-color: #f9fafb;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stats-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.stats-table tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}
+

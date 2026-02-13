@@ -1,0 +1,103 @@
+/* ----- Layering: keep nodes absolute and above edges ----- */
+
+/* 1) Edges at bottom */
+.react-flow__edges,
+.react-flow__edge {
+  z-index: 1 !important;
+}
+
+/* 2) The temporary connection line while dragging */
+.react-flow__connection,
+.react-flow__connection-line,
+.react-flow__connectionline {
+  z-index: 2 !important;
+}
+
+/* 3) Nodes above lines; DO NOT change node positioning */
+.react-flow__nodes {
+  z-index: 3 !important;
+}
+.react-flow__node {
+  /* React Flow needs position: absolute; don't override it */
+  /* position: absolute;  <-- leave to library default */
+  overflow: visible;            /* allow pills to extend past the node */
+}
+
+/* 4) Handles above nodes */
+.react-flow__handle {
+  z-index: 4 !important;
+}
+
+/* 5) Pill label drawn from the handle itself */
+.react-flow__handle.port::after {
+  content: attr(data-label);
+  position: absolute;
+  z-index: 5;                   /* above any SVG stroke */
+  pointer-events: none;         /* don't block dragging */
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+
+  /* vertically center on the handle dot */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Offset per side so the pill sits just off the dot */
+.react-flow__handle.port.port--right::after { left: 10px; }
+.react-flow__handle.port.port--left::after  { right: 10px; }
+.react-flow__handle.port.port--top::after   { bottom: 10px; transform: none; }
+.react-flow__handle.port.port--bottom::after{ top: 10px;    transform: none; }
+
+/* ----- Data Flow Animation for Entity→Model Connections ----- */
+@keyframes dashflow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* Apply animation to batch-to-model connections */
+.react-flow__edge[data-isbatchtomodel="true"] {
+  animation: dashflow 2s linear infinite;
+}
+
+/* Highlight handles when their associated edge is hovered or selected */
+.react-flow__handle.edge-highlighted-handle {
+  background: #4A5568 !important; /* Dark gray highlight */
+  border: 2px solid #2D3748 !important;
+  box-shadow: 0 0 4px rgba(74, 85, 104, 0.6), 0 0 6px rgba(45, 55, 72, 0.4) !important;
+  transform: scale(1.15) !important; /* Slightly bigger */
+  z-index: 10 !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Also highlight the badge label when handle is highlighted - more specific selector */
+.react-flow__handle.edge-highlighted-handle.port::after,
+.react-flow__handle.edge-highlighted-handle::after {
+  background: #4A5568 !important;
+  border: 2px solid #2D3748 !important;
+  box-shadow: 0 0 4px rgba(74, 85, 104, 0.6) !important;
+  font-weight: bold !important;
+  color: #fff !important;
+  z-index: 11 !important;
+  transform: translateY(-50%) scale(1.05) !important; /* Slightly bigger badge */
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Ensure badge labels are visible and highlighted */
+.react-flow__handle.edge-highlighted-handle[data-label]::after {
+  content: attr(data-label) !important;
+  background: #4A5568 !important;
+  border: 2px solid #2D3748 !important;
+  box-shadow: 0 0 4px rgba(74, 85, 104, 0.6) !important;
+  font-weight: bold !important;
+  color: #fff !important;
+}
