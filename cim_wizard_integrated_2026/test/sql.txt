@@ -1,8 +1,8 @@
 select b.building_id, bp.* , b.building_geometry 
 from cim_vector.cim_wizard_building_properties as bp ,
 cim_vector.cim_wizard_building as b
-where bp.scenario_id = 'd8e92b60-e340-40dc-ab50-e2f0642c38ff'
-and bp.project_id = '32d6f262-4638-46ee-827c-abc42559c0bc'
+where bp.scenario_id = 'f7d7dd63-d300-4430-9e3e-b9d106e81b43'
+and bp.project_id = '7cdddc7d-29cc-4dae-8264-2dd44b098852'
 and b.building_id = bp.building_id
 
 
