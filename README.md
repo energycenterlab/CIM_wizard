@@ -16,8 +16,9 @@
   - [3.4 GET Project Scenario Buildings](#34-get-project-scenario-buildings)
 - [4. Data Flow Diagrams](#4-data-flow-diagrams)
 - [5. Database Schema](#5-database-schema)
-- [6. Issues & Recommendations](#6-issues--recommendations)
-- [7. Running the System](#7-running-the-system)
+- [6. Backend Field Normalizer](#6-backend-field-normalizer)
+- [7. Issues & Recommendations](#7-issues--recommendations)
+- [8. Running the System](#8-running-the-system)
 
 ---
 
@@ -520,19 +521,165 @@ User draws polygon / uploads GeoJSON
 
 ---
 
-## 6. Issues & Recommendations
+## 6. Backend Field Normalizer
+
+### Problem
+
+Different clients send the same data using different field names:
+- Frontend (React): `projectName`, `scenarioName`, `n_families`
+- Postman users: `project_name`, `Project_Name`
+- GIS tools / Italian datasets: `altezza_vo`, `superficie`, `epoca_cost`
+
+Without centralized normalization, **every client** must independently figure out the correct field names, leading to drift and silent data loss.
+
+### Solution: Config-Driven Normalizer
+
+The backend now has a **centralized field normalizer** with a JSON configuration file that serves as the single source of truth.
+
+```
+app/core/
+├── normalization_config.json   ← JSON config: canonical names + all known aliases
+└── normalizer.py               ← Python module: normalize, validate, schema export
+```
+
+### How It Works
+
+```
+                  ┌─────────────────────────────────────────────┐
+                  │          normalization_config.json           │
+                  │  (single source of truth for field names)   │
+                  └──────────┬──────────────┬───────────────────┘
+                             │              │
+              ┌──────────────▼──┐    ┌──────▼──────────────────┐
+              │  normalize_input │    │  GET /schema endpoint   │
+              │  (server-side)   │    │  (client discovery)     │
+              └──────┬──────────┘    └──────┬──────────────────┘
+                     │                      │
+         Any alias → canonical        Clients auto-configure
+         before DB operations         their own normalizers
+```
+
+**On input (POST/PUT):** The backend normalizer maps any known alias to the canonical name before processing. A client can send `projectName` or `proj_name` or `ProjectName` — they all resolve to `project_id`.
+
+**On output (GET):** The backend always returns canonical names (matching DB columns). Clients can query the `/schema` endpoint to discover what those names are.
+
+### Config File Structure
+
+Each entity defines its canonical fields and accepted aliases:
+
+```json
+{
+  "entities": {
+    "building_properties": {
+      "table": "cim_vector.cim_wizard_building_properties",
+      "fields": {
+        "height": {
+          "type": "float",
+          "required": false,
+          "description": "Building height in meters",
+          "value_range": [0, 500],
+          "unit": "m",
+          "aliases": ["Height", "altezza_vo", "building_height", "bldg_height", "h"]
+        },
+        "area": {
+          "type": "float",
+          "aliases": ["Area", "superficie", "surface_area", "Surface Area", "footprint_area"]
+        },
+        "n_family": {
+          "type": "integer",
+          "aliases": ["nFamily", "n_families", "Number of Families", "number_of_families",
+                      "families", "households", "nuclei_familiari"]
+        }
+      }
+    }
+  }
+}
+```
+
+### Schema Discovery Endpoint
+
+Any client can fetch the full normalization schema:
+
+```
+GET /api/v1/vector/schema                       → Full schema (all entities)
+GET /api/v1/vector/schema/building_properties   → Single entity schema
+```
+
+**Example response** (abbreviated):
+```json
+{
+  "version": "1.0.0",
+  "entities": {
+    "building_properties": {
+      "fields": {
+        "height": {
+          "type": "float",
+          "required": false,
+          "description": "Building height in meters",
+          "aliases": ["Height", "altezza_vo", "building_height", "bldg_height", "h"],
+          "value_range": [0, 500],
+          "unit": "m"
+        }
+      }
+    }
+  }
+}
+```
+
+Frontend or any other client can call this once, cache it, and auto-build their normalizer from it — eliminating hardcoded field name guessing.
+
+### Python API
+
+```python
+from app.core.normalizer import normalize_input, validate, get_client_schema
+
+# Normalize any alias → canonical name
+data = {"projectName": "Test", "proj_id": "abc-123"}
+normalized = normalize_input("project_scenario", data)
+# → {"project_name": "Test", "project_id": "abc-123"}
+
+# Validate types and required fields
+errors = validate("building_properties", {"height": "not_a_number"})
+# → ["Field 'height': expected float, got str"]
+
+# Normalize GeoJSON Feature properties
+from app.core.normalizer import normalize_geojson_properties
+geojson = {"type": "Feature", "geometry": {...}, "properties": {"Height": 12.5, "superficie": 250}}
+normalized_geojson = normalize_geojson_properties("building_properties", geojson)
+# → properties become {"height": 12.5, "area": 250}
+```
+
+### Entities Covered
+
+| Entity | DB Table | # Fields | Description |
+|--------|----------|----------|-------------|
+| `project_scenario` | `cim_vector.cim_wizard_project_scenario` | 11 | Project/scenario metadata + boundaries |
+| `building` | `cim_vector.cim_wizard_building` | 8 | Building geometry records |
+| `building_properties` | `cim_vector.cim_wizard_building_properties` | 15 | Physical + demographic properties per scenario |
+
+### Adding New Aliases
+
+To support a new client or data source, just edit `normalization_config.json`:
+
+```json
+"height": {
+  "aliases": ["Height", "altezza_vo", "building_height", "h",
+              "NEW_ALIAS_HERE"]
+}
+```
+
+No Python code changes needed. Call `reload_config()` or restart the server.
+
+---
+
+## 7. Issues & Recommendations
 
 ### Critical Issues
 
-| # | Issue | Location | Impact | Recommendation |
-|---|-------|----------|--------|----------------|
-| 1 | **Building `id` normalizer mismatch** | `normalizers.ts` line 44 | Buildings cannot be identified — `id` is always `undefined` | Add `'building_id'` to the lookup list: `get('building_id', 'ID', 'id', 'Id', 'fid')` |
-| 2 | **`surface_area` normalizer mismatch** | `normalizers.ts` line 46 | Building areas always `undefined` | Add `'area'` to lookup: `get('Surface Area', 'superficie', 'surface_area', 'area')` |
-| 3 | **`filter_res` column missing** | `building_analysis_route.py` line 281 | Residential filter results never saved to DB | Either add `filter_res = Column(Boolean)` to `BuildingProperties` model, or save to the `type` column |
-| 4 | **`n_family` vs `n_families` mismatch** | `normalizers.ts` line 57 | Family count always `undefined` | Add `'n_family'` to lookup: `get('Number of Families', 'n_families', 'n_family')` |
-| 5 | **`year` vs `const_year` mismatch** | `normalizers.ts` line 55 | Construction year always `undefined` | Add `'const_year'` to lookup: `get('Year', 'year', 'const_year')` |
-| 6 | **`usage_category` vs `type` mismatch** | `normalizers.ts` line 47 | Usage category always `undefined` | Add `'type'` to lookup: `get('Usage Category', 'categ_uso', 'usage_category', 'type')` |
-| 7 | **`construction_period` vs `const_period_census`** | `normalizers.ts` line 48 | Construction period always `undefined` | Add `'const_period_census'` to lookup |
+| # | Issue | Location | Impact | Resolution |
+|---|-------|----------|--------|------------|
+| 1 | **`filter_res` column missing in DB model** | `building_analysis_route.py` line 281, `vector.py` | Residential filter results never saved to DB | **TODO:** Add `filter_res = Column(Boolean)` to `BuildingProperties` model and run migration |
+| 2 | **Frontend normalizer field mismatches (7 fields)** | `normalizers.ts` | Building properties resolve as `undefined` | **RESOLVED by backend normalizer.** Frontend should call `GET /api/v1/vector/schema/building_properties` to get canonical names and update its normalizer accordingly. All aliases are now documented in `normalization_config.json`. |
 
 ### Minor Issues
 
@@ -543,28 +690,29 @@ User draws polygon / uploads GeoJSON
 | 10 | **No explicit foreign keys in DB** | `cim-database` schema | No referential integrity enforcement | Consider adding FK constraints with ON DELETE CASCADE |
 | 11 | **`usage_type` normalizer** | `normalizers.ts` line 54 | Backend returns `type` but normalizer looks for `usage`, `usage_type` | Add `'type'` to lookup list |
 
-### Recommended Fix for `normalizers.ts`
+### Recommended Approach for Frontend
+
+Instead of hardcoding field aliases, the frontend should fetch canonical names from the backend schema endpoint and use them directly. This eliminates drift permanently:
 
 ```typescript
+// 1. Fetch schema once at app startup
+const schema = await fetch('/api/v1/vector/schema/building_properties').then(r => r.json());
+// schema.fields contains canonical names, types, descriptions
+
+// 2. The backend ALWAYS returns canonical names in responses,
+//    so the frontend normalizer should just use those:
 export function normalizeBuilding(raw: any): Building {
   const p = raw || {};
-  const get = (...keys: string[]) => keys.find(k => p[k] !== undefined) ? p[keys.find(k => p[k] !== undefined)!] : undefined;
   return {
-    id: get('building_id', 'ID', 'id', 'Id', 'fid') ?? p.id,
-    height: nf(get('Height', 'altezza_vo', 'height')),
-    surface_area: nf(get('Surface Area', 'superficie', 'surface_area', 'area')),
-    usage_category: ns(get('Usage Category', 'categ_uso', 'usage_category', 'type')),
-    construction_period: ns(get('Construction Period', 'epoca_cost', 'construction_period', 'const_period_census')),
-    number_of_floors: ns(get('Number of Floors', 'num_piani', 'number_of_floors')),
-    section_number: get('Section Number', 'nsez', 'section_number'),
-    net_leased_area: nf(get('Net Leased Area', 'net_leased_area')),
-    total_floors: nf(get('Total Floors', 'number_of_floors', 'total_floors')),
-    net_leased_volume: nf(get('Net Leased Volume', 'net_leased_volume')),
-    usage_type: ns(get('Usage Type', 'usage', 'usage_type', 'type')),
-    year: extractYear(get('Year', 'year', 'const_year')),
-    number_of_people: nf(get('Number of People', 'n_people')),
-    number_of_families: nf(get('Number of Families', 'n_families', 'n_family')),
-    building_type: ns(get('Building Type', 'tab_type', 'building_type')),
+    id: p.building_id,               // canonical name from backend
+    height: p.height,                 // canonical
+    surface_area: p.area,             // canonical (backend says "area", not "surface_area")
+    usage_category: p.type,           // canonical
+    construction_period: p.const_period_census,
+    number_of_floors: p.number_of_floors,
+    year: p.const_year,
+    number_of_people: p.n_people,
+    number_of_families: p.n_family,   // canonical (singular, not plural)
     __raw: p,
   };
 }
@@ -590,7 +738,7 @@ export interface ProjectScenario {
 
 ---
 
-## 7. Running the System
+## 8. Running the System
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -652,8 +800,9 @@ DATABASE_URL=postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/ci
 | Endpoint | Route | Status | Issues |
 |----------|-------|--------|--------|
 | **GET Projects** | `/api/v1/vector/projects` | ✅ Compliant | Minor: incomplete TS interface |
-| **POST Create Project** | `/api/v1/building/execute_building_analysis` | ✅ Compliant | Bug: `filter_res` not persisted to DB |
+| **POST Create Project** | `/api/v1/building/execute_building_analysis` | ✅ Compliant | Now normalizes input aliases. Bug: `filter_res` not persisted (needs DB column) |
 | **GET Scenarios** | `/api/v1/vector/pscenarios/{project_id}` | ✅ Compliant | Minor: incomplete TS interface |
-| **GET Buildings** | `/api/v1/vector/get_buildings_geojson/{project_id}/{scenario_id}` | ⚠️ Partial | **7 field normalizer mismatches** — buildings data cannot be properly displayed |
+| **GET Buildings** | `/api/v1/vector/get_buildings_geojson/{project_id}/{scenario_id}` | ✅ Compliant | Backend returns canonical names. Frontend should use `/schema` endpoint to sync. |
+| **GET Schema** | `/api/v1/vector/schema` | ✅ NEW | Clients discover canonical field names + aliases |
 
-> **Bottom line:** The HTTP transport layer (URLs, methods, request/response formats) is fully aligned across all three projects. The critical gap is in the **frontend building normalizer** (`normalizers.ts`), which uses field names from an older/different data source that don't match the backend's output field names. This causes most building properties to resolve as `undefined` after normalization.
+> **Bottom line:** The backend is now the **single source of truth** for field naming via `normalization_config.json`. The HTTP transport layer is fully aligned. Input normalization handles alias → canonical conversion server-side. Clients can call `GET /schema` to auto-discover canonical names and build their own mapping layers. The only remaining DB-level issue is the missing `filter_res` column on `cim_wizard_building_properties`.

@@ -170,8 +170,15 @@ class CimWizardPipelineExecutor:
     # === DEPENDENCY RESOLUTION ===
     
     def check_dependencies(self, dependencies: List[str]) -> bool:
-        """Check if all dependencies are satisfied"""
+        """Check if all dependencies are satisfied.
+        
+        Checks both calculated features (from set_feature) and context values
+        (project_id, scenario_id, service URLs, etc.).
+        """
         for dep in dependencies:
+            # Check calculated features first, then context
+            if self.data_manager.has_feature(dep):
+                continue
             value = self.data_manager.get_context(dep)
             if value is None:
                 return False

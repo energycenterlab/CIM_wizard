@@ -1,0 +1,269 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Field normalization configuration for CIM Wizard Integrated API. This file is the single source of truth for field naming across all clients. Each entity defines canonical field names (matching DB columns) and known aliases from various sources (frontend, Postman, GIS tools, Italian data sources, etc.).",
+    "usage": "Clients can fetch this config via GET /api/v1/vector/schema to auto-discover canonical field names and build their own mappings."
+  },
+
+  "entities": {
+
+    "project_scenario": {
+      "description": "Project and scenario metadata. Maps to cim_vector.cim_wizard_project_scenario",
+      "table": "cim_vector.cim_wizard_project_scenario",
+      "fields": {
+        "project_id": {
+          "type": "string",
+          "required": true,
+          "description": "Unique project identifier (UUID)",
+          "aliases": ["projectId", "project_ID", "proj_id", "ProjectId", "ProjectID"]
+        },
+        "scenario_id": {
+          "type": "string",
+          "required": true,
+          "description": "Unique scenario identifier (UUID)",
+          "aliases": ["scenarioId", "scenario_ID", "ScenarioId", "ScenarioID"]
+        },
+        "project_name": {
+          "type": "string",
+          "required": false,
+          "description": "Human-readable project name",
+          "aliases": ["projectName", "proj_name", "ProjectName", "name"]
+        },
+        "scenario_name": {
+          "type": "string",
+          "required": false,
+          "description": "Human-readable scenario name",
+          "aliases": ["scenarioName", "ScenarioName"]
+        },
+        "project_boundary": {
+          "type": "geometry",
+          "geometry_type": "Polygon",
+          "srid": 4326,
+          "required": false,
+          "description": "Project boundary as GeoJSON Polygon",
+          "aliases": ["projectBoundary", "boundary", "project_geom", "project_geometry"]
+        },
+        "project_center": {
+          "type": "geometry",
+          "geometry_type": "Point",
+          "srid": 4326,
+          "required": false,
+          "description": "Project center point as GeoJSON Point (auto-calculated from boundary centroid)",
+          "aliases": ["projectCenter", "center", "centroid"]
+        },
+        "project_zoom": {
+          "type": "integer",
+          "required": false,
+          "default": 15,
+          "description": "Default map zoom level",
+          "aliases": ["projectZoom", "zoom", "map_zoom"]
+        },
+        "project_crs": {
+          "type": "integer",
+          "required": false,
+          "default": 4326,
+          "description": "Coordinate reference system EPSG code",
+          "aliases": ["projectCrs", "crs", "epsg", "srid", "CRS", "EPSG"]
+        },
+        "census_boundary": {
+          "type": "geometry",
+          "geometry_type": "MultiPolygon",
+          "srid": 4326,
+          "required": false,
+          "description": "Census sections boundary covering the project area",
+          "aliases": ["censusBoundary", "census_geom"]
+        },
+        "created_at": {
+          "type": "datetime",
+          "required": false,
+          "description": "Record creation timestamp (auto-generated)",
+          "aliases": ["createdAt", "created", "creation_date"]
+        },
+        "updated_at": {
+          "type": "datetime",
+          "required": false,
+          "description": "Record last update timestamp (auto-generated)",
+          "aliases": ["updatedAt", "updated", "modification_date", "last_modified"]
+        }
+      }
+    },
+
+    "building": {
+      "description": "Building geometry records. Maps to cim_vector.cim_wizard_building",
+      "table": "cim_vector.cim_wizard_building",
+      "fields": {
+        "building_id": {
+          "type": "string",
+          "required": true,
+          "description": "Unique building identifier (UUID)",
+          "aliases": ["buildingId", "building_ID", "BuildingId", "BuildingID", "ID", "id", "Id", "fid", "FID", "gml_id", "osm_id"]
+        },
+        "lod": {
+          "type": "integer",
+          "required": false,
+          "default": 0,
+          "description": "Level of Detail (0=footprint, 1=extruded, 2=detailed)",
+          "aliases": ["LOD", "level_of_detail", "levelOfDetail"]
+        },
+        "building_geometry": {
+          "type": "geometry",
+          "geometry_type": "Geometry",
+          "srid": 4326,
+          "required": true,
+          "description": "Building geometry (Polygon for footprint, MultiPolygon for complex)",
+          "aliases": ["geometry", "geom", "building_geom", "the_geom", "shape"]
+        },
+        "building_geometry_source": {
+          "type": "string",
+          "required": true,
+          "description": "Source of the geometry data (e.g., 'osm', 'cadastre', 'integrated_database')",
+          "aliases": ["geometrySource", "geom_source", "source", "data_source"]
+        },
+        "census_id": {
+          "type": "integer",
+          "required": false,
+          "description": "Census section ID (links to censusgeo.SEZ2011)",
+          "aliases": ["censusId", "census_ID", "SEZ2011", "sez2011", "section_id", "nsez"]
+        },
+        "building_surfaces_lod12": {
+          "type": "json",
+          "required": false,
+          "description": "LoD 1.2 surface geometry data (walls, roof, ground)",
+          "aliases": ["surfaces_lod12", "lod12_surfaces", "surfacesLod12"]
+        },
+        "created_at": {
+          "type": "datetime",
+          "required": false,
+          "description": "Record creation timestamp",
+          "aliases": ["createdAt", "created", "creation_date"]
+        },
+        "updated_at": {
+          "type": "datetime",
+          "required": false,
+          "description": "Record last update timestamp",
+          "aliases": ["updatedAt", "updated", "modification_date"]
+        }
+      }
+    },
+
+    "building_properties": {
+      "description": "Building physical and demographic properties per scenario. Maps to cim_vector.cim_wizard_building_properties",
+      "table": "cim_vector.cim_wizard_building_properties",
+      "fields": {
+        "building_id": {
+          "type": "string",
+          "required": true,
+          "description": "Building identifier (references cim_wizard_building)",
+          "aliases": ["buildingId", "building_ID", "BuildingId", "ID", "id", "Id", "fid", "FID"]
+        },
+        "scenario_id": {
+          "type": "string",
+          "required": true,
+          "description": "Scenario identifier",
+          "aliases": ["scenarioId", "scenario_ID", "ScenarioId"]
+        },
+        "project_id": {
+          "type": "string",
+          "required": true,
+          "description": "Project identifier",
+          "aliases": ["projectId", "project_ID", "ProjectId"]
+        },
+        "lod": {
+          "type": "integer",
+          "required": false,
+          "default": 0,
+          "description": "Level of Detail",
+          "aliases": ["LOD", "level_of_detail"]
+        },
+        "height": {
+          "type": "float",
+          "required": false,
+          "description": "Building height in meters",
+          "value_range": [0, 500],
+          "unit": "m",
+          "aliases": ["Height", "altezza_vo", "building_height", "bldg_height", "h"]
+        },
+        "area": {
+          "type": "float",
+          "required": false,
+          "description": "Building footprint area in square meters",
+          "value_range": [0, 100000],
+          "unit": "m2",
+          "aliases": ["Area", "superficie", "surface_area", "Surface Area", "footprint_area", "building_area"]
+        },
+        "volume": {
+          "type": "float",
+          "required": false,
+          "description": "Building volume in cubic meters",
+          "value_range": [0, 1000000],
+          "unit": "m3",
+          "aliases": ["Volume", "building_volume", "net_leased_volume", "Net Leased Volume"]
+        },
+        "number_of_floors": {
+          "type": "float",
+          "required": false,
+          "description": "Number of floors / stories",
+          "value_range": [0, 200],
+          "aliases": ["numberOfFloors", "Number of Floors", "num_piani", "n_floors", "floors", "total_floors", "Total Floors", "stories"]
+        },
+        "type": {
+          "type": "string",
+          "required": false,
+          "description": "Building usage type (e.g., 'residential', 'commercial', 'industrial')",
+          "aliases": ["Type", "building_type", "Building Type", "usage_type", "Usage Type", "usage_category", "Usage Category", "categ_uso", "usage", "tab_type", "land_use"]
+        },
+        "const_period_census": {
+          "type": "string",
+          "required": false,
+          "description": "Construction period from census data (e.g., '1961-70')",
+          "aliases": ["constPeriodCensus", "construction_period", "Construction Period", "epoca_cost", "period"]
+        },
+        "const_year": {
+          "type": "integer",
+          "required": false,
+          "description": "Construction year",
+          "value_range": [1800, 2030],
+          "aliases": ["constYear", "construction_year", "year", "Year", "built_year", "anno_costruzione"]
+        },
+        "const_tabula": {
+          "type": "string",
+          "required": false,
+          "description": "TABULA building typology classification",
+          "aliases": ["constTabula", "tabula", "tabula_type", "TABULA"]
+        },
+        "n_people": {
+          "type": "integer",
+          "required": false,
+          "description": "Number of people (residents) in the building",
+          "value_range": [0, 10000],
+          "aliases": ["nPeople", "n_People", "Number of People", "number_of_people", "population", "residents", "abitanti"]
+        },
+        "n_family": {
+          "type": "integer",
+          "required": false,
+          "description": "Number of families / households in the building",
+          "value_range": [0, 1000],
+          "aliases": ["nFamily", "n_families", "Number of Families", "number_of_families", "families", "households", "nuclei_familiari"]
+        },
+        "filter_res": {
+          "type": "boolean",
+          "required": false,
+          "description": "Whether the building is classified as residential (true) or non-residential (false)",
+          "aliases": ["filterRes", "filter_residential", "is_residential", "residential"]
+        },
+        "created_at": {
+          "type": "datetime",
+          "required": false,
+          "description": "Record creation timestamp",
+          "aliases": ["createdAt", "created"]
+        },
+        "updated_at": {
+          "type": "datetime",
+          "required": false,
+          "description": "Record last update timestamp",
+          "aliases": ["updatedAt", "updated"]
+        }
+      }
+    }
+  }
+}

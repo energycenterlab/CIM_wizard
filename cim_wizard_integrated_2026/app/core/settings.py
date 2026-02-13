@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # ====================
     PROJECT_NAME: str = Field(default="CIM Wizard Integrated", description="Project name")
     VERSION: str = Field(default="2.0.0", description="Application version")
-    API_V1_STR: str = Field(default="/api", description="API version string")
+    API_V1_STR: str = Field(default="/api/v1", description="API version prefix (e.g. /api/v1)")
     
     # Server settings
     HOST: str = Field(default="0.0.0.0", description="Server host")

@@ -1,5 +1,6 @@
 """
 Simple Building Height Calculator - DSM minus DTM
+Uses cim_raster.dsm and cim_raster.dtm tables from PostGIS database.
 """
 from typing import Optional, List
 from sqlalchemy import text
@@ -11,141 +12,144 @@ class BuildingHeightCalculator:
         self.pipeline = pipeline_executor
         self.data_manager = pipeline_executor.data_manager
         self.calculator_name = self.__class__.__name__
+
+    # ── Raster table configuration ──────────────────────────────────
+    # Change these if your raster tables have different names/schemas.
+    DSM_TABLE = "cim_raster.dsm"
+    DTM_TABLE = "cim_raster.dtm"
+    DEFAULT_HEIGHT = 12.0   # Fallback when raster data unavailable
+    MIN_HEIGHT = 3.0
+    MAX_HEIGHT = 200.0
+    # ────────────────────────────────────────────────────────────────
         
     def calculate_from_raster_tiles(self) -> Optional[List[float]]:
-        """Calculate heights: DSM - DTM"""
+        """Calculate heights: DSM - DTM for each building centroid."""
         
-        print(f"\n=== DEBUG: Starting height calculation ===")
+        self.pipeline.log_info(self.calculator_name, "Starting height calculation")
         
         # Get buildings
         building_geo = self.pipeline.get_feature_safely('building_geo')
         if not building_geo:
-            print("ERROR: No building_geo data")
+            self.pipeline.log_error(self.calculator_name, "No building_geo data")
             return None
             
         buildings = building_geo.get('buildings', [])
         if not buildings:
-            print("ERROR: No buildings in building_geo")
+            self.pipeline.log_error(self.calculator_name, "No buildings in building_geo")
             return None
         
-        print(f"DEBUG: Found {len(buildings)} buildings")
+        self.pipeline.log_info(self.calculator_name, f"Found {len(buildings)} buildings")
         
-        # Get database
+        # Get database session
         db_session = getattr(self.data_manager, 'db_session', None)
         if not db_session:
-            print("ERROR: No database session")
+            self.pipeline.log_error(self.calculator_name, "No database session")
             return None
         
-        print("DEBUG: Database session OK")
+        # ── Verify raster tables exist ──────────────────────────────
+        dsm_ok = self._check_raster_table(db_session, self.DSM_TABLE)
+        dtm_ok = self._check_raster_table(db_session, self.DTM_TABLE)
         
-        # Test database tables exist
-        try:
-            dsm_test = db_session.execute(text("SELECT COUNT(*) FROM cim_raster.dsm_raster_tiles")).fetchone()
-            print(f"DEBUG: DSM table has {dsm_test[0]} rows")
-        except Exception as e:
-            print(f"ERROR: DSM table issue: {e}")
-            
-        try:
-            dtm_test = db_session.execute(text("SELECT COUNT(*) FROM cim_wizard.dtm_raster_tiles")).fetchone()
-            print(f"DEBUG: DTM table has {dtm_test[0]} rows")
-        except Exception as e:
-            print(f"ERROR: DTM table issue: {e}")
+        if not dsm_ok or not dtm_ok:
+            self.pipeline.log_warning(
+                self.calculator_name,
+                f"Raster tables missing (DSM={dsm_ok}, DTM={dtm_ok}). "
+                f"All buildings will get default height {self.DEFAULT_HEIGHT}m"
+            )
+            heights = [self.DEFAULT_HEIGHT] * len(buildings)
+            self.data_manager.set_feature('building_height', heights)
+            return heights
         
+        # ── Calculate height per building ───────────────────────────
         heights = []
+        raster_hits = 0
         
         for i, building in enumerate(buildings):
-            if i >= 3:  # Only debug first 3 buildings
-                break
-                
-            print(f"\n--- Building {i} ---")
-            
-            # Get coordinates (simple centroid)
-            geometry = building.get('geometry', {})
-            coords = geometry.get('coordinates', [])
-            
-            print(f"DEBUG: Geometry type: {geometry.get('type')}")
-            print(f"DEBUG: Coords structure: {type(coords)}, length: {len(coords) if coords else 0}")
-            
-            if not coords:
-                print("ERROR: No coordinates")
-                heights.append(12.0)  # default
-                continue
-                
-            # Get first coordinate pair - fix coordinate extraction
-            try:
-                if geometry.get('type') == 'Polygon':
-                    # For polygon: coords[0] is exterior ring, coords[0][0] is first point
-                    lon, lat = coords[0][0][0], coords[0][0][1]
-                elif geometry.get('type') == 'Point':
-                    # For point: coords is [lon, lat]
-                    lon, lat = coords[0], coords[1]
-                else:
-                    print(f"ERROR: Unknown geometry type: {geometry.get('type')}")
-                    heights.append(12.0)
-                    continue
-                    
-                print(f"DEBUG: Coordinates: lon={lon}, lat={lat}")
-                    
-            except Exception as e:
-                print(f"ERROR: Coordinate extraction failed: {e}")
-                heights.append(12.0)
+            lon, lat = self._get_centroid(building)
+            if lon is None or lat is None:
+                heights.append(self.DEFAULT_HEIGHT)
                 continue
             
-            # Get DSM value
-            try:
-                dsm_query = text("""
-                    SELECT ST_Value(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
-                    FROM cim_raster.dsm_raster_tiles
-                    WHERE ST_Intersects(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
-                    LIMIT 1
-                """)
-                dsm_result = db_session.execute(dsm_query, {'lon': lon, 'lat': lat}).fetchone()
-                dsm_value = dsm_result[0] if dsm_result and dsm_result[0] is not None else None
-                print(f"DEBUG: DSM value: {dsm_value}")
-            except Exception as e:
-                print(f"ERROR: DSM query failed: {e}")
-                dsm_value = None
-            
-            # Get DTM value  
-            try:
-                dtm_query = text("""
-                    SELECT ST_Value(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
-                    FROM cim_wizard.dtm_raster_tiles
-                    WHERE ST_Intersects(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
-                    LIMIT 1
-                """)
-                dtm_result = db_session.execute(dtm_query, {'lon': lon, 'lat': lat}).fetchone()
-                dtm_value = dtm_result[0] if dtm_result and dtm_result[0] is not None else None
-                print(f"DEBUG: DTM value: {dtm_value}")
-            except Exception as e:
-                print(f"ERROR: DTM query failed: {e}")
-                dtm_value = None
-            
-            # Calculate height
-            if dsm_value is not None and dtm_value is not None:
-                height = dsm_value - dtm_value
-                print(f"DEBUG: Raw height: {height}")
-                
-                if height < 3:
-                    height = 3.0
-                if height > 200:
-                    height = 200.0
-                    
-                print(f"DEBUG: Final height: {height}")
-                heights.append(height)
+            height = self._query_height(db_session, lon, lat)
+            if height is not None:
+                raster_hits += 1
             else:
-                print("DEBUG: Missing raster data, using default")
-                heights.append(12.0)
+                height = self.DEFAULT_HEIGHT
+            heights.append(height)
         
-        # Add remaining buildings with default height for now
-        remaining = len(buildings) - len(heights)
-        if remaining > 0:
-            print(f"DEBUG: Adding {remaining} more buildings with default height")
-            heights.extend([12.0] * remaining)
-        
-        print(f"\nDEBUG: Final heights: {heights[:10]}...")  # Show first 10
+        self.pipeline.log_info(
+            self.calculator_name,
+            f"Height calculation complete: {raster_hits}/{len(buildings)} from raster, "
+            f"{len(buildings) - raster_hits} default ({self.DEFAULT_HEIGHT}m)"
+        )
         
         # Store result
         self.data_manager.set_feature('building_height', heights)
-        
         return heights
+    
+    # ── Helper methods ──────────────────────────────────────────────
+    
+    def _check_raster_table(self, db_session, table_name: str) -> bool:
+        """Check if a raster table exists and has data. Rolls back on error."""
+        try:
+            result = db_session.execute(
+                text(f"SELECT COUNT(*) FROM {table_name}")
+            ).fetchone()
+            count = result[0] if result else 0
+            self.pipeline.log_info(self.calculator_name, f"{table_name}: {count} rows")
+            return count > 0
+        except Exception as e:
+            self.pipeline.log_warning(self.calculator_name, f"{table_name} not available: {e}")
+            db_session.rollback()  # Critical: clear the failed transaction
+            return False
+    
+    def _get_centroid(self, building: dict):
+        """Extract a representative point (centroid) from building geometry."""
+        geometry = building.get('geometry', {})
+        coords = geometry.get('coordinates', [])
+        geom_type = geometry.get('type', '')
+        
+        try:
+            if geom_type == 'Polygon' and coords:
+                # Average all ring vertices for a simple centroid
+                ring = coords[0]
+                if ring:
+                    lons = [p[0] for p in ring]
+                    lats = [p[1] for p in ring]
+                    return sum(lons) / len(lons), sum(lats) / len(lats)
+            elif geom_type == 'Point' and len(coords) >= 2:
+                return coords[0], coords[1]
+        except Exception:
+            pass
+        return None, None
+    
+    def _query_height(self, db_session, lon: float, lat: float) -> Optional[float]:
+        """Query DSM and DTM at a point, return height = DSM - DTM (clamped)."""
+        dsm_value = self._query_raster_value(db_session, self.DSM_TABLE, lon, lat)
+        if dsm_value is None:
+            return None
+        
+        dtm_value = self._query_raster_value(db_session, self.DTM_TABLE, lon, lat)
+        if dtm_value is None:
+            return None
+        
+        height = dsm_value - dtm_value
+        height = max(self.MIN_HEIGHT, min(self.MAX_HEIGHT, height))
+        return round(height, 2)
+    
+    def _query_raster_value(self, db_session, table_name: str, lon: float, lat: float) -> Optional[float]:
+        """Get raster cell value at a point. Rolls back on error to keep session clean."""
+        try:
+            query = text(f"""
+                SELECT ST_Value(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
+                FROM {table_name}
+                WHERE ST_Intersects(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
+                LIMIT 1
+            """)
+            result = db_session.execute(query, {'lon': lon, 'lat': lat}).fetchone()
+            if result and result[0] is not None:
+                return float(result[0])
+            return None
+        except Exception:
+            db_session.rollback()  # Clear failed transaction
+            return None

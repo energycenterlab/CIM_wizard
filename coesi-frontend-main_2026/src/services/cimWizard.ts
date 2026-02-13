@@ -6,8 +6,12 @@ export interface ProjectScenario {
   project_name?: string;
   scenario_name?: string;
   project_boundary?: any;
-  project_center?: any;
+  project_center?: { type: string; coordinates: [number, number] };
   lod?: number;
+  project_zoom?: number;
+  project_crs?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BuildingFeature {

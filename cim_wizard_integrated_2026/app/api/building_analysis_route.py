@@ -14,6 +14,7 @@ from app.db.database import get_db
 from app.core.data_manager import CimWizardDataManager
 from app.core.pipeline_executor import CimWizardPipelineExecutor
 from app.models.vector import Building, BuildingProperties, ProjectScenario
+from app.core.normalizer import normalize_input, validate
 
 router = APIRouter()
 
@@ -323,6 +324,17 @@ async def execute_building_analysis(
     - Building classification (residential/non-residential)
     """
     try:
+        # ── Normalize incoming field names ──────────────────────────────
+        # Clients may send camelCase, PascalCase, or other alias variants.
+        # The normalizer converts them to canonical (DB column) names.
+        request_data = normalize_input("project_scenario", request_data)
+
+        # Validate the normalized data (partial=True because most fields are generated server-side)
+        validation_errors = validate("project_scenario", request_data, partial=True)
+        if validation_errors:
+            print(f"Input validation warnings: {validation_errors}")
+        # ────────────────────────────────────────────────────────────────
+
         # Get executor and data manager with DB session
         executor, data_manager = get_pipeline_executor(db)
         

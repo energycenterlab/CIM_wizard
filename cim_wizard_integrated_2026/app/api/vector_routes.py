@@ -16,7 +16,11 @@ from app.models.vector import (
     ProjectScenario, Building, BuildingProperties, 
     GridBus, GridLine
 )
-# Removed Pydantic schemas for simplicity - using dict responses
+from app.core.normalizer import (
+    normalize_input, normalize_output, validate,
+    normalize_geojson_properties, get_client_schema,
+    get_schema as get_entity_schema, get_entity_names,
+)
 
 
 router = APIRouter()
@@ -466,6 +470,47 @@ async def get_grid_lines_by_network(
     except Exception as e:
         # Possible errors: Database connection issues
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+# ── Schema discovery endpoints ─────────────────────────────────────────
+# These let any client fetch the normalization config so they know
+# which canonical field names the API uses and which aliases are accepted.
+
+@router.get("/schema")
+async def get_normalization_schema():
+    """
+    Return the full normalization schema for all entities.
+    
+    Clients (frontend, Postman, scripts) can call this endpoint to discover:
+    - Available entities and their canonical field names
+    - Accepted aliases for each field
+    - Field types, required status, value ranges, and descriptions
+    
+    Use this to auto-generate client-side normalizers or validate payloads.
+    """
+    return get_client_schema()
+
+
+@router.get("/schema/{entity_name}")
+async def get_entity_normalization_schema(entity_name: str):
+    """
+    Return the normalization schema for a single entity.
+    
+    Entity names: project_scenario, building, building_properties
+    """
+    schema = get_entity_schema(entity_name)
+    if schema is None:
+        available = get_entity_names()
+        raise HTTPException(
+            status_code=404,
+            detail=f"Entity '{entity_name}' not found. Available: {available}"
+        )
+    return {
+        "entity": entity_name,
+        "description": schema.get("description", ""),
+        "table": schema.get("table", ""),
+        "fields": schema.get("fields", {}),
+    }
 
 
 @router.get("/health")

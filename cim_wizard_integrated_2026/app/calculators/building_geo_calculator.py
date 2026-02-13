@@ -73,21 +73,10 @@ class BuildingGeoCalculator:
                     'created_from': 'osm_query_failed'
                 }
             else:
-                # Convert OSM buildings to GeoJSON format
-                buildings = []
-                for osm_building in osm_buildings:
-                    building = {
-                        'type': 'Feature',
-                        'properties': {
-                            'building_id': osm_building.get('building_id'),
-                            'building': 'yes',
-                            'building:type': osm_building.get('properties', {}).get('building_type', 'residential'),
-                            'osm_id': osm_building.get('properties', {}).get('osm_id'),
-                            'source': 'osm'
-                        },
-                        'geometry': osm_building.get('geometry')
-                    }
-                    buildings.append(building)
+                # Use OSM buildings directly — they already have building_id, geometry, properties
+                # Do NOT re-wrap into GeoJSON Feature format (that moves building_id into properties
+                # and downstream calculators like building_props_calculator expect it at top level)
+                buildings = osm_buildings
                 data_source = 'osm_overpass_api'
             
             # Build result with metadata
