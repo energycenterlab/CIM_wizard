@@ -24,19 +24,37 @@ class CensusPopulationCalculator:
             
             self.pipeline.log_info(self.calculator_name, "Calculating population from census boundary")
             
-            # Get total population from census boundary
-            total_population = census_boundary.get('total_population', 0)
+            # Census boundary may nest data under 'properties' (GeoJSON Feature format)
+            props = census_boundary.get('properties', {})
             
-            if total_population > 0:
+            # Check top-level first, then properties
+            total_population = (
+                census_boundary.get('total_population', 0)
+                or props.get('total_population', 0)
+            )
+            
+            if total_population and total_population > 0:
                 self.pipeline.log_info(self.calculator_name, f"Found total population: {total_population}")
+                self.data_manager.set_feature('census_population', float(total_population))
                 return float(total_population)
             
-            # If no total population, sum from zones
-            census_zones = census_boundary.get('census_zones', [])
-            zone_population = sum(zone.get('population', 0) for zone in census_zones)
+            # If no total population, sum from zones (check both levels)
+            census_zones = (
+                census_boundary.get('census_zones', [])
+                or props.get('census_zones', [])
+            )
+            zone_population = 0
+            for zone in census_zones:
+                # Population may be at zone level or inside zone properties
+                pop = zone.get('population', 0)
+                if not pop:
+                    zone_props = zone.get('properties', {})
+                    pop = zone_props.get('population', 0)
+                zone_population += pop
             
             if zone_population > 0:
-                self.pipeline.log_info(self.calculator_name, f"Calculated population from zones: {zone_population}")
+                self.pipeline.log_info(self.calculator_name, f"Calculated population from {len(census_zones)} zones: {zone_population}")
+                self.data_manager.set_feature('census_population', float(zone_population))
                 return float(zone_population)
             
             self.pipeline.log_error(self.calculator_name, "No population data found in census boundary")

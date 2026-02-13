@@ -42,17 +42,22 @@ class BuildingPopulationCalculator:
                 self.pipeline.log_error(self.calculator_name, "No building volumes found")
                 return None
             
-            # Calculate total volume for distribution
-            total_volume = sum(building_volumes)
+            # Calculate total volume for distribution (skip None values from non-residential buildings)
+            total_volume = sum(v for v in building_volumes if v is not None and v > 0)
             if total_volume <= 0:
                 self.pipeline.log_error(self.calculator_name, "Total volume is zero or negative")
                 return None
             
+            residential_count = sum(1 for v in building_volumes if v is not None and v > 0)
+            self.pipeline.log_info(self.calculator_name, 
+                f"Distributing {total_population} people across {residential_count} residential buildings "
+                f"(total volume: {total_volume:.0f} m3)")
+            
             # Distribute population proportionally by volume
+            # Non-residential buildings (None volume) get 0 population
             building_populations = []
             for i, volume in enumerate(building_volumes):
-                if volume > 0:
-                    # Proportional distribution
+                if volume is not None and volume > 0:
                     population = (volume / total_volume) * total_population
                     building_populations.append(round(population, 1))
                 else:

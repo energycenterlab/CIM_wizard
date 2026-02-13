@@ -42,10 +42,10 @@ class BuildingNFamiliesCalculator:
             avg_family_size = 2.5  # Average family size
             
             # Calculate families for all buildings
+            # Non-residential buildings have 0 population and get 0 families
             building_families = []
             for i, population in enumerate(building_populations):
-                if population > 0:
-                    # Calculate number of families
+                if population is not None and population > 0:
                     num_families = math.ceil(population / avg_family_size)
                     building_families.append(num_families)
                 else:

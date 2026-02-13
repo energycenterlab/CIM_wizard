@@ -1,0 +1,9 @@
+select b.building_id, bp.height , bp.n_family, bp.const_tabula, bp.const_year, b.building_geometry 
+from cim_vector.cim_wizard_building_properties as bp ,
+cim_vector.cim_wizard_building as b
+where bp.scenario_id = '7750f90c-3674-44dd-8e23-bf4eb3b71150'
+and bp.project_id = '5671f758-0898-43a5-83c7-098daac9d780'
+and b.building_id = bp.building_id
+
+
+

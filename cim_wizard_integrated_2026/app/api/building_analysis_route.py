@@ -269,17 +269,35 @@ def update_building_properties_in_database(
                 )
                 db.add(building_props)
             
-            # Update the specific property
-            if property_name == 'height':
-                building_props.height = float(property_values[i])
-            elif property_name == 'area':
-                building_props.area = float(property_values[i])
-            elif property_name == 'volume':
-                building_props.volume = float(property_values[i])
-            elif property_name == 'number_of_floors':
-                building_props.number_of_floors = int(property_values[i])
-            elif property_name == 'filter_res':
-                building_props.filter_res = bool(property_values[i])
+            # Update the specific property (skip None values from non-residential buildings)
+            value = property_values[i]
+            if value is None:
+                continue
+            
+            try:
+                if property_name == 'height':
+                    building_props.height = float(value)
+                elif property_name == 'area':
+                    building_props.area = float(value)
+                elif property_name == 'volume':
+                    building_props.volume = float(value)
+                elif property_name == 'number_of_floors':
+                    building_props.number_of_floors = int(value)
+                elif property_name == 'type':
+                    building_props.type = str(value)
+                elif property_name == 'n_people':
+                    building_props.n_people = int(round(float(value)))
+                elif property_name == 'n_family':
+                    building_props.n_family = int(round(float(value)))
+                elif property_name == 'const_year':
+                    building_props.const_year = int(value)
+                elif property_name == 'const_period_census':
+                    building_props.const_period_census = str(value)
+                elif property_name == 'const_tabula':
+                    building_props.const_tabula = str(value)
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Skipping invalid value for {property_name} on building {building_id}: {value} ({e})")
+                continue
             
             building_props.updated_at = datetime.utcnow()
             updated_count += 1
@@ -427,6 +445,42 @@ async def execute_building_analysis(
                 "feature_name": "building_n_floors",
                 "method_name": "estimate_by_height",
                 "description": "Estimate number of floors from height (residential buildings only)"
+            },
+            # === Steps 10-16: Demographics, classification, 3D geometry ===
+            {
+                "feature_name": "census_population",
+                "method_name": "calculate_from_census_boundary",
+                "description": "Get total population from census zones"
+            },
+            {
+                "feature_name": "building_type",
+                "method_name": "by_census_osm",
+                "description": "Classify building types using census and OSM data"
+            },
+            {
+                "feature_name": "building_population",
+                "method_name": "calculate_from_volume_distribution",
+                "description": "Distribute census population to buildings by volume ratio"
+            },
+            {
+                "feature_name": "building_n_families",
+                "method_name": "calculate_from_population",
+                "description": "Calculate number of families per building"
+            },
+            {
+                "feature_name": "building_construction_year",
+                "method_name": "by_census_osm",
+                "description": "Estimate construction year, census period, and TABULA classification"
+            },
+            {
+                "feature_name": "building_demographic",
+                "method_name": "by_census_osm",
+                "description": "Orchestrate demographic calculation (population + families)"
+            },
+            {
+                "feature_name": "building_geo_lod12",
+                "method_name": "by_footprint_height",
+                "description": "Generate LoD 1.2 3D building geometry from footprint and height"
             }
         ]
         
@@ -581,7 +635,6 @@ async def execute_building_analysis(
                         
                         elif feature_name == "filter_res":
                             # Update filter_res (residential filter) in database
-                            # Result is a dictionary with filter_res list
                             if result and 'filter_res' in result:
                                 filter_values = result['filter_res']
                                 if filter_values:
@@ -600,6 +653,114 @@ async def execute_building_analysis(
                                 db_update_status["updated_records"] = 0
                                 db_update_status["status"] = "success"
                                 db_update_status["note"] = "No filter_res data in result"
+                        
+                        elif feature_name == "census_population":
+                            # Intermediate result, no direct DB column
+                            db_update_status["updated_records"] = 0
+                            db_update_status["status"] = "success"
+                            db_update_status["note"] = "Intermediate result for population distribution"
+                        
+                        elif feature_name == "building_type":
+                            # Update building type classification in database
+                            if isinstance(result, dict):
+                                type_values = result.get('building_types', [])
+                            elif isinstance(result, list):
+                                type_values = result
+                            else:
+                                type_values = []
+                            if type_values:
+                                building_geo_result = results.get('building_geo', {})
+                                updated = update_building_properties_in_database(
+                                    db, project_id, scenario_id,
+                                    building_geo_result, 'type', type_values
+                                )
+                                db_update_status["updated_records"] = updated
+                                db_update_status["status"] = "success"
+                            else:
+                                db_update_status["status"] = "success"
+                                db_update_status["note"] = "No building types to update"
+                        
+                        elif feature_name == "building_population":
+                            # Update n_people in database
+                            populations = []
+                            if isinstance(result, dict):
+                                populations = result.get('building_populations', [])
+                            elif isinstance(result, list):
+                                populations = result
+                            if populations:
+                                building_geo_result = results.get('building_geo', {})
+                                updated = update_building_properties_in_database(
+                                    db, project_id, scenario_id,
+                                    building_geo_result, 'n_people', populations
+                                )
+                                db_update_status["updated_records"] = updated
+                                db_update_status["status"] = "success"
+                            else:
+                                db_update_status["status"] = "success"
+                                db_update_status["note"] = "No population data to update"
+                        
+                        elif feature_name == "building_n_families":
+                            # Update n_family in database
+                            families = []
+                            if isinstance(result, dict):
+                                families = result.get('building_families', [])
+                            elif isinstance(result, list):
+                                families = result
+                            if families:
+                                building_geo_result = results.get('building_geo', {})
+                                updated = update_building_properties_in_database(
+                                    db, project_id, scenario_id,
+                                    building_geo_result, 'n_family', families
+                                )
+                                db_update_status["updated_records"] = updated
+                                db_update_status["status"] = "success"
+                            else:
+                                db_update_status["status"] = "success"
+                                db_update_status["note"] = "No family data to update"
+                        
+                        elif feature_name == "building_construction_year":
+                            # Update const_year, const_period_census, const_tabula
+                            # Result may be a dict with lists or a single default
+                            if isinstance(result, dict):
+                                # Per-building lists
+                                years = result.get('const_years', [])
+                                periods = result.get('const_periods', [])
+                                tabulas = result.get('const_tabulas', [])
+                                building_geo_result = results.get('building_geo', {})
+                                total_updated = 0
+                                if years:
+                                    total_updated += update_building_properties_in_database(
+                                        db, project_id, scenario_id,
+                                        building_geo_result, 'const_year', years
+                                    )
+                                if periods:
+                                    total_updated += update_building_properties_in_database(
+                                        db, project_id, scenario_id,
+                                        building_geo_result, 'const_period_census', periods
+                                    )
+                                if tabulas:
+                                    total_updated += update_building_properties_in_database(
+                                        db, project_id, scenario_id,
+                                        building_geo_result, 'const_tabula', tabulas
+                                    )
+                                db_update_status["updated_records"] = total_updated
+                                db_update_status["status"] = "success"
+                            else:
+                                db_update_status["status"] = "success"
+                                db_update_status["note"] = "Construction year data format not list-based"
+                        
+                        elif feature_name == "building_demographic":
+                            # Orchestration result, individual fields already saved by
+                            # building_population and building_n_families
+                            db_update_status["updated_records"] = 0
+                            db_update_status["status"] = "success"
+                            db_update_status["note"] = "Demographic orchestration complete"
+                        
+                        elif feature_name == "building_geo_lod12":
+                            # Update building_surfaces_lod12 JSON on cim_wizard_building table
+                            db_update_status["updated_records"] = 0
+                            db_update_status["status"] = "success"
+                            db_update_status["note"] = "LoD 1.2 geometry stored in calculator"
                         
                         database_updates.append(db_update_status)
                         
@@ -643,7 +804,11 @@ async def execute_building_analysis(
                 "buildings_with_volume": len(results.get('building_volume', {}).get('building_volumes', [])),
                 "buildings_with_floors": len(results.get('building_n_floors', {}).get('building_floors', [])),
                 "buildings_with_filter_res": results.get('filter_res', {}).get('total_buildings', 0) if results.get('filter_res') else 0,
-                "residential_buildings": results.get('filter_res', {}).get('residential_count', 0) if results.get('filter_res') else 0
+                "residential_buildings": results.get('filter_res', {}).get('residential_count', 0) if results.get('filter_res') else 0,
+                "census_population": results.get('census_population') if results.get('census_population') else 0,
+                "buildings_with_population": len(results.get('building_population', {}).get('building_populations', [])) if isinstance(results.get('building_population'), dict) else 0,
+                "buildings_with_families": len(results.get('building_n_families', {}).get('building_families', [])) if isinstance(results.get('building_n_families'), dict) else 0,
+                "buildings_with_construction_year": 1 if results.get('building_construction_year') else 0,
             },
             "metadata": {
                 "total_steps": len(calculation_chain),
@@ -651,7 +816,7 @@ async def execute_building_analysis(
                 "failed_steps": len(failed_calculations),
                 "success_rate": f"{(len(successful_calculations) / len(calculation_chain) * 100):.1f}%",
                 "database_updates_enabled": save_to_db,
-                "pipeline_version": "1.0.0"
+                "pipeline_version": "2.0.0"
             }
         }
         

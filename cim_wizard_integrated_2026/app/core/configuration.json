@@ -271,7 +271,7 @@
       "methods": [
         {
           "priority": 1,
-          "input_dependencies": ["building_id", "project_id", "scenario_id", "building_geo", "building_height"],
+          "input_dependencies": ["building_geo", "building_height"],
           "method_name": "by_footprint_height"
         }
       ]

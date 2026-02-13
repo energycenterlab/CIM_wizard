@@ -236,18 +236,53 @@ class BuildingGeoCalculator:
             out skel qt;
             """
             
-            # Query Overpass API
-            overpass_url = "https://overpass-api.de/api/interpreter"
+            # Query Overpass API with retry logic
+            overpass_urls = [
+                "https://overpass-api.de/api/interpreter",
+                "https://overpass.kumi.systems/api/interpreter",
+            ]
             self.pipeline.log_info(self.calculator_name, f"Querying OSM Overpass API for buildings in bounds: {min_lat},{min_lon},{max_lat},{max_lon}")
             
-            response = requests.post(overpass_url, data=overpass_query, timeout=30)
+            import time
+            osm_data = None
+            max_retries = 3
             
-            if response.status_code != 200:
-                self.pipeline.log_error(self.calculator_name, f"Overpass API request failed: {response.status_code}")
+            for attempt in range(max_retries):
+                for overpass_url in overpass_urls:
+                    try:
+                        server_name = overpass_url.split("//")[1].split("/")[0]
+                        self.pipeline.log_info(self.calculator_name, f"Attempt {attempt + 1}/{max_retries} via {server_name}")
+                        response = requests.post(overpass_url, data=overpass_query, timeout=60)
+                        
+                        if response.status_code == 200:
+                            osm_data = response.json()
+                            if osm_data.get('elements'):
+                                self.pipeline.log_info(self.calculator_name, f"Received {len(osm_data['elements'])} elements from {server_name}")
+                                break
+                            else:
+                                self.pipeline.log_warning(self.calculator_name, f"Empty response from {server_name}")
+                        elif response.status_code == 429:
+                            wait_time = 2 ** (attempt + 1)
+                            self.pipeline.log_warning(self.calculator_name, f"Rate limited by {server_name}, waiting {wait_time}s")
+                            time.sleep(wait_time)
+                        else:
+                            self.pipeline.log_warning(self.calculator_name, f"{server_name} returned HTTP {response.status_code}")
+                    except requests.exceptions.Timeout:
+                        self.pipeline.log_warning(self.calculator_name, f"Timeout from {server_name}")
+                    except Exception as e:
+                        self.pipeline.log_warning(self.calculator_name, f"Error from {server_name}: {e}")
+                
+                if osm_data and osm_data.get('elements'):
+                    break
+                
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** (attempt + 1)
+                    self.pipeline.log_info(self.calculator_name, f"Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+            
+            if not osm_data or not osm_data.get('elements'):
+                self.pipeline.log_error(self.calculator_name, f"All Overpass API attempts failed after {max_retries} retries")
                 return buildings
-            
-            osm_data = response.json()
-            self.pipeline.log_info(self.calculator_name, f"Received {len(osm_data.get('elements', []))} elements from OSM")
             
             # Process OSM elements
             nodes = {node['id']: node for node in osm_data.get('elements', []) if node['type'] == 'node'}
