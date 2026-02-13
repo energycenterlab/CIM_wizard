@@ -472,6 +472,183 @@ async def get_grid_lines_by_network(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+# ── Delete endpoints ───────────────────────────────────────────────────
+
+@router.delete("/delete")
+async def delete_project_data(
+    project_id: str = Query(..., description="Project ID (required)"),
+    scenario_id: Optional[str] = Query(None, description="Scenario ID (optional)"),
+    building_id: Optional[str] = Query(None, description="Building ID (optional)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Flexible delete endpoint. Behavior depends on which parameters are provided:
+    
+    1. project_id + scenario_id + building_id
+       Delete one building from building_properties and building tables.
+    
+    2. project_id + scenario_id (no building_id)
+       Delete the project scenario and ALL its buildings from
+       building_properties, building, and project_scenario tables.
+    
+    3. project_id only (no scenario_id, no building_id)
+       Delete ALL scenarios for that project and ALL their buildings
+       from building_properties, building, and project_scenario tables.
+    """
+    try:
+        deleted = {
+            "building_properties_deleted": 0,
+            "buildings_deleted": 0,
+            "project_scenarios_deleted": 0,
+        }
+
+        # ── Case 1: Delete a specific building ──────────────────────
+        if project_id and scenario_id and building_id:
+            # Delete from building_properties
+            bp_count = db.query(BuildingProperties).filter(
+                and_(
+                    BuildingProperties.project_id == project_id,
+                    BuildingProperties.scenario_id == scenario_id,
+                    BuildingProperties.building_id == building_id,
+                )
+            ).delete(synchronize_session=False)
+            deleted["building_properties_deleted"] = bp_count
+
+            # Check if this building_id is used by any other scenario
+            other_refs = db.query(BuildingProperties).filter(
+                BuildingProperties.building_id == building_id
+            ).count()
+
+            if other_refs == 0:
+                # No other scenario references this building, safe to delete geometry
+                b_count = db.query(Building).filter(
+                    Building.building_id == building_id
+                ).delete(synchronize_session=False)
+                deleted["buildings_deleted"] = b_count
+
+            db.commit()
+            return {
+                "action": "delete_building",
+                "project_id": project_id,
+                "scenario_id": scenario_id,
+                "building_id": building_id,
+                **deleted,
+            }
+
+        # ── Case 2: Delete a project scenario and all its buildings ─
+        elif project_id and scenario_id:
+            # Get all building_ids for this scenario
+            bp_building_ids = [
+                row.building_id for row in
+                db.query(BuildingProperties.building_id).filter(
+                    and_(
+                        BuildingProperties.project_id == project_id,
+                        BuildingProperties.scenario_id == scenario_id,
+                    )
+                ).all()
+            ]
+
+            # Delete building_properties
+            bp_count = db.query(BuildingProperties).filter(
+                and_(
+                    BuildingProperties.project_id == project_id,
+                    BuildingProperties.scenario_id == scenario_id,
+                )
+            ).delete(synchronize_session=False)
+            deleted["building_properties_deleted"] = bp_count
+
+            # Delete buildings that are no longer referenced by any scenario
+            b_count = 0
+            for bid in bp_building_ids:
+                still_referenced = db.query(BuildingProperties).filter(
+                    BuildingProperties.building_id == bid
+                ).count()
+                if still_referenced == 0:
+                    b_count += db.query(Building).filter(
+                        Building.building_id == bid
+                    ).delete(synchronize_session=False)
+            deleted["buildings_deleted"] = b_count
+
+            # Delete the project_scenario record
+            ps_count = db.query(ProjectScenario).filter(
+                and_(
+                    ProjectScenario.project_id == project_id,
+                    ProjectScenario.scenario_id == scenario_id,
+                )
+            ).delete(synchronize_session=False)
+            deleted["project_scenarios_deleted"] = ps_count
+
+            db.commit()
+            return {
+                "action": "delete_scenario",
+                "project_id": project_id,
+                "scenario_id": scenario_id,
+                **deleted,
+            }
+
+        # ── Case 3: Delete entire project (all scenarios + buildings) ─
+        else:
+            # Get all scenario_ids for this project
+            scenario_ids = [
+                row.scenario_id for row in
+                db.query(ProjectScenario.scenario_id).filter(
+                    ProjectScenario.project_id == project_id
+                ).all()
+            ]
+
+            if not scenario_ids:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No project found with project_id '{project_id}'"
+                )
+
+            # Get all building_ids across all scenarios of this project
+            bp_building_ids = [
+                row.building_id for row in
+                db.query(BuildingProperties.building_id).filter(
+                    BuildingProperties.project_id == project_id
+                ).distinct().all()
+            ]
+
+            # Delete all building_properties for this project
+            bp_count = db.query(BuildingProperties).filter(
+                BuildingProperties.project_id == project_id
+            ).delete(synchronize_session=False)
+            deleted["building_properties_deleted"] = bp_count
+
+            # Delete buildings no longer referenced by any scenario
+            b_count = 0
+            for bid in bp_building_ids:
+                still_referenced = db.query(BuildingProperties).filter(
+                    BuildingProperties.building_id == bid
+                ).count()
+                if still_referenced == 0:
+                    b_count += db.query(Building).filter(
+                        Building.building_id == bid
+                    ).delete(synchronize_session=False)
+            deleted["buildings_deleted"] = b_count
+
+            # Delete all project_scenario records for this project
+            ps_count = db.query(ProjectScenario).filter(
+                ProjectScenario.project_id == project_id
+            ).delete(synchronize_session=False)
+            deleted["project_scenarios_deleted"] = ps_count
+
+            db.commit()
+            return {
+                "action": "delete_project",
+                "project_id": project_id,
+                "scenarios_affected": scenario_ids,
+                **deleted,
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
+
 # ── Schema discovery endpoints ─────────────────────────────────────────
 # These let any client fetch the normalization config so they know
 # which canonical field names the API uses and which aliases are accepted.

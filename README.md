@@ -22,6 +22,7 @@
   - [3.4 What Is Missing from Building Analysis](#34-what-is-missing-from-building-analysis)
 - [4. Database Schema](#4-database-schema)
 - [5. API Endpoint Reference](#5-api-endpoint-reference)
+  - [DELETE Project Data](#delete-project-data)
 - [6. Backend Field Normalizer](#6-backend-field-normalizer)
 - [7. Issues and Recommendations](#7-issues-and-recommendations)
 - [8. Running the System](#8-running-the-system)
@@ -387,6 +388,7 @@ No explicit foreign keys are enforced in the database. All relationships are log
 | GET | `/api/v1/vector/schema/{entity_name}` | Get normalization schema for one entity |
 | POST | `/api/v1/building/execute_building_analysis` | Create project + run full 16-step pipeline (physical + demographic + 3D) |
 | POST | `/api/v1/complete/execute_complete_chain` | *Deprecated* -- use building_analysis endpoint instead |
+| DELETE | `/api/v1/vector/delete` | Flexible delete (building, scenario, or entire project) |
 
 ### Pipeline Endpoints (Generic)
 
@@ -427,6 +429,74 @@ Content-Type: application/json
 | `project_name` | string | No | `"Building_Analysis"` | Human-readable project name |
 | `scenario_name` | string or null | No | `"baseline"` | If null, defaults to "baseline" with scenario_id = project_id |
 | `save_to_db` | boolean | No | `true` | Whether to persist results to database |
+
+### DELETE Project Data
+
+A single flexible endpoint that deletes a building, a scenario, or an entire project depending on which query parameters are provided. The `project_id` parameter is always required. Adding `scenario_id` narrows the scope to one scenario, and further adding `building_id` narrows it to a single building.
+
+```
+DELETE /api/v1/vector/delete?project_id=<id>[&scenario_id=<id>][&building_id=<id>]
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `project_id` | string | Yes | The UUID of the project |
+| `scenario_id` | string | No | The UUID of the scenario within the project |
+| `building_id` | string | No | The UUID of a specific building (requires `scenario_id`) |
+
+#### Behavior Matrix
+
+| project_id | scenario_id | building_id | Action |
+|:----------:|:-----------:|:-----------:|--------|
+| provided | provided | provided | **Delete one building** -- removes its row from `building_properties`; also removes the geometry from `building` if no other scenario references that building |
+| provided | provided | -- | **Delete one scenario** -- removes all `building_properties` for that scenario, orphaned `building` geometries, and the `project_scenario` record |
+| provided | -- | -- | **Delete entire project** -- removes all `building_properties`, orphaned `building` geometries, and all `project_scenario` records for every scenario in the project |
+
+#### Example Requests (Postman / curl)
+
+Delete a single building:
+
+```
+DELETE /api/v1/vector/delete?project_id=abc-123&scenario_id=def-456&building_id=ghi-789
+```
+
+Delete a scenario and all its buildings:
+
+```
+DELETE /api/v1/vector/delete?project_id=abc-123&scenario_id=def-456
+```
+
+Delete an entire project:
+
+```
+DELETE /api/v1/vector/delete?project_id=abc-123
+```
+
+#### Response
+
+All three cases return a JSON object summarizing what was removed:
+
+```json
+{
+  "action": "delete_building | delete_scenario | delete_project",
+  "project_id": "abc-123",
+  "scenario_id": "def-456",
+  "building_id": "ghi-789",
+  "building_properties_deleted": 1,
+  "buildings_deleted": 1,
+  "project_scenarios_deleted": 0
+}
+```
+
+For `delete_project`, the response also includes a `scenarios_affected` array listing all scenario IDs that were removed.
+
+#### Safety Logic
+
+- A `building` geometry row is only deleted when no other scenario still references that `building_id` in `building_properties`. This prevents data loss when multiple scenarios share the same physical building.
+- If a `project_id` has no matching `project_scenario` records, the endpoint returns `404 Not Found`.
+- On any unexpected error the transaction is rolled back and a `500 Internal Server Error` is returned with a description.
 
 ---
 
