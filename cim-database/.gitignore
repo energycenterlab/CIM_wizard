@@ -1,0 +1,7 @@
+# Large backup - keep locally, do not commit
+init-db/init_backup.sql
+
+# Backup outputs
+backups/*.dump
+backups/*.sql
+!backups/.gitkeep

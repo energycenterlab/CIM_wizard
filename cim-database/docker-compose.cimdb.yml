@@ -1,50 +1,41 @@
-# CIM Wizard Database with Persistent Storage
-# This docker-compose file runs the CIM database with persistent volumes
-# Any changes to the database will be stored permanently
+# CIM Wizard Database - initializes from init_backup.sql on first startup
 
 services:
   cim-database:
-    image: taherdoust/cim:sansalva-raster-vector-census-network
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cim-database:latest
     container_name: cim-integrateddb
     restart: unless-stopped
-    
-    # Expose database port
+
     ports:
       - "15432:5432"
-    
-    # Environment variables
+
     environment:
       POSTGRES_DB: cim_wizard_integrated
       POSTGRES_USER: cim_wizard_user
       POSTGRES_PASSWORD: cim_wizard_password
       PGDATA: /var/lib/postgresql/data/pgdata
-    
-    # Persistent volumes for data storage
+
     volumes:
-      # PostgreSQL data directory - stores all database data
+      # Persistent database storage
       - cim_postgres_data:/var/lib/postgresql/data
-      
-      # Mount db_backup.sql for automatic restore on first startup
-      - ../db:/db:ro
-      
-      # Mount init script to run restore automatically
+
+      # Init backup - runs automatically on first startup
+      # Place init_backup.sql (plain SQL from pg_dump -F p) in init-db/
       - ./init-db:/docker-entrypoint-initdb.d:ro
-      
-      # Optional: Mount backup directory for easy backup/restore
+
+      # Backup directory for create_backup.sh
       - ./backups:/backups
-      
-      # Optional: Mount logs directory
-      - ./logs:/var/log/postgresql
-    
-    # Health check
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
-    
-    # Resource limits (optional - adjust based on your machine)
+      start_period: 300s
+
     deploy:
       resources:
         limits:
@@ -52,7 +43,6 @@ services:
         reservations:
           memory: 2G
 
-# Named volumes for persistent storage
 volumes:
   cim_postgres_data:
     driver: local
