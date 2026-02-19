@@ -580,6 +580,14 @@ No Python code changes needed. Restart the server or call `reload_config()`.
 - Python 3.10+ with conda or pip
 - Node.js 18+
 
+### Docker Quick Start (DB + Backend)
+
+```bash
+chmod +x run-docker.sh
+./run-docker.sh up      # Start database and backend
+./run-docker.sh down    # Stop both
+```
+
 ### 1. Start the Database
 ```bash
 cd cim-database

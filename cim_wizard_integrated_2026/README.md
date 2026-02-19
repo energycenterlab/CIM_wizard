@@ -200,13 +200,24 @@ curl http://localhost:8000/health
 ```
 
 ### Docker Deployment
+
+**Full stack** (DB + backend; requires `../cim-database/init-db/init_backup.sql`):
 ```bash
-# Build and run
-docker-compose up --build
+docker compose up -d --build
 
 # Check status
-docker-compose ps
+docker compose ps
+
+# Logs
+docker compose logs -f backend
 ```
+
+**Backend only** (when DB is already running on localhost:15432):
+```bash
+docker compose -f docker-compose.backend-only.yml up -d --build
+```
+
+API docs: http://localhost:8000/docs
 
 ## Documentation
 

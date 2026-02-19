@@ -1,0 +1,2 @@
+# Deploy script contains server password - do not commit
+deploy-to-server.sh

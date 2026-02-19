@@ -1,0 +1,16 @@
+# Backend only - use when DB is already running (e.g. from cim-database)
+# Requires: cim-integrateddb on localhost:15432
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cim-backend:latest
+    container_name: cim-backend
+    restart: unless-stopped
+
+    network_mode: host
+
+    environment:
+      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated

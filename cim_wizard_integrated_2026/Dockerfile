@@ -1,5 +1,5 @@
 # Multi-stage build for CIM Wizard Integrated
-FROM python:3.10-slim as builder
+FROM python:3.11-slim as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -22,7 +22,7 @@ COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
 
 # Final stage
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -51,4 +51,4 @@ USER appuser
 EXPOSE 8000
 
 # Run application
-CMD ["python", "run.py"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

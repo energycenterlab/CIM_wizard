@@ -1,0 +1,59 @@
+# CIM Wizard Integrated - Backend + Database
+# Run from this directory. Requires ../cim-database/ with init_backup.sql for first-time DB init.
+
+services:
+  db:
+    build:
+      context: ../cim-database
+      dockerfile: Dockerfile
+    image: cim-database:latest
+    container_name: cim-integrateddb
+    restart: unless-stopped
+
+    ports:
+      - "15432:5432"
+
+    environment:
+      POSTGRES_DB: cim_wizard_integrated
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    volumes:
+      - cim_postgres_data:/var/lib/postgresql/data
+      - ../cim-database/init-db:/docker-entrypoint-initdb.d:ro
+      - ../cim-database/backups:/backups
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cim-backend:latest
+    container_name: cim-backend
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@db:5432/cim_wizard_integrated
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  cim_postgres_data:
+    driver: local
