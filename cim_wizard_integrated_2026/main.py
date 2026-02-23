@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route, building_analysis_route
+from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route, building_analysis_route, network_routes
 from app.db.database import engine, Base
 from app.db.database import create_all_schemas
 from app.core.settings import settings
@@ -92,6 +92,12 @@ app.include_router(
     tags=["Building Analysis"]
 )
 
+app.include_router(
+    network_routes.router,
+    prefix=f"{settings.API_V1_STR}/network",
+    tags=["Network Data"]
+)
+
 
 @app.get("/")
 async def root():
@@ -104,7 +110,8 @@ async def root():
             "census_data": f"{settings.API_V1_STR}/census",
             "raster_data": f"{settings.API_V1_STR}/raster",
             "complete_chain": f"{settings.API_V1_STR}/complete",
-            "building_analysis": f"{settings.API_V1_STR}/building"
+            "building_analysis": f"{settings.API_V1_STR}/building",
+            "network_data": f"{settings.API_V1_STR}/network"
         },
         "documentation": {
             "swagger": "/docs",
@@ -121,6 +128,7 @@ async def health():
             "vector": "operational",
             "pipeline": "operational", 
             "census": "operational",
-            "raster": "operational"
+            "raster": "operational",
+            "network": "operational"
         }
     }

@@ -54,7 +54,7 @@ def create_all_schemas():
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""))
         
         # Create schemas for different services
-        schemas = ['cim_vector', 'cim_census', 'cim_raster']
+        schemas = ['cim_vector', 'cim_census', 'cim_raster', 'cim_network']
         for schema in schemas:
             # Possible errors: Schema already exists, insufficient privileges
             connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))

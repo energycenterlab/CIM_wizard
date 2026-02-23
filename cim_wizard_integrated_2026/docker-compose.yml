@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "8000:8000"
+      - "8001:8001"
 
     environment:
       DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@db:5432/cim_wizard_integrated
