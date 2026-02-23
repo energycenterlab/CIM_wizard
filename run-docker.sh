@@ -34,7 +34,7 @@ case "${1:-up}" in
     echo ""
     echo "CIM Wizard is running:"
     echo "  Database: localhost:15432"
-    echo "  API docs: http://localhost:8000/docs"
+    echo "  API docs: http://localhost:8001/docs"
     ;;
   down)
     echo "Stopping CIM Wizard Backend..."
