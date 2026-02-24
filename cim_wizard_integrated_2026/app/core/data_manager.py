@@ -107,6 +107,9 @@ class CimWizardDataManager:
         self.configuration = None
         self.load_configuration(config_path)
         
+        # Runtime method priority overrides: {feature_name: {method_name: priority}}
+        self.method_priority_overrides: Dict[str, Dict[str, int]] = {}
+        
         # Feature proxies for chaining
         self.scenario_geo = FeatureProxy('scenario_geo')
         self.scenario_census_boundary = FeatureProxy('scenario_census_boundary')
@@ -227,6 +230,51 @@ class CimWizardDataManager:
         """Check if a feature has been calculated"""
         return (feature_name in self.calculated_features or 
                 getattr(self, f"{feature_name}_data", None) is not None)
+    
+    def set_inputs_from_request(self, inputs: Dict[str, Any]):
+        """Set context and features from request body (e.g. from API inputs)"""
+        if not inputs:
+            return
+        # Standard context keys
+        for key in ('project_id', 'scenario_id', 'building_id'):
+            if key in inputs:
+                setattr(self, key, inputs[key])
+        # Feature keys - set as feature and corresponding _data attribute
+        feature_keys = list(self.configuration.get('features', {}).keys()) if self.configuration else []
+        for key, value in inputs.items():
+            if key in feature_keys:
+                self.set_feature(key, value)
+                data_attr = f"{key}_data"
+                if hasattr(self, data_attr):
+                    setattr(self, data_attr, value)
+            elif key not in ('project_id', 'scenario_id', 'building_id'):
+                self.set_context(**{key: value})
+    
+    def set_method_priority(self, feature: str, priorities: Dict[str, int]):
+        """Set runtime priority override for a feature's methods.
+        
+        Args:
+            feature: Feature name (e.g. 'building_height')
+            priorities: Dict mapping method_name -> priority (lower = higher priority)
+                       e.g. {"calculate_default_estimate": 1, "calculate_from_raster_tiles": 2}
+        """
+        self.method_priority_overrides[feature] = priorities
+    
+    def get_method_priority_override(self, feature: str) -> Optional[Dict[str, int]]:
+        """Get runtime priority override for a feature, or None if not set"""
+        return self.method_priority_overrides.get(feature)
+    
+    def get_available_pipelines(self) -> List[str]:
+        """Get list of predefined pipeline names from configuration"""
+        if self.configuration and 'predefined_pipelines' in self.configuration:
+            return list(self.configuration['predefined_pipelines'].keys())
+        return []
+    
+    def get_configured_features(self) -> List[str]:
+        """Get list of feature names defined in configuration (available to calculate)"""
+        if self.configuration and 'features' in self.configuration:
+            return list(self.configuration['features'].keys())
+        return []
     
     def get_available_features(self) -> List[str]:
         """Get list of available (calculated) features"""

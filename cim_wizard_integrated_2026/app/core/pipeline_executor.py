@@ -286,8 +286,16 @@ class CimWizardPipelineExecutor:
                              f"Method {explicit_method} not found for feature {feature_name}")
                 return False
         
-        # Otherwise, try methods in priority order
-        sorted_methods = sorted(methods, key=lambda x: x.get('priority', 999))
+        # Otherwise, try methods in priority order (use runtime override if set)
+        priority_override = self.data_manager.get_method_priority_override(feature_name)
+        
+        def sort_key(m):
+            base_priority = m.get('priority', 999)
+            if priority_override and m['method_name'] in priority_override:
+                return priority_override[m['method_name']]
+            return base_priority
+        
+        sorted_methods = sorted(methods, key=sort_key)
         
         for method_config in sorted_methods:
             if self.check_dependencies(method_config.get('input_dependencies', [])):

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route, building_analysis_route, network_routes
+from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route, building_analysis_route, network_routes, cim_wizard_views
 from app.db.database import engine, Base
 from app.db.database import create_all_schemas
 from app.core.settings import settings
@@ -98,6 +98,12 @@ app.include_router(
     tags=["Network Data"]
 )
 
+app.include_router(
+    cim_wizard_views.router,
+    prefix=f"{settings.API_V1_STR}/cim-wizard",
+    tags=["CIM Wizard Views"]
+)
+
 
 @app.get("/")
 async def root():
@@ -111,7 +117,8 @@ async def root():
             "raster_data": f"{settings.API_V1_STR}/raster",
             "complete_chain": f"{settings.API_V1_STR}/complete",
             "building_analysis": f"{settings.API_V1_STR}/building",
-            "network_data": f"{settings.API_V1_STR}/network"
+            "network_data": f"{settings.API_V1_STR}/network",
+            "cim_wizard": f"{settings.API_V1_STR}/cim-wizard"
         },
         "documentation": {
             "swagger": "/docs",

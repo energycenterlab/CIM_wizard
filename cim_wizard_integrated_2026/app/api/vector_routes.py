@@ -14,7 +14,7 @@ import json
 from app.db.database import get_db
 from app.models.vector import (
     ProjectScenario, Building, BuildingProperties, 
-    GridBus, GridLine
+    
 )
 from app.core.normalizer import (
     normalize_input, normalize_output, validate,
@@ -424,52 +424,52 @@ async def building_id_fetcher_buffer(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-# Grid-related endpoints
-@router.get("/{project_id}/{scenario_id}/gridline")
-async def get_grid_lines(
-    project_id: str,
-    scenario_id: str,
-    network_id: Optional[str] = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db)
-):
-    """Get grid lines for a project scenario"""
-    try:
-        query = db.query(GridLine).filter(
-            and_(
-                GridLine.project_id == project_id,
-                GridLine.scenario_id == scenario_id
-            )
-        )
+# # Grid-related endpoints
+# @router.get("/{project_id}/{scenario_id}/gridline")
+# async def get_grid_lines(
+#     project_id: str,
+#     scenario_id: str,
+#     network_id: Optional[str] = Query(None),
+#     limit: int = Query(100, ge=1, le=1000),
+#     offset: int = Query(0, ge=0),
+#     db: Session = Depends(get_db)
+# ):
+#     """Get grid lines for a project scenario"""
+#     try:
+#         query = db.query(GridLine).filter(
+#             and_(
+#                 GridLine.project_id == project_id,
+#                 GridLine.scenario_id == scenario_id
+#             )
+#         )
         
-        if network_id:
-            query = query.filter(GridLine.network_id == network_id)
+#         if network_id:
+#             query = query.filter(GridLine.network_id == network_id)
         
-        lines = query.offset(offset).limit(limit).all()
-        return lines
-    except Exception as e:
-        # Possible errors: Database connection issues
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+#         lines = query.offset(offset).limit(limit).all()
+#         return lines
+#     except Exception as e:
+#         # Possible errors: Database connection issues
+#         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/gridline/network/{network_id}")
-async def get_grid_lines_by_network(
-    network_id: str,
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db)
-):
-    """Get grid lines by network ID"""
-    try:
-        lines = db.query(GridLine).filter(
-            GridLine.network_id == network_id
-        ).offset(offset).limit(limit).all()
+# @router.get("/gridline/network/{network_id}")
+# async def get_grid_lines_by_network(
+#     network_id: str,
+#     limit: int = Query(100, ge=1, le=1000),
+#     offset: int = Query(0, ge=0),
+#     db: Session = Depends(get_db)
+# ):
+#     """Get grid lines by network ID"""
+#     try:
+#         lines = db.query(GridLine).filter(
+#             GridLine.network_id == network_id
+#         ).offset(offset).limit(limit).all()
         
-        return lines
-    except Exception as e:
-        # Possible errors: Database connection issues
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+#         return lines
+#     except Exception as e:
+#         # Possible errors: Database connection issues
+#         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 # ── Delete endpoints ───────────────────────────────────────────────────
