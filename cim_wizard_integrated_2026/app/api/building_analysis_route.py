@@ -483,6 +483,11 @@ async def execute_building_analysis(
                 "feature_name": "building_geo_lod12",
                 "method_name": "by_footprint_height",
                 "description": "Generate LoD 1.2 3D building geometry from footprint and height"
+            },
+            {
+                "feature_name": "envelope_efficiency",
+                "method_name": "assign_random",
+                "description": "Assign random envelope efficiency (low/medium/high) per building"
             }
         ]
         

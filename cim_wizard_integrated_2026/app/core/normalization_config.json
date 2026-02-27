@@ -245,6 +245,12 @@
           "value_range": [0, 1000],
           "aliases": ["nFamily", "n_families", "Number of Families", "number_of_families", "families", "households", "nuclei_familiari"]
         },
+        "envelope_efficiency": {
+          "type": "string",
+          "required": false,
+          "description": "Envelope efficiency classification: low, medium, or high",
+          "aliases": ["envelopeEfficiency", "EnvelopeEfficiency", "envelope_efficiency_class"]
+        },
         "filter_res": {
           "type": "boolean",
           "required": false,

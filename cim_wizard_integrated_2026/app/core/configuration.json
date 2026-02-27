@@ -275,6 +275,21 @@
           "method_name": "by_footprint_height"
         }
       ]
+    },
+    "envelope_efficiency": {
+      "constraints": {
+        "datatype": "string",
+        "required": false
+      },
+      "class_path": "app.calculators.envelope_efficiency_calculator",
+      "class_name": "EnvelopeEfficiencyCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo", "building_props"],
+          "method_name": "assign_random"
+        }
+      ]
     }
   },
   "predefined_pipelines": {
