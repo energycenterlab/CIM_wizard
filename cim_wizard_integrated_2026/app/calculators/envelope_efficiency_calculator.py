@@ -4,7 +4,6 @@ Assigns random envelope efficiency (low/medium/high) per building.
 """
 import random
 from typing import Optional, Dict, Any
-from sqlalchemy import and_
 
 from app.calculators.base_calculator import BaseCalculator
 
@@ -18,7 +17,7 @@ class EnvelopeEfficiencyCalculator(BaseCalculator):
         super().__init__(pipeline_executor)
 
     def assign_random(self) -> Optional[Dict[str, Any]]:
-        """Assign random envelope efficiency (low/medium/high) per building and save to BuildingProperties"""
+        """Assign random envelope efficiency (low/medium/high) per building"""
         try:
             building_geo = self.pipeline.get_feature_safely(
                 "building_geo", calculator_name=self.calculator_name
@@ -45,24 +44,25 @@ class EnvelopeEfficiencyCalculator(BaseCalculator):
                 )
                 return None
 
-            envelope_values = []
-            for building in buildings:
-                value = random.choice(self.VALID_VALUES)
-                envelope_values.append(value)
+            envelope_values = [random.choice(self.VALID_VALUES) for _ in buildings]
 
-            self.data_manager.set_feature(
-                "envelope_efficiency",
-                {
-                    "project_id": project_id,
-                    "scenario_id": scenario_id,
-                    "envelope_efficiency": envelope_values,
-                },
-            )
+            result = {
+                "project_id": project_id,
+                "scenario_id": scenario_id,
+                "envelope_efficiency": envelope_values,
+                "processed_count": len(buildings),
+            }
+            self.data_manager.set_feature("envelope_efficiency", result)
 
-            db_session = getattr(self.data_manager, "db_session", None)
-            if db_session:
-                self._save_to_database(
-                    db_session, buildings, envelope_values, project_id, scenario_id
+            # Persist via DataManager
+            try:
+                self.data_manager.upsert_building_properties_batch(
+                    buildings, project_id, scenario_id,
+                    "envelope_efficiency", envelope_values,
+                )
+            except Exception as db_err:
+                self.pipeline.log_warning(
+                    self.calculator_name, f"DB save failed: {db_err}"
                 )
 
             self.pipeline.log_calculation_success(
@@ -70,56 +70,9 @@ class EnvelopeEfficiencyCalculator(BaseCalculator):
                 "assign_random",
                 f"Assigned envelope efficiency for {len(buildings)} buildings",
             )
-            return {
-                "project_id": project_id,
-                "scenario_id": scenario_id,
-                "envelope_efficiency": envelope_values,
-                "processed_count": len(buildings),
-            }
+            return result
         except Exception as e:
             self.pipeline.log_calculation_failure(
                 self.calculator_name, "assign_random", str(e)
             )
             return None
-
-    def _save_to_database(
-        self, db_session, buildings, envelope_values, project_id, scenario_id
-    ):
-        """Save envelope efficiency to BuildingProperties for each building"""
-        try:
-            from app.models.vector import BuildingProperties
-
-            updated_count = 0
-            for building, value in zip(buildings, envelope_values):
-                building_id = building.get("building_id")
-                if not building_id:
-                    continue
-                lod = building.get("lod", 0)
-
-                props = db_session.query(BuildingProperties).filter(
-                    and_(
-                        BuildingProperties.building_id == building_id,
-                        BuildingProperties.project_id == project_id,
-                        BuildingProperties.scenario_id == scenario_id,
-                        BuildingProperties.lod == lod,
-                    )
-                ).first()
-
-                if props:
-                    props.envelope_efficiency = value
-                    db_session.add(props)
-                    updated_count += 1
-
-            if updated_count > 0:
-                db_session.commit()
-                db_session.flush()
-                self.pipeline.log_info(
-                    self.calculator_name,
-                    f"Saved envelope_efficiency for {updated_count} buildings",
-                )
-        except Exception as e:
-            db_session.rollback()
-            self.pipeline.log_error(
-                self.calculator_name, f"Failed to save envelope_efficiency: {str(e)}"
-            )
-            raise

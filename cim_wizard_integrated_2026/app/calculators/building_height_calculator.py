@@ -40,15 +40,9 @@ class BuildingHeightCalculator(BaseCalculator):
         
         self.pipeline.log_info(self.calculator_name, f"Found {len(buildings)} buildings")
         
-        # Get database session
-        db_session = getattr(self.data_manager, 'db_session', None)
-        if not db_session:
-            self.pipeline.log_error(self.calculator_name, "No database session")
-            return None
-        
-        # ── Verify raster tables exist ──────────────────────────────
-        dsm_ok = self._check_raster_table(db_session, self.DSM_TABLE)
-        dtm_ok = self._check_raster_table(db_session, self.DTM_TABLE)
+        # ── Verify raster tables exist (via DataManager) ─────────────
+        dsm_ok = self.data_manager.check_raster_table(self.DSM_TABLE)
+        dtm_ok = self.data_manager.check_raster_table(self.DTM_TABLE)
         
         if not dsm_ok or not dtm_ok:
             self.pipeline.log_warning(
@@ -124,32 +118,15 @@ class BuildingHeightCalculator(BaseCalculator):
         return None, None
     
     def _query_height(self, db_session, lon: float, lat: float) -> Optional[float]:
-        """Query DSM and DTM at a point, return height = DSM - DTM (clamped)."""
-        dsm_value = self._query_raster_value(db_session, self.DSM_TABLE, lon, lat)
+        """Query DSM and DTM at a point via DataManager, return height = DSM - DTM (clamped)."""
+        dsm_value = self.data_manager.query_raster_value(self.DSM_TABLE, lon, lat)
         if dsm_value is None:
             return None
-        
-        dtm_value = self._query_raster_value(db_session, self.DTM_TABLE, lon, lat)
+
+        dtm_value = self.data_manager.query_raster_value(self.DTM_TABLE, lon, lat)
         if dtm_value is None:
             return None
-        
+
         height = dsm_value - dtm_value
         height = max(self.MIN_HEIGHT, min(self.MAX_HEIGHT, height))
         return round(height, 2)
-    
-    def _query_raster_value(self, db_session, table_name: str, lon: float, lat: float) -> Optional[float]:
-        """Get raster cell value at a point. Rolls back on error to keep session clean."""
-        try:
-            query = text(f"""
-                SELECT ST_Value(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
-                FROM {table_name}
-                WHERE ST_Intersects(rast, ST_SetSRID(ST_Point(:lon, :lat), 4326))
-                LIMIT 1
-            """)
-            result = db_session.execute(query, {'lon': lon, 'lat': lat}).fetchone()
-            if result and result[0] is not None:
-                return float(result[0])
-            return None
-        except Exception:
-            db_session.rollback()  # Clear failed transaction
-            return None

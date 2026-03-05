@@ -2,7 +2,6 @@
 FMU Assign Calculator - Assigns FMU file identifier to building properties
 """
 from typing import Optional, Dict, Any
-from sqlalchemy import and_
 
 from app.calculators.base_calculator import BaseCalculator
 
@@ -42,20 +41,23 @@ class FmuAssignCalculator(BaseCalculator):
                 return None
 
             value = "frassinetto"
-            self.data_manager.set_feature(
-                "fmu_assign",
-                {
-                    "project_id": project_id,
-                    "scenario_id": scenario_id,
-                    "fmu_file": value,
-                    "processed_count": len(buildings),
-                },
-            )
+            result = {
+                "project_id": project_id,
+                "scenario_id": scenario_id,
+                "fmu_file": value,
+                "processed_count": len(buildings),
+            }
+            self.data_manager.set_feature("fmu_assign", result)
 
-            db_session = getattr(self.data_manager, "db_session", None)
-            if db_session:
-                self._save_to_database(
-                    db_session, buildings, value, project_id, scenario_id
+            # Persist via DataManager
+            try:
+                values = [value] * len(buildings)
+                self.data_manager.upsert_building_properties_batch(
+                    buildings, project_id, scenario_id, "fmu_file", values,
+                )
+            except Exception as db_err:
+                self.pipeline.log_warning(
+                    self.calculator_name, f"DB save failed: {db_err}"
                 )
 
             self.pipeline.log_calculation_success(
@@ -63,56 +65,9 @@ class FmuAssignCalculator(BaseCalculator):
                 "frassinetto",
                 f"Assigned fmu_file='{value}' for {len(buildings)} buildings",
             )
-            return {
-                "project_id": project_id,
-                "scenario_id": scenario_id,
-                "fmu_file": value,
-                "processed_count": len(buildings),
-            }
+            return result
         except Exception as e:
             self.pipeline.log_calculation_failure(
                 self.calculator_name, "frassinetto", str(e)
             )
             return None
-
-    def _save_to_database(
-        self, db_session, buildings, value, project_id, scenario_id
-    ):
-        """Save fmu_file to BuildingProperties for each building"""
-        try:
-            from app.models.vector import BuildingProperties
-
-            updated_count = 0
-            for building in buildings:
-                building_id = building.get("building_id")
-                if not building_id:
-                    continue
-                lod = building.get("lod", 0)
-
-                props = db_session.query(BuildingProperties).filter(
-                    and_(
-                        BuildingProperties.building_id == building_id,
-                        BuildingProperties.project_id == project_id,
-                        BuildingProperties.scenario_id == scenario_id,
-                        BuildingProperties.lod == lod,
-                    )
-                ).first()
-
-                if props:
-                    props.fmu_file = value
-                    db_session.add(props)
-                    updated_count += 1
-
-            if updated_count > 0:
-                db_session.commit()
-                db_session.flush()
-                self.pipeline.log_info(
-                    self.calculator_name,
-                    f"Saved fmu_file for {updated_count} buildings",
-                )
-        except Exception as e:
-            db_session.rollback()
-            self.pipeline.log_error(
-                self.calculator_name, f"Failed to save fmu_file: {str(e)}"
-            )
-            raise

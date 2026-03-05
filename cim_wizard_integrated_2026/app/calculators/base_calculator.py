@@ -4,13 +4,16 @@ BaseCalculator - Abstract base class for all CIM Wizard pipeline calculators.
 Every calculator inherits from this class to get:
 - pipeline executor and data manager references
 - convenience wrappers for logging, validation, feature access
-- db_session / project_id / scenario_id properties
+- project_id / scenario_id properties
+- save_to_db helper that delegates to DataManager
 
 Subclasses only need to call  super().__init__(pipeline_executor)  and then
-implement their domain-specific calculation methods.
+implement their domain-specific calculation methods.  Direct database access
+(db.query, db.commit, ...) should NOT appear in calculators; all persistence
+goes through DataManager.
 """
 
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class BaseCalculator:
@@ -94,14 +97,36 @@ class BaseCalculator:
     # ------------------------------------------------------------------
 
     @property
-    def db_session(self):
-        """Current SQLAlchemy session (or None)."""
-        return getattr(self.data_manager, "db_session", None)
-
-    @property
     def project_id(self) -> Optional[str]:
         return getattr(self.data_manager, "project_id", None)
 
     @property
     def scenario_id(self) -> Optional[str]:
         return getattr(self.data_manager, "scenario_id", None)
+
+    # ------------------------------------------------------------------
+    # Database persistence (via DataManager)
+    # ------------------------------------------------------------------
+
+    def save_property_batch(
+        self,
+        buildings: List[Dict[str, Any]],
+        property_name: str,
+        values: List[Any],
+        project_id: str = None,
+        scenario_id: str = None,
+    ) -> int:
+        """
+        Convenience wrapper around DataManager.upsert_building_properties_batch.
+
+        Calculators should call this instead of touching the DB session
+        directly.
+        """
+        pid = project_id or self.project_id
+        sid = scenario_id or self.scenario_id
+        if not pid or not sid:
+            self.log_warning("Cannot save to DB: missing project_id or scenario_id")
+            return 0
+        return self.data_manager.upsert_building_properties_batch(
+            buildings, pid, sid, property_name, values,
+        )

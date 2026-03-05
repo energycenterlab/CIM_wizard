@@ -119,10 +119,15 @@ class BuildingNFloorsCalculator(BaseCalculator):
             self.data_manager.set_feature('building_n_floors', result)
             self.data_manager.set_feature('building_floors', building_floors)  # Also store list
             
-            # Save to database immediately
-            db_session = getattr(self.data_manager, 'db_session', None)
-            if db_session and project_id and scenario_id:
-                self._save_floors_to_database(db_session, buildings, building_floors, project_id, scenario_id)
+            # Save to database via DataManager
+            if project_id and scenario_id:
+                try:
+                    self.data_manager.upsert_building_properties_batch(
+                        buildings, project_id, scenario_id,
+                        'number_of_floors', building_floors,
+                    )
+                except Exception as db_err:
+                    self.pipeline.log_warning(self.calculator_name, f"DB save failed: {db_err}")
 
             self.pipeline.log_calculation_success(self.calculator_name, 'estimate_by_height', f"Estimated floors for {processed_count} residential buildings (skipped {skipped_count} non-residential)")
             return result

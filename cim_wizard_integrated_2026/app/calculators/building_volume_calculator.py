@@ -142,10 +142,15 @@ class BuildingVolumeCalculator(BaseCalculator):
             self.data_manager.set_feature('building_volume', result)
             self.data_manager.set_feature('building_volumes', building_volumes)  # Also store list
             
-            # Save to database immediately
-            db_session = getattr(self.data_manager, 'db_session', None)
-            if db_session and project_id and scenario_id:
-                self._save_volumes_to_database(db_session, buildings, building_volumes, project_id, scenario_id)
+            # Save to database via DataManager
+            if project_id and scenario_id:
+                try:
+                    self.data_manager.upsert_building_properties_batch(
+                        buildings, project_id, scenario_id,
+                        'volume', building_volumes,
+                    )
+                except Exception as db_err:
+                    self.pipeline.log_warning(self.calculator_name, f"DB save failed: {db_err}")
             
             self.pipeline.log_info(self.calculator_name, f"Successfully calculated volumes for {processed_count} residential buildings (skipped {skipped_count} non-residential)")
             return result

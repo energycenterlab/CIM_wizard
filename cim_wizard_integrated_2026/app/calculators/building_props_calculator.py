@@ -77,14 +77,20 @@ class BuildingPropsCalculator(BaseCalculator):
             
             self.pipeline.log_info(self.calculator_name, f"Created {created_count} building properties")
 
-            # Save to database if we have a db session
-            db_session = self.data_manager.db_session
-            if db_session:
-                self.pipeline.log_info(self.calculator_name, f"Database session available, saving {len(building_properties_list)} properties")
-                saved_count = self._save_props_to_database(db_session, project_id, scenario_id, building_properties_list)
-                self.pipeline.log_info(self.calculator_name, f"Saved {saved_count} building properties to database")
-            else:
-                self.pipeline.log_warning(self.calculator_name, "No database session available, skipping database save")
+            # Initialize BuildingProperties rows via DataManager
+            if project_id and scenario_id:
+                try:
+                    for bp in building_properties_list:
+                        self.data_manager.upsert_building_property_fields(
+                            project_id, scenario_id,
+                            bp['building_id'], bp.get('lod', 0),
+                        )
+                    self.pipeline.log_info(
+                        self.calculator_name,
+                        f"Initialized {len(building_properties_list)} BuildingProperties rows",
+                    )
+                except Exception as db_err:
+                    self.pipeline.log_warning(self.calculator_name, f"DB init failed: {db_err}")
 
             # Create result with all building properties
             building_props = {

@@ -96,10 +96,15 @@ class BuildingAreaCalculator(BaseCalculator):
             # Also store the areas list directly for easier access
             self.data_manager.set_feature('building_areas', building_areas)
             
-            # Save to database immediately
-            db_session = getattr(self.data_manager, 'db_session', None)
-            if db_session and project_id and scenario_id:
-                self._save_areas_to_database(db_session, building_properties_list, project_id, scenario_id)
+            # Save to database via DataManager
+            if project_id and scenario_id:
+                try:
+                    self.data_manager.upsert_building_properties_batch(
+                        building_properties_list, project_id, scenario_id,
+                        'area', building_areas,
+                    )
+                except Exception as db_err:
+                    self.pipeline.log_warning(self.calculator_name, f"DB save failed: {db_err}")
 
             self.pipeline.log_calculation_success(self.calculator_name, 'calculate_from_geometry', f"Calculated areas for {len(building_properties_list)} buildings")
             return result

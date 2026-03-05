@@ -83,41 +83,20 @@ class ScenarioCensusBoundaryCalculator(BaseCalculator):
             return None 
     
     def _save_census_boundary_to_db(self, census_boundary: Dict[str, Any], project_id: str, scenario_id: str) -> bool:
-        """Internal method to save census boundary to project_scenario table"""
+        """Persist census boundary to the ProjectScenario row via DataManager."""
         try:
-            db_session = getattr(self.data_manager, 'db_session', None)
-            if not db_session:
-                self.pipeline.log_warning(self.calculator_name, "No database session available")
-                return False
-            
-            from app.models.vector import ProjectScenario
-            from shapely.geometry import shape
-            from geoalchemy2.shape import from_shape
-            
-            # Get or create project_scenario record
-            project_scenario = db_session.query(ProjectScenario).filter_by(
-                project_id=project_id,
-                scenario_id=scenario_id
-            ).first()
-            
-            if project_scenario:
-                # Update existing record
-                geometry = census_boundary.get('geometry')
-                if geometry:
-                    # Convert to shapely geometry and then to PostGIS format
-                    census_shape = shape(geometry)
-                    # Ensure it's a MultiPolygon
-                    from shapely.geometry import MultiPolygon, Polygon
-                    if isinstance(census_shape, Polygon):
-                        census_shape = MultiPolygon([census_shape])
-                    project_scenario.census_boundary = from_shape(census_shape, srid=4326)
-                    db_session.commit()
-                    self.pipeline.log_info(self.calculator_name, f"Updated census boundary for project_scenario {project_id}/{scenario_id}")
-                    return True
+            ok = self.data_manager.update_census_boundary(project_id, scenario_id, census_boundary)
+            if ok:
+                self.pipeline.log_info(
+                    self.calculator_name,
+                    f"Updated census boundary for {project_id}/{scenario_id}",
+                )
             else:
-                self.pipeline.log_warning(self.calculator_name, f"Project_scenario record not found for {project_id}/{scenario_id}")
-                return False
-                
+                self.pipeline.log_warning(
+                    self.calculator_name,
+                    f"Could not update census boundary for {project_id}/{scenario_id}",
+                )
+            return ok
         except Exception as e:
             self.pipeline.log_error(self.calculator_name, f"Failed to save census boundary: {str(e)}")
             return False

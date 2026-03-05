@@ -5,15 +5,12 @@ Focuses on physical building properties without demographic calculations
 
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from typing import Dict, Any, List, Optional
-import json
+from typing import Dict, Any, List
 import uuid
-from datetime import datetime
 
 from app.db.database import get_db
 from app.core.data_manager import CimWizardDataManager
 from app.core.pipeline_executor import CimWizardPipelineExecutor
-from app.models.vector import Building, BuildingProperties, ProjectScenario
 from app.core.normalizer import normalize_input, validate
 
 router = APIRouter()
@@ -26,293 +23,6 @@ def get_pipeline_executor(db: Session):
     return executor, data_manager
 
 
-def save_scenario_to_database(
-    db: Session,
-    project_id: str,
-    scenario_id: str,
-    project_name: str,
-    scenario_name: str,
-    scenario_geo: Dict[str, Any]
-) -> bool:
-    """
-    Save or update project scenario in the database
-    
-    Args:
-        db: Database session
-        project_id: Project identifier
-        scenario_id: Scenario identifier
-        project_name: Project name
-        scenario_name: Scenario name
-        scenario_geo: Scenario geometry data
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        from shapely.geometry import shape, mapping
-        from geoalchemy2.shape import from_shape
-        
-        # Extract geometry from scenario_geo
-        geometry = scenario_geo.get('geometry')
-        if not geometry:
-            return False
-        
-        # Convert MultiPolygon to Polygon if needed for project_boundary
-        geom_shape = shape(geometry)
-        
-        # Database expects Polygon, so we need to convert MultiPolygon
-        if geometry['type'] == 'MultiPolygon':
-            print(f"Converting MultiPolygon to Polygon (coords count: {len(geometry['coordinates'])})")
-            if len(geometry['coordinates']) == 1:
-                # Create a Polygon from the single MultiPolygon part
-                polygon_coords = geometry['coordinates'][0]
-                from shapely.geometry import Polygon
-                boundary_shape = Polygon(polygon_coords[0], polygon_coords[1:] if len(polygon_coords) > 1 else [])
-                print(f"Converted to Polygon: {boundary_shape.geom_type}")
-            else:
-                # Multiple polygons - use the largest one
-                print(f"Multiple polygons detected, using the first one")
-                polygon_coords = geometry['coordinates'][0]
-                boundary_shape = Polygon(polygon_coords[0], polygon_coords[1:] if len(polygon_coords) > 1 else [])
-        else:
-            boundary_shape = geom_shape
-            print(f"Using original geometry type: {boundary_shape.geom_type}")
-        
-        # Calculate center point
-        center_shape = boundary_shape.centroid
-        
-        # Check if scenario already exists
-        scenario = db.query(ProjectScenario).filter_by(
-            project_id=project_id,
-            scenario_id=scenario_id
-        ).first()
-        
-        if not scenario:
-            # Create new scenario
-            scenario = ProjectScenario(
-                project_id=project_id,
-                scenario_id=scenario_id,
-                project_name=project_name,
-                scenario_name=scenario_name,
-                project_boundary=from_shape(boundary_shape, srid=4326),
-                project_center=from_shape(center_shape, srid=4326),
-                project_zoom=15,
-                project_crs=4326,
-                created_at=datetime.utcnow()
-            )
-            db.add(scenario)
-        else:
-            # Update existing scenario
-            scenario.project_name = project_name
-            scenario.scenario_name = scenario_name
-            scenario.project_boundary = from_shape(boundary_shape, srid=4326)
-            scenario.project_center = from_shape(center_shape, srid=4326)
-            scenario.updated_at = datetime.utcnow()
-        
-        db.commit()
-        return True
-        
-    except Exception as e:
-        db.rollback()
-        print(f"ERROR saving scenario to database: {str(e)}")
-        print(f"Project ID: {project_id}, Scenario ID: {scenario_id}")
-        print(f"Project Name: {project_name}, Scenario Name: {scenario_name}")
-        print(f"Scenario Geo Keys: {list(scenario_geo.keys()) if scenario_geo else 'None'}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-def save_building_to_database(
-    db: Session,
-    building_data: Dict[str, Any],
-    project_id: str,
-    scenario_id: str,
-    lod: int = 0
-) -> bool:
-    """
-    Save or update building geometry and properties in the database
-    
-    Args:
-        db: Database session
-        building_data: Building data dictionary with geometry and properties
-        project_id: Project identifier
-        scenario_id: Scenario identifier
-        lod: Level of detail (default 0)
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        # Extract building_id from properties if it's a GeoJSON Feature
-        building_id = building_data.get('building_id')
-        if not building_id and 'properties' in building_data:
-            building_id = building_data['properties'].get('building_id')
-        
-        if not building_id:
-            print(f"No building_id found in building data: {building_data.keys()}")
-            return False
-        
-        # Save or update Building
-        building_geo = db.query(Building).filter_by(
-            building_id=building_id,
-            lod=lod
-        ).first()
-        
-        if not building_geo:
-            # Convert geometry to WKT or GeoJSON format for PostGIS
-            from shapely.geometry import shape
-            from geoalchemy2.shape import from_shape
-            
-            geom_dict = building_data.get('geometry', {})
-            if geom_dict:
-                geom_shape = shape(geom_dict)
-                building_geo = Building(
-                    building_id=building_id,
-                    lod=lod,
-                    building_geometry=from_shape(geom_shape, srid=4326),
-                    building_geometry_source='integrated_database',
-                    created_at=datetime.utcnow()
-                )
-            else:
-                building_geo = Building(
-                    building_id=building_id,
-                    lod=lod,
-                    building_geometry_source='integrated_database',
-                    created_at=datetime.utcnow()
-                )
-            db.add(building_geo)
-        else:
-            # Update existing building
-            geom_dict = building_data.get('geometry', {})
-            if geom_dict:
-                from shapely.geometry import shape
-                from geoalchemy2.shape import from_shape
-                geom_shape = shape(geom_dict)
-                building_geo.building_geometry = from_shape(geom_shape, srid=4326)
-            building_geo.updated_at = datetime.utcnow()
-        
-        # Don't create BuildingProperties here - let the calculators handle it
-        # This prevents duplicate records being created
-        
-        db.commit()
-        return True
-        
-    except Exception as e:
-        db.rollback()
-        print(f"ERROR saving building to database: {str(e)}")
-        print(f"Building ID: {building_data.get('building_id')}")
-        print(f"Project ID: {project_id}, Scenario ID: {scenario_id}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-def update_building_properties_in_database(
-    db: Session,
-    project_id: str,
-    scenario_id: str,
-    building_results: Dict[str, Any],
-    property_name: str,
-    property_values: List[Any]
-) -> int:
-    """
-    Update specific building properties in the database
-    
-    Args:
-        db: Database session
-        project_id: Project identifier
-        scenario_id: Scenario identifier
-        building_results: Building geometry results containing building list
-        property_name: Name of the property to update (height, area, volume, number_of_floors)
-        property_values: List of property values corresponding to buildings
-    
-    Returns:
-        int: Number of buildings updated
-    """
-    try:
-        updated_count = 0
-        buildings = building_results.get('buildings', [])
-        
-        for i, building in enumerate(buildings):
-            if i >= len(property_values):
-                break
-                
-            # Extract building_id from properties if it's a GeoJSON Feature
-            building_id = building.get('building_id')
-            if not building_id and 'properties' in building:
-                building_id = building['properties'].get('building_id')
-            
-            if not building_id:
-                print(f"No building_id found in building {i}: {building.keys()}")
-                continue
-            
-            # Extract lod from building data  
-            lod = building.get('lod', 0)
-            
-            # Get or create BuildingProperties
-            building_props = db.query(BuildingProperties).filter_by(
-                building_id=building_id,
-                lod=lod,
-                project_id=project_id,
-                scenario_id=scenario_id
-            ).first()
-            
-            if not building_props:
-                # Create new building properties record
-                building_props = BuildingProperties(
-                    building_id=building_id,
-                    lod=lod,
-                    project_id=project_id,
-                    scenario_id=scenario_id,
-                    created_at=datetime.utcnow()
-                )
-                db.add(building_props)
-            
-            # Update the specific property (skip None values from non-residential buildings)
-            value = property_values[i]
-            if value is None:
-                continue
-            
-            try:
-                if property_name == 'height':
-                    building_props.height = float(value)
-                elif property_name == 'area':
-                    building_props.area = float(value)
-                elif property_name == 'volume':
-                    building_props.volume = float(value)
-                elif property_name == 'number_of_floors':
-                    building_props.number_of_floors = int(value)
-                elif property_name == 'type':
-                    building_props.type = str(value)
-                elif property_name == 'n_people':
-                    building_props.n_people = int(round(float(value)))
-                elif property_name == 'n_family':
-                    building_props.n_family = int(round(float(value)))
-                elif property_name == 'const_year':
-                    building_props.const_year = int(value)
-                elif property_name == 'const_period_census':
-                    building_props.const_period_census = str(value)
-                elif property_name == 'const_tabula':
-                    building_props.const_tabula = str(value)
-                elif property_name == 'filter_res':
-                    building_props.filter_res = bool(value)
-            except (ValueError, TypeError) as e:
-                print(f"Warning: Skipping invalid value for {property_name} on building {building_id}: {value} ({e})")
-                continue
-            
-            building_props.updated_at = datetime.utcnow()
-            updated_count += 1
-        
-        db.commit()
-        return updated_count
-        
-    except Exception as e:
-        db.rollback()
-        print(f"Error updating building properties: {str(e)}")
-        return 0
-
-
 @router.post("/execute_building_analysis")
 async def execute_building_analysis(
     request_data: dict = Body(...),
@@ -320,65 +30,38 @@ async def execute_building_analysis(
 ):
     """
     Execute building analysis calculator chain.
-    
-    This endpoint focuses on physical building properties and filtering:
-    1. scenario_geo - Initialize scenario geometry from project boundary
-    2. scenario_census_boundary - Get census boundary (simplified)
-    3. building_geo - Extract buildings from the area
-    4. building_props - Initialize building properties
-    5. building_height - Calculate building heights
-    6. building_area - Calculate building footprint areas
-    7. filter_res - Filter residential vs non-residential buildings
-    8. building_volume - Calculate building volumes (residential only)
-    9. building_n_floors - Estimate number of floors from height (residential only)
-    
+
     Input:
     - project_boundary: GeoJSON FeatureCollection or Feature with the project boundary
     - project_name: Optional project name (default: "Building_Analysis")
     - scenario_name: Optional scenario name (default: "Current_State")
     - save_to_db: Whether to save results to database (default: true)
-    
-    Returns:
-    - Analysis results from the calculator chain
-    - Database update status for each step
-    - Building classification (residential/non-residential)
     """
     try:
-        # ── Normalize incoming field names ──────────────────────────────
-        # Clients may send camelCase, PascalCase, or other alias variants.
-        # The normalizer converts them to canonical (DB column) names.
         request_data = normalize_input("project_scenario", request_data)
 
-        # Validate the normalized data (partial=True because most fields are generated server-side)
         validation_errors = validate("project_scenario", request_data, partial=True)
         if validation_errors:
             print(f"Input validation warnings: {validation_errors}")
-        # ────────────────────────────────────────────────────────────────
 
-        # Get executor and data manager with DB session
         executor, data_manager = get_pipeline_executor(db)
-        
-        # Extract project boundary from request
+
         project_boundary = request_data.get('project_boundary')
         if not project_boundary:
             raise HTTPException(status_code=400, detail="Missing project_boundary in request")
-        
-        # Set project and scenario names
+
         project_name = request_data.get('project_name', 'Building_Analysis')
-        scenario_name = request_data.get('scenario_name', None)  # Can be null for baseline
+        scenario_name = request_data.get('scenario_name', None)
         save_to_db = request_data.get('save_to_db', True)
-        
-        # Generate NEW UUIDs for each request
+
         project_id = str(uuid.uuid4())
-        
-        # If scenario_name is null/not provided, use "baseline" with same UUID as project
+
         if not scenario_name:
             scenario_name = 'baseline'
-            scenario_id = project_id  # Same UUID for baseline scenario
+            scenario_id = project_id
         else:
-            scenario_id = str(uuid.uuid4())  # Different UUID for named scenarios
-        
-        # Initialize the data manager context
+            scenario_id = str(uuid.uuid4())
+
         data_manager.set_context(
             project_id=project_id,
             scenario_id=scenario_id,
@@ -386,8 +69,7 @@ async def execute_building_analysis(
             scenario_name=scenario_name,
             db_session=db
         )
-        
-        # Prepare the scenario_geo input
+
         if project_boundary.get('type') == 'FeatureCollection':
             features = project_boundary.get('features', [])
             if features:
@@ -396,409 +78,164 @@ async def execute_building_analysis(
                 raise HTTPException(status_code=400, detail="FeatureCollection has no features")
         else:
             scenario_geo_input = project_boundary
-        
-        # Set the initial input data
+
         data_manager.set_feature('scenario_geo', scenario_geo_input)
         data_manager.set_feature('project_boundary', project_boundary)
-        
-        # Define the calculation chain
+
         calculation_chain = [
-            {
-                "feature_name": "scenario_geo",
-                "method_name": "calculate_from_scenario_geo",
-                "description": "Initialize scenario geometry from project boundary"
-            },
-            {
-                "feature_name": "scenario_census_boundary",
-                "method_name": "calculate_from_census_api",
-                "description": "Get census boundary (simplified for building analysis)"
-            },
-            {
-                "feature_name": "building_geo",
-                "method_name": "calculate_from_scenario_census_geo",
-                "description": "Extract buildings from the area"
-            },
-            {
-                "feature_name": "building_props",
-                "method_name": "init",
-                "description": "Initialize building properties"
-            },
-            {
-                "feature_name": "building_height",
-                "method_name": "calculate_from_raster_tiles",
-                "description": "Calculate building heights from DSM-DTM raster tiles"
-            },
-            {
-                "feature_name": "building_area",
-                "method_name": "calculate_from_geometry",
-                "description": "Calculate building footprint areas"
-            },
-            {
-                "feature_name": "filter_res",
-                "method_name": "calculate_filter_res",
-                "description": "Filter residential vs non-residential buildings based on area, height and OSM tags"
-            },
-            {
-                "feature_name": "building_volume",
-                "method_name": "calculate_from_height_and_area",
-                "description": "Calculate building volumes (residential buildings only)"
-            },
-            {
-                "feature_name": "building_n_floors",
-                "method_name": "estimate_by_height",
-                "description": "Estimate number of floors from height (residential buildings only)"
-            },
-            # === Steps 10-16: Demographics, classification, 3D geometry ===
-            {
-                "feature_name": "census_population",
-                "method_name": "calculate_from_census_boundary",
-                "description": "Get total population from census zones"
-            },
-            {
-                "feature_name": "building_type",
-                "method_name": "by_census_osm",
-                "description": "Classify building types using census and OSM data"
-            },
-            {
-                "feature_name": "building_population",
-                "method_name": "calculate_from_volume_distribution",
-                "description": "Distribute census population to buildings by volume ratio"
-            },
-            {
-                "feature_name": "building_n_families",
-                "method_name": "calculate_from_population",
-                "description": "Calculate number of families per building"
-            },
-            {
-                "feature_name": "building_construction_year",
-                "method_name": "by_census_osm",
-                "description": "Estimate construction year, census period, and TABULA classification"
-            },
-            {
-                "feature_name": "building_demographic",
-                "method_name": "by_census_osm",
-                "description": "Orchestrate demographic calculation (population + families)"
-            },
-            {
-                "feature_name": "building_geo_lod12",
-                "method_name": "by_footprint_height",
-                "description": "Generate LoD 1.2 3D building geometry from footprint and height"
-            },
-            {
-                "feature_name": "envelope_efficiency",
-                "method_name": "assign_random",
-                "description": "Assign random envelope efficiency (low/medium/high) per building"
-            },
-            {
-                "feature_name": "fmu_assign",
-                "method_name": "frassinetto",
-                "description": "Assign FMU file identifier (frassinetto) to all building-scenarios"
-            }
+            {"feature_name": "scenario_geo", "method_name": "calculate_from_scenario_geo",
+             "description": "Initialize scenario geometry from project boundary"},
+            {"feature_name": "scenario_census_boundary", "method_name": "calculate_from_census_api",
+             "description": "Get census boundary (simplified for building analysis)"},
+            {"feature_name": "building_geo", "method_name": "calculate_from_scenario_census_geo",
+             "description": "Extract buildings from the area"},
+            {"feature_name": "building_props", "method_name": "init",
+             "description": "Initialize building properties"},
+            {"feature_name": "building_height", "method_name": "calculate_from_raster_tiles",
+             "description": "Calculate building heights from DSM-DTM raster tiles"},
+            {"feature_name": "building_area", "method_name": "calculate_from_geometry",
+             "description": "Calculate building footprint areas"},
+            {"feature_name": "filter_res", "method_name": "calculate_filter_res",
+             "description": "Filter residential vs non-residential buildings"},
+            {"feature_name": "building_volume", "method_name": "calculate_from_height_and_area",
+             "description": "Calculate building volumes (residential buildings only)"},
+            {"feature_name": "building_n_floors", "method_name": "estimate_by_height",
+             "description": "Estimate number of floors from height (residential only)"},
+            {"feature_name": "census_population", "method_name": "calculate_from_census_boundary",
+             "description": "Get total population from census zones"},
+            {"feature_name": "building_type", "method_name": "by_census_osm",
+             "description": "Classify building types using census and OSM data"},
+            {"feature_name": "building_population", "method_name": "calculate_from_volume_distribution",
+             "description": "Distribute census population to buildings by volume ratio"},
+            {"feature_name": "building_n_families", "method_name": "calculate_from_population",
+             "description": "Calculate number of families per building"},
+            {"feature_name": "building_construction_year", "method_name": "by_census_osm",
+             "description": "Estimate construction year, census period, and TABULA classification"},
+            {"feature_name": "building_demographic", "method_name": "by_census_osm",
+             "description": "Orchestrate demographic calculation (population + families)"},
+            {"feature_name": "building_geo_lod12", "method_name": "by_footprint_height",
+             "description": "Generate LoD 1.2 3D building geometry from footprint and height"},
+            {"feature_name": "envelope_efficiency", "method_name": "assign_random",
+             "description": "Assign random envelope efficiency (low/medium/high) per building"},
+            {"feature_name": "fmu_assign", "method_name": "frassinetto",
+             "description": "Assign FMU file identifier (frassinetto) to all building-scenarios"},
         ]
-        
-        # Execute the calculation chain
+
         results = {}
         successful_calculations = []
         failed_calculations = []
         execution_chain = []
         database_updates = []
-        
-        print(f"DEBUG: About to execute {len(calculation_chain)} calculators")
-        
+
+        # Feature-name to DB column mapping (used for post-calculation persistence)
+        _FEATURE_DB_MAP = {
+            "building_height":           ("height",              lambda r: r if isinstance(r, list) else []),
+            "building_area":             ("area",                lambda r: r.get('building_areas', []) or [bp.get('area', 0) for bp in r.get('building_properties', [])]),
+            "building_volume":           ("volume",              lambda r: r.get('building_volumes', [])),
+            "building_n_floors":         ("number_of_floors",    lambda r: r.get('building_floors', [])),
+            "filter_res":                ("filter_res",          lambda r: r.get('filter_res', []) if isinstance(r, dict) else []),
+            "building_type":             ("type",                lambda r: r.get('building_types', []) if isinstance(r, dict) else (r if isinstance(r, list) else [])),
+            "building_population":       ("n_people",            lambda r: r.get('building_populations', []) if isinstance(r, dict) else (r if isinstance(r, list) else [])),
+            "building_n_families":       ("n_family",            lambda r: r.get('building_families', []) if isinstance(r, dict) else (r if isinstance(r, list) else [])),
+        }
+
         for step_num, calc_config in enumerate(calculation_chain, 1):
             feature_name = calc_config["feature_name"]
             method_name = calc_config["method_name"]
             description = calc_config["description"]
-            
+
             print(f"\n=== Step {step_num}/{len(calculation_chain)}: {feature_name} ===")
-            print(f"Method: {method_name}")
-            print(f"Description: {description}")
-            
-            # Execute the calculator
+
             success = executor.execute_feature(feature_name, method_name)
-            
-            # Get the result
             result = data_manager.get_feature(feature_name)
-            
-            # Store execution info
+
             execution_info = {
                 "step": step_num,
                 "feature": feature_name,
                 "method": method_name,
                 "description": description,
-                "status": "success" if success else "failed"
+                "status": "success" if success else "failed",
             }
-            
+
             if not success:
                 execution_info["error"] = "Unknown error"
                 failed_calculations.append(feature_name)
-                print(f"✗ Failed: Unknown error")
             else:
                 successful_calculations.append(feature_name)
                 results[feature_name] = result
-                print(f"✓ Success")
-                
-                # Save to database if enabled
+
                 if save_to_db and result:
                     db_update_status = {
                         "feature": feature_name,
                         "updated_records": 0,
-                        "status": "pending"
+                        "status": "pending",
                     }
-                    
                     try:
                         if feature_name == "scenario_geo":
-                            # Save scenario to database
-                            if save_scenario_to_database(
-                                db, project_id, scenario_id, 
+                            ok = data_manager.save_scenario(
+                                project_id, scenario_id,
                                 project_name, scenario_name, result
-                            ):
-                                db_update_status["updated_records"] = 1
-                                db_update_status["status"] = "success"
-                                print(f"Successfully saved scenario to database")
-                            else:
-                                db_update_status["status"] = "failed"
-                                db_update_status["error"] = "Failed to save scenario"
-                                print(f"Failed to save scenario to database")
-                        
-                        elif feature_name == "scenario_census_boundary":
-                            # For now, we don't save census boundary separately
-                            # It's part of the scenario calculation
-                            db_update_status["updated_records"] = 0
-                            db_update_status["status"] = "success"
-                            db_update_status["note"] = "Census boundary not saved separately"
-                        
+                            )
+                            db_update_status["updated_records"] = 1 if ok else 0
+                            db_update_status["status"] = "success" if ok else "failed"
+
                         elif feature_name == "building_geo":
-                            # Save all buildings to database
                             buildings = result.get('buildings', [])
-                            saved_count = 0
-                            for building in buildings:
-                                if save_building_to_database(db, building, project_id, scenario_id):
-                                    saved_count += 1
-                            db_update_status["updated_records"] = saved_count
+                            saved = sum(
+                                1 for b in buildings
+                                if data_manager.save_building(b)
+                            )
+                            db_update_status["updated_records"] = saved
                             db_update_status["status"] = "success"
-                        
-                        elif feature_name == "building_props":
-                            # Building properties are initialized, no separate save needed
-                            db_update_status["updated_records"] = 0
-                            db_update_status["status"] = "success"
-                            db_update_status["note"] = "Properties initialized, will be updated by specific property calculators"
-                            
-                        elif feature_name == "building_height":
-                            # Update building heights in database
-                            if isinstance(result, list):
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id, 
-                                    building_geo_result, 'height', result
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                        
-                        elif feature_name == "building_area":
-                            # Update building areas in database
-                            building_properties = result.get('building_properties', [])
-                            building_areas = result.get('building_areas', [])
-                            
-                            # Use building_areas if building_properties is empty
-                            if building_areas and not building_properties:
-                                areas = building_areas
-                            elif building_properties:
-                                areas = [bp.get('area', 0) for bp in building_properties]
-                            else:
-                                areas = []
-                            
-                            if areas:
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id,
-                                    building_geo_result, 'area', areas
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                            else:
-                                db_update_status["updated_records"] = 0
-                                db_update_status["status"] = "success"
-                                db_update_status["note"] = "No areas to update"
-                        
-                        elif feature_name == "building_volume":
-                            # Update building volumes in database
-                            volumes = result.get('building_volumes', [])
-                            if volumes:
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id,
-                                    building_geo_result, 'volume', volumes
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                        
-                        elif feature_name == "building_n_floors":
-                            # Update number of floors in database
-                            floors = result.get('building_floors', [])
-                            if floors:
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id,
-                                    building_geo_result, 'number_of_floors', floors
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                        
-                        elif feature_name == "filter_res":
-                            # Update filter_res (residential filter) in database
-                            if result and 'filter_res' in result:
-                                filter_values = result['filter_res']
-                                if filter_values:
-                                    building_geo_result = results.get('building_geo', {})
-                                    updated = update_building_properties_in_database(
-                                        db, project_id, scenario_id,
-                                        building_geo_result, 'filter_res', filter_values
-                                    )
-                                    db_update_status["updated_records"] = updated
-                                    db_update_status["status"] = "success"
-                                else:
-                                    db_update_status["updated_records"] = 0
-                                    db_update_status["status"] = "success"
-                                    db_update_status["note"] = "No filter_res values to update"
-                            else:
-                                db_update_status["updated_records"] = 0
-                                db_update_status["status"] = "success"
-                                db_update_status["note"] = "No filter_res data in result"
-                        
-                        elif feature_name == "census_population":
-                            # Intermediate result, no direct DB column
-                            db_update_status["updated_records"] = 0
-                            db_update_status["status"] = "success"
-                            db_update_status["note"] = "Intermediate result for population distribution"
-                        
-                        elif feature_name == "building_type":
-                            # Update building type classification in database
-                            if isinstance(result, dict):
-                                type_values = result.get('building_types', [])
-                            elif isinstance(result, list):
-                                type_values = result
-                            else:
-                                type_values = []
-                            if type_values:
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id,
-                                    building_geo_result, 'type', type_values
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                            else:
-                                db_update_status["status"] = "success"
-                                db_update_status["note"] = "No building types to update"
-                        
-                        elif feature_name == "building_population":
-                            # Update n_people in database
-                            populations = []
-                            if isinstance(result, dict):
-                                populations = result.get('building_populations', [])
-                            elif isinstance(result, list):
-                                populations = result
-                            if populations:
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id,
-                                    building_geo_result, 'n_people', populations
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                            else:
-                                db_update_status["status"] = "success"
-                                db_update_status["note"] = "No population data to update"
-                        
-                        elif feature_name == "building_n_families":
-                            # Update n_family in database
-                            families = []
-                            if isinstance(result, dict):
-                                families = result.get('building_families', [])
-                            elif isinstance(result, list):
-                                families = result
-                            if families:
-                                building_geo_result = results.get('building_geo', {})
-                                updated = update_building_properties_in_database(
-                                    db, project_id, scenario_id,
-                                    building_geo_result, 'n_family', families
-                                )
-                                db_update_status["updated_records"] = updated
-                                db_update_status["status"] = "success"
-                            else:
-                                db_update_status["status"] = "success"
-                                db_update_status["note"] = "No family data to update"
-                        
+
                         elif feature_name == "building_construction_year":
-                            # Update const_year, const_period_census, const_tabula
-                            # Result may be a dict with lists or a single default
                             if isinstance(result, dict):
-                                # Per-building lists
-                                years = result.get('const_years', [])
-                                periods = result.get('const_periods', [])
-                                tabulas = result.get('const_tabulas', [])
                                 building_geo_result = results.get('building_geo', {})
-                                total_updated = 0
-                                if years:
-                                    total_updated += update_building_properties_in_database(
-                                        db, project_id, scenario_id,
-                                        building_geo_result, 'const_year', years
-                                    )
-                                if periods:
-                                    total_updated += update_building_properties_in_database(
-                                        db, project_id, scenario_id,
-                                        building_geo_result, 'const_period_census', periods
-                                    )
-                                if tabulas:
-                                    total_updated += update_building_properties_in_database(
-                                        db, project_id, scenario_id,
-                                        building_geo_result, 'const_tabula', tabulas
-                                    )
-                                db_update_status["updated_records"] = total_updated
+                                bldgs = building_geo_result.get('buildings', [])
+                                total = 0
+                                for col, key in [("const_year", "const_years"),
+                                                 ("const_period_census", "const_periods"),
+                                                 ("const_tabula", "const_tabulas")]:
+                                    vals = result.get(key, [])
+                                    if vals:
+                                        total += data_manager.upsert_building_properties_batch(
+                                            bldgs, project_id, scenario_id, col, vals
+                                        )
+                                db_update_status["updated_records"] = total
+                                db_update_status["status"] = "success"
+
+                        elif feature_name in _FEATURE_DB_MAP:
+                            col_name, extractor = _FEATURE_DB_MAP[feature_name]
+                            values = extractor(result)
+                            if values:
+                                building_geo_result = results.get('building_geo', {})
+                                updated = data_manager.upsert_building_properties_batch(
+                                    building_geo_result.get('buildings', []),
+                                    project_id, scenario_id, col_name, values,
+                                )
+                                db_update_status["updated_records"] = updated
                                 db_update_status["status"] = "success"
                             else:
                                 db_update_status["status"] = "success"
-                                db_update_status["note"] = "Construction year data format not list-based"
-                        
-                        elif feature_name == "building_demographic":
-                            # Orchestration result, individual fields already saved by
-                            # building_population and building_n_families
-                            db_update_status["updated_records"] = 0
+                                db_update_status["note"] = "No values to persist"
+
+                        else:
                             db_update_status["status"] = "success"
-                            db_update_status["note"] = "Demographic orchestration complete"
-                        
-                        elif feature_name == "building_geo_lod12":
-                            # Update building_surfaces_lod12 JSON on cim_wizard_building table
-                            db_update_status["updated_records"] = 0
-                            db_update_status["status"] = "success"
-                            db_update_status["note"] = "LoD 1.2 geometry stored in calculator"
-                        
+                            db_update_status["note"] = "No direct DB column"
+
                         database_updates.append(db_update_status)
-                        
                     except Exception as e:
                         db_update_status["status"] = "failed"
                         db_update_status["error"] = str(e)
                         database_updates.append(db_update_status)
-                        print(f"Database update failed for {feature_name}: {str(e)}")
                         import traceback
                         traceback.print_exc()
-                else:
-                    # If save_to_db is False, still add a status entry
-                    if result:
-                        database_updates.append({
-                            "feature": feature_name,
-                            "updated_records": 0,
-                            "status": "skipped - save_to_db disabled"
-                        })
-            
+
             execution_chain.append(execution_info)
-        
-        # Get total buildings processed
+
         building_geo_result = results.get('building_geo', {})
         total_buildings = building_geo_result.get('total_buildings', 0)
-        
-        # Prepare final response
+
         response = {
             "project_id": project_id,
             "scenario_id": scenario_id,
@@ -828,17 +265,11 @@ async def execute_building_analysis(
                 "failed_steps": len(failed_calculations),
                 "success_rate": f"{(len(successful_calculations) / len(calculation_chain) * 100):.1f}%",
                 "database_updates_enabled": save_to_db,
-                "pipeline_version": "2.0.0"
-            }
+                "pipeline_version": "2.0.0",
+            },
         }
-        
-        print(f"\n=== Pipeline Execution Complete ===")
-        print(f"Success Rate: {response['metadata']['success_rate']}")
-        print(f"Total Buildings: {total_buildings}")
-        if save_to_db:
-            print(f"Database Updates: {len([u for u in database_updates if u.get('status') == 'success'])} successful")
-        
+
         return response
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

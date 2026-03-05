@@ -46,49 +46,64 @@ Client (Frontend / Postman / Script)
          v
 +---------------------------+
 | FastAPI Endpoints         |      app/api/
-| (vector_routes,           |      - building_analysis_route.py  (9-step pipeline)
-|  building_analysis_route, |      - complete_chain_route.py     (16-step pipeline)
-|  complete_chain_route,    |      - pipeline_routes.py          (generic pipeline API)
+| (vector_routes,           |      - building_analysis_route.py  (16-step pipeline)
+|  building_analysis_route, |      - pipeline_routes.py          (generic pipeline API)
 |  pipeline_routes)         |      - vector_routes.py            (CRUD + schema)
 +---------------------------+
          |
          | Creates instances per request
          v
 +---------------------------+       +---------------------------+
-| CimWizardDataManager      | <---> | CimWizardPipelineExecutor |
-| (context, features,       |       | (orchestration, deps,     |
-|  configuration, DB)       |       |  calculator loading,      |
-+---------------------------+       |  fallback methods)        |
-                                    +---------------------------+
-                                               |
-                    Dynamically loads from configuration.json
-                                               |
-         +----------+----------+----------+----------+----------+
-         |          |          |          |          |          |
-     Calculator Calculator Calculator Calculator Calculator  ...
-     (height)  (area)    (volume)  (population) (type)     (16 total)
-         |          |          |          |          |
-         v          v          v          v          v
-+------------------------------------------------------------------+
-| PostgreSQL/PostGIS (cim_vector, cim_census, cim_raster schemas)  |
-+------------------------------------------------------------------+
+| CimWizardPipelineExecutor | ----> | CimWizardDataManager      |
+| (orchestration, deps,     |       | (SINGLE DB BOUNDARY)      |
+|  calculator loading,      |       | - context & features      |
+|  fallback methods)        |       | - configuration.json      |
++---------------------------+       | - Scenario CRUD           |
+         |                          | - Building CRUD           |
+         | Dynamically loads        | - BuildingProperties CRUD |
+         | from configuration.json  | - Raster queries          |
+         v                          | - Normalizer sync         |
++---------------------------+       +---------------------------+
+| BaseCalculator            |                    |
+|  +-- Calculator (height)  |                    v
+|  +-- Calculator (area)    |       +---------------------------+
+|  +-- Calculator (volume)  |       | PostgreSQL/PostGIS        |
+|  +-- Calculator (pop.)    |       | cim_vector, cim_census,   |
+|  +-- Calculator (type)    |       | cim_raster schemas        |
+|  +-- ... (18 total)       |       +---------------------------+
++---------------------------+
 ```
+
+Key architectural rule: only CimWizardDataManager touches the database. Routes and calculators delegate all persistence to DataManager methods.
 
 ---
 
 ## 2. Backend Architecture
 
-### 2.1 Core Pattern: DataManager + PipelineExecutor + Calculators
+### 2.1 Core OOP Pattern
 
-The backend uses a three-layer pattern:
+The backend enforces a strict separation of concerns across four layers:
 
-1. **CimWizardDataManager** -- Holds all state for a single pipeline execution: project/scenario IDs, calculated feature values, database session, and the loaded `configuration.json`.
+```
+Endpoint (route)
+     |
+     v
+PipelineExecutor  ---------->  CimWizardDataManager  (single DB boundary)
+     |                                   |
+     v                                   v
+BaseCalculator                    PostgreSQL / PostGIS
+     |
+     v
+Calculator (domain logic)
+```
 
-2. **CimWizardPipelineExecutor** -- Orchestrates calculator execution. It reads `configuration.json` to know which calculator class to load for each feature, resolves dependencies between features, selects the right method (with fallback), and stores results back in the DataManager.
+1. **CimWizardDataManager** -- The single data-access boundary for the entire application. Every database read, write, and delete goes through this class. It also manages context (project/scenario IDs), feature storage, configuration, service access, and field normalization. Routes and calculators never call `db.query()` or `db.commit()` directly.
 
-3. **Calculators** -- Independent classes, one per feature. Each calculator receives the PipelineExecutor in its constructor and uses it to read dependencies (`get_feature_safely`) and write results (`data_manager.set_feature`). A calculator can have multiple methods for the same feature (different data sources or algorithms), and the PipelineExecutor picks the right one based on priority or explicit instruction.
+2. **CimWizardPipelineExecutor** -- Pure orchestration. It reads `configuration.json` to know which calculator class to load for each feature, resolves dependencies between features, selects the right method (with fallback), and stores results back through the DataManager.
 
-4. **Endpoint routes** -- Each FastAPI route creates a fresh DataManager + PipelineExecutor pair, defines a calculation chain (sequence of feature.method steps), and iterates through it. The route also handles saving results to the database.
+3. **BaseCalculator / Calculators** -- Domain logic only. Each calculator inherits from BaseCalculator, which provides convenience wrappers for logging, validation, feature access, and a `save_property_batch()` helper that delegates to DataManager. Calculators never import SQLAlchemy models or execute raw SQL.
+
+4. **Endpoint routes** -- Thin request/response handlers. Each route creates a DataManager (bound to the current request session), a PipelineExecutor, and orchestrates a calculation chain. All database interaction in the route goes through DataManager methods.
 
 ```
 Endpoint function
@@ -104,10 +119,10 @@ Endpoint function
   |       +-- Loads calculator class from configuration.json
   |       +-- Checks dependencies via has_feature() / get_context()
   |       +-- Calls calculator.method()
-  |       +-- Stores result in data_manager.calculated_features
+  |       +-- Calculator stores result via data_manager.set_feature()
+  |       +-- Calculator persists to DB via data_manager.upsert_*()
   |
-  +-- Saves results to database
-  +-- Returns JSON response
+  +-- Returns JSON response (no separate DB-save loop needed)
 ```
 
 ### 2.2 CimWizardDataManager
@@ -115,21 +130,34 @@ Endpoint function
 **File:** `app/core/data_manager.py`
 
 Responsibilities:
-- **Context storage:** project_id, scenario_id, db_session, service references
+- **Context storage:** project_id, scenario_id, service references
 - **Feature storage:** `calculated_features` dict holds all computed values
 - **Configuration:** Loads and caches `configuration.json` at init
 - **Feature access:** `set_feature()`, `get_feature()`, `has_feature()`
 - **Config access:** `get_feature_config(name)`, `get_pipeline_config(name)`
+- **Scenario CRUD:** `save_scenario()`, `get_scenario()`, `create_scenario_from_baseline()`, `delete_project_data()`
+- **Building CRUD:** `save_building()`, `get_building()`, `get_buildings_geojson()`, spatial queries
+- **BuildingProperties CRUD:** `upsert_building_properties_batch()`, `upsert_building_property_fields()`, `get_building_properties()`
+- **Raster queries:** `check_raster_table()`, `query_raster_value()`
+- **Census boundary:** `update_census_boundary()`
 
 Key methods:
 
 | Method | Purpose |
 |--------|---------|
-| `set_context(**kwargs)` | Set project_id, scenario_id, db_session, etc. |
+| `set_context(**kwargs)` | Set project_id, scenario_id, etc. |
 | `set_feature(name, value)` | Store a calculated feature result |
-| `get_feature(name)` | Retrieve a calculated feature (checks `calculated_features` then `_data` attributes) |
+| `get_feature(name)` | Retrieve a calculated feature |
 | `has_feature(name)` | Check if a feature has been calculated |
 | `get_feature_config(name)` | Get calculator config for a feature from configuration.json |
+| `save_scenario(...)` | Upsert a ProjectScenario from GeoJSON geometry |
+| `save_building(...)` | Upsert a Building row from a GeoJSON Feature |
+| `upsert_building_properties_batch(...)` | Bulk upsert a single property column across many buildings |
+| `upsert_building_property_fields(...)` | Upsert arbitrary fields on a single BuildingProperties row |
+| `get_buildings_geojson(...)` | Return GeoJSON FeatureCollection with baseline/delta merge |
+| `delete_project_data(...)` | Cascading delete (building, scenario, or project) |
+| `check_raster_table(name)` | Check if a raster table exists and has data |
+| `query_raster_value(table, lon, lat)` | Get raster cell value at a point |
 
 ### 2.3 CimWizardPipelineExecutor
 
@@ -166,31 +194,43 @@ Key methods:
 
 If priority-1 method fails (e.g., missing `census_population`), the executor falls back to priority-2. This only works when `execute_feature()` is called without an explicit method name.
 
-### 2.4 Calculators
+### 2.4 BaseCalculator and Calculators
 
 **Directory:** `app/calculators/`
 
-Each calculator is an independent class that:
-1. Receives `pipeline_executor` in `__init__`
-2. Reads dependencies via `self.pipeline.get_feature_safely(name)`
-3. Performs computation
-4. Stores result via `self.data_manager.set_feature(name, value)`
-5. Returns the result (or None on failure)
+Every calculator inherits from `BaseCalculator` (`app/calculators/base_calculator.py`), which provides:
+- Pipeline executor and data manager references
+- Logging helpers: `log_info()`, `log_error()`, `log_warning()`, `log_success()`, `log_failure()`
+- Feature helpers: `get_feature()`, `set_feature()`
+- Validation helpers: `validate_input()`, `validate_dict()`, `validate_geometry()`, `validate_numeric()`
+- Properties: `project_id`, `scenario_id`
+- DB persistence: `save_property_batch()` -- delegates to DataManager
 
-Example structure:
+Each calculator:
+1. Inherits from `BaseCalculator` and calls `super().__init__(pipeline_executor)`
+2. Reads dependencies via `self.get_feature(name)` or `self.pipeline.get_feature_safely(name)`
+3. Performs domain-specific computation
+4. Stores result via `self.set_feature(name, value)`
+5. Persists to DB via `self.data_manager.upsert_building_properties_batch(...)` or `self.save_property_batch(...)`
+6. Returns the result (or None on failure)
+
+Calculators never import SQLAlchemy models or execute raw queries. All database interaction is delegated to DataManager.
+
+Example:
 
 ```python
-class BuildingVolumeCalculator:
+from app.calculators.base_calculator import BaseCalculator
+
+class BuildingVolumeCalculator(BaseCalculator):
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
+        super().__init__(pipeline_executor)
 
     def calculate_from_height_and_area(self):
-        heights = self.pipeline.get_feature_safely('building_height')
-        areas = self.pipeline.get_feature_safely('building_area')
-        filter_res = self.pipeline.get_feature_safely('filter_res')
-        # ... compute volumes for residential buildings ...
-        self.data_manager.set_feature('building_volume', result)
+        heights = self.get_feature('building_height')
+        areas = self.get_feature('building_area')
+        # ... compute volumes ...
+        self.set_feature('building_volume', result)
+        self.save_property_batch(buildings, 'volume', volumes)
         return result
 ```
 
