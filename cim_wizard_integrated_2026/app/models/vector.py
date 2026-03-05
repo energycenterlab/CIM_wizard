@@ -88,6 +88,7 @@ class BuildingProperties(Base):
     # Building characteristics
     type = Column(String(50), nullable=True)  # Building type (residential, commercial, etc.)
     envelope_efficiency = Column(String(20), nullable=True)  # "low" | "medium" | "high"
+    fmu_file = Column(String(255), nullable=True)  # FMU file path or identifier
     const_period_census = Column(String(10), nullable=True)
     const_year = Column(Integer, nullable=True)
     const_tabula = Column(String(15), nullable=True)  # Note: lowercase in actual table

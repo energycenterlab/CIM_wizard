@@ -347,6 +347,7 @@ def _props_to_dict(props: BuildingProperties) -> Dict[str, Any]:
         "const_period_census": props.const_period_census,
         "const_tabula": props.const_tabula,
         "envelope_efficiency": props.envelope_efficiency,
+        "fmu_file": props.fmu_file,
     }
 
 
@@ -575,6 +576,7 @@ async def query_building_properties(
                         "const_year": p.const_year, "const_tabula": p.const_tabula,
                         "n_people": p.n_people, "n_family": p.n_family,
                         "envelope_efficiency": p.envelope_efficiency,
+                        "fmu_file": p.fmu_file,
                     },
                     delta
                 )
@@ -597,7 +599,7 @@ async def query_building_properties(
 _BP_EDITABLE_FIELDS = {
     "height", "area", "volume", "number_of_floors",
     "type", "const_period_census", "const_year", "const_tabula",
-    "n_people", "n_family", "envelope_efficiency",
+    "n_people", "n_family", "envelope_efficiency", "fmu_file",
 }
 
 

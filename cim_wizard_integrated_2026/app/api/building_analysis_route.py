@@ -488,6 +488,11 @@ async def execute_building_analysis(
                 "feature_name": "envelope_efficiency",
                 "method_name": "assign_random",
                 "description": "Assign random envelope efficiency (low/medium/high) per building"
+            },
+            {
+                "feature_name": "fmu_assign",
+                "method_name": "frassinetto",
+                "description": "Assign FMU file identifier (frassinetto) to all building-scenarios"
             }
         ]
         

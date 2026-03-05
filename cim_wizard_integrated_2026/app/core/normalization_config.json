@@ -251,6 +251,12 @@
           "description": "Envelope efficiency classification: low, medium, or high",
           "aliases": ["envelopeEfficiency", "EnvelopeEfficiency", "envelope_efficiency_class"]
         },
+        "fmu_file": {
+          "type": "string",
+          "required": false,
+          "description": "FMU file path or identifier",
+          "aliases": ["fmuFile", "FmuFile", "fmu_path"]
+        },
         "filter_res": {
           "type": "boolean",
           "required": false,

@@ -290,6 +290,21 @@
           "method_name": "assign_random"
         }
       ]
+    },
+    "fmu_assign": {
+      "constraints": {
+        "datatype": "string",
+        "required": false
+      },
+      "class_path": "app.calculators.fmu_assign_calculator",
+      "class_name": "FmuAssignCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo", "building_props"],
+          "method_name": "frassinetto"
+        }
+      ]
     }
   },
   "predefined_pipelines": {
