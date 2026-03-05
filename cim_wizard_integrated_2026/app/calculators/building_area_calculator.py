@@ -3,14 +3,14 @@ Building Area Calculator
 """
 from typing import Optional, Dict, Any
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingAreaCalculator:
+
+class BuildingAreaCalculator(BaseCalculator):
     """Calculate building area from geometry"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_geometry(self) -> Optional[Dict[str, Any]]:
         """Calculate area directly from building geometry for ALL buildings"""

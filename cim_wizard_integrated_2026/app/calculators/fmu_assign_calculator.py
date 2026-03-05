@@ -4,14 +4,14 @@ FMU Assign Calculator - Assigns FMU file identifier to building properties
 from typing import Optional, Dict, Any
 from sqlalchemy import and_
 
+from app.calculators.base_calculator import BaseCalculator
 
-class FmuAssignCalculator:
+
+class FmuAssignCalculator(BaseCalculator):
     """Assign FMU file identifier to building properties"""
 
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
 
     def frassinetto(self) -> Optional[Dict[str, Any]]:
         """Assign the string 'frassinetto' to fmu_file for all building-scenarios"""

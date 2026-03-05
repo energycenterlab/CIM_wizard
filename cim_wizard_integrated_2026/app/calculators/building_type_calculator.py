@@ -5,14 +5,15 @@ from typing import Optional, Dict, Any
 import pandas as pd
 import geopandas as gpd
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingTypeCalculator:
+
+class BuildingTypeCalculator(BaseCalculator):
     """Calculate building types based on census residential data"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.calculator_name = self.__class__.__name__
-        self.zone_assignment_errors = []  # Store error statistics for final report
+        super().__init__(pipeline_executor)
+        self.zone_assignment_errors = []
     
     def by_census_osm(self, census_gdf: gpd.GeoDataFrame = None, buildings_gdf: gpd.GeoDataFrame = None) -> Optional[Dict[str, Any]]:
         """Determine building types using Tabula classification"""

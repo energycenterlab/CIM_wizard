@@ -3,14 +3,14 @@ Census Population Calculator - Independent class with pipeline executor injectio
 """
 from typing import Optional, Dict, Any
 
+from app.calculators.base_calculator import BaseCalculator
 
-class CensusPopulationCalculator:
+
+class CensusPopulationCalculator(BaseCalculator):
     """Calculate census population"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_census_boundary(self) -> Optional[float]:
         """Calculate total population from census boundary data"""

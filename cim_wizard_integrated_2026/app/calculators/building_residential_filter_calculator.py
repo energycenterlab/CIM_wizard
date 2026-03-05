@@ -4,13 +4,14 @@ Determines filter_res attribute based on area, height, and OSM tags
 """
 from typing import Optional, Dict, Any
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingResidentialFilterCalculator:
+
+class BuildingResidentialFilterCalculator(BaseCalculator):
     """Calculate filter_res attribute to separate residential from non-residential buildings"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
         
     def calculate_filter_res(self) -> Optional[Dict[str, Any]]:
         """

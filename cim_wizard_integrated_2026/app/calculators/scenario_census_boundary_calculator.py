@@ -7,14 +7,14 @@ from shapely.geometry import shape, mapping
 from shapely.ops import unary_union
 import json
 
+from app.calculators.base_calculator import BaseCalculator
 
-class ScenarioCensusBoundaryCalculator:
+
+class ScenarioCensusBoundaryCalculator(BaseCalculator):
     """Calculate scenario census boundary"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_census_api(self) -> Optional[Dict[str, Any]]:
         """Calculate census boundary using integrated database (simplified for testing)"""

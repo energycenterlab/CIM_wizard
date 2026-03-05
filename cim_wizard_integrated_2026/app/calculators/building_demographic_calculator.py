@@ -8,14 +8,14 @@ import requests
 import json
 import pandas as pd
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingDemographicCalculator:
+
+class BuildingDemographicCalculator(BaseCalculator):
     """Orchestrate building demographics by integrating census data with OSM buildings"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def by_census_osm(self) -> Optional[Dict[str, Any]]:
         """

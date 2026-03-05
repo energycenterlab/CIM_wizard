@@ -1,5 +1,6 @@
 # Calculator Classes Package
 
+from .base_calculator import BaseCalculator
 from .building_residential_filter_calculator import BuildingResidentialFilterCalculator
 from .building_volume_calculator import BuildingVolumeCalculator
 from .building_n_floors_calculator import BuildingNFloorsCalculator

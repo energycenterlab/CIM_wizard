@@ -5,14 +5,14 @@ from typing import Optional, Dict, Any, Tuple
 import pandas as pd
 import geopandas as gpd
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingPopulationCalculator:
+
+class BuildingPopulationCalculator(BaseCalculator):
     """Calculate building population through volume distribution"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_volume_distribution(self) -> Optional[Dict[str, Any]]:
         """Distribute census population through buildings based on volume"""

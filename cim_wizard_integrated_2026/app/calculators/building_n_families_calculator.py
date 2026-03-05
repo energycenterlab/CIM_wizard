@@ -6,14 +6,14 @@ import pandas as pd
 import geopandas as gpd
 import math
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingNFamiliesCalculator:
+
+class BuildingNFamiliesCalculator(BaseCalculator):
     """Calculate number of families from building population"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_population(self) -> Optional[Dict[str, Any]]:
         """Calculate number of families based on building populations"""

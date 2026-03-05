@@ -3,14 +3,14 @@ Scenario Geo Calculator - Independent class with pipeline executor injection
 """
 from typing import Optional, Dict, Any
 
+from app.calculators.base_calculator import BaseCalculator
 
-class ScenarioGeoCalculator:
+
+class ScenarioGeoCalculator(BaseCalculator):
     """Calculate scenario geometry data"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_scenario_geo(self) -> Optional[Dict[str, Any]]:
         """Create scenario geometry from UI project boundary input"""

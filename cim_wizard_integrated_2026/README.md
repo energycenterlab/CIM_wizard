@@ -166,6 +166,13 @@ print(f"Found {len(census_zones['features'])} census zones")
 - `POST /clip` - Clip raster by geometry
 - `GET /statistics` - Raster statistics
 
+### CIM Wizard Views (`/api/cim-wizard`)
+- `POST /calculate` - Calculate a single feature (body includes feature_name)
+- `GET /calculate?feature_name=<n>` - Calculate a single feature (query param)
+- `POST /chainable` - Execute chain of calculators separated by `|`
+- `POST /priority-override` - Set runtime priority override for a feature
+- `GET /list` - List all available features, pipelines, and endpoints
+
 ## Architecture Overview
 
 ### Database Schemas
@@ -173,10 +180,106 @@ print(f"Found {len(census_zones['features'])} census zones")
 - **`cim_census`**: Census zones and demographic data
 - **`cim_raster`**: DTM/DSM data and height calculations
 
-### Core Components
-- **Pipeline Executor**: Orchestrates feature calculations
-- **Data Manager**: Manages context and configuration  
-- **Calculators**: Individual feature calculation methods
+### Core OOP Design
+
+The system is built around three core classes and a `BaseCalculator` hierarchy:
+
+```
+BaseCalculator                  (app/calculators/base_calculator.py)
+  |-- ScenarioGeoCalculator
+  |-- ScenarioCensusBoundaryCalculator
+  |-- BuildingGeoCalculator
+  |-- BuildingPropsCalculator
+  |-- BuildingHeightCalculator
+  |-- BuildingAreaCalculator
+  |-- BuildingVolumeCalculator
+  |-- BuildingNFloorsCalculator
+  |-- BuildingResidentialFilterCalculator
+  |-- CensusPopulationCalculator
+  |-- BuildingPopulationCalculator
+  |-- BuildingTypeCalculator
+  |-- BuildingConstructionYearCalculator
+  |-- BuildingNFamiliesCalculator
+  |-- BuildingDemographicCalculator
+  |-- BuildingGeoLod12Calculator
+  |-- EnvelopeEfficiencyCalculator
+  |-- FmuAssignCalculator
+
+CimWizardDataManager            (app/core/data_manager.py)
+CimWizardPipelineExecutor       (app/core/pipeline_executor.py)
+```
+
+**BaseCalculator** -- Every calculator inherits from `BaseCalculator`, which
+provides pipeline/data-manager references, convenience wrappers for logging,
+validation, feature access, and properties for `db_session`, `project_id`,
+and `scenario_id`.  Subclasses only call `super().__init__(pipeline_executor)`
+and implement domain-specific methods.
+
+**CimWizardDataManager** -- Central context object for a pipeline run.
+Stores calculated features, project/scenario identifiers, DB session,
+`configuration.json`, and `FeatureProxy` objects that enable fluent chaining
+(`dm.building_height.calculate_from_raster_tiles`).
+
+**CimWizardPipelineExecutor** -- Orchestrates calculator execution.
+Dynamically loads calculator classes from `configuration.json`, resolves
+dependency order via topological sort, and selects methods through a
+priority-based fallback mechanism (lowest priority number runs first; runtime
+overrides are supported).
+
+### How Calculators Work
+
+1. The pipeline executor instantiates a calculator via its `class_path` and
+   `class_name` from `configuration.json`.
+2. Each calculator receives the executor in its constructor and gains access
+   to the data manager and all convenience methods through `BaseCalculator`.
+3. A calculation method reads its inputs via `self.get_feature(...)`,
+   performs computation, and stores results with `self.set_feature(...)`.
+4. The executor tries methods in priority order; the first one whose
+   dependencies are satisfied and returns a non-None value wins.
+
+### Creating a New Calculator
+
+```python
+from app.calculators.base_calculator import BaseCalculator
+
+class MyNewCalculator(BaseCalculator):
+    def __init__(self, pipeline_executor):
+        super().__init__(pipeline_executor)
+
+    def my_method(self):
+        building_geo = self.get_feature("building_geo")
+        if not building_geo:
+            self.log_error("building_geo not available")
+            return None
+        # ... compute ...
+        self.set_feature("my_feature", result)
+        self.log_success("my_method", result, "computed successfully")
+        return result
+```
+
+Then register the calculator in `app/core/configuration.json` under
+`features` with the appropriate `class_path`, `class_name`, and `methods`.
+
+### CIM Wizard Views Endpoint
+
+The unified views module (`app/api/cim_wizard_views.py`) exposes four
+endpoints under `/api/v1/cim-wizard`:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/calculate` | POST, GET | Single feature calculation |
+| `/chainable` | POST | Chain of calculators separated by `\|` |
+| `/priority-override` | POST | Runtime method priority override |
+| `/list` | GET | List features, pipelines, and endpoints |
+
+Chain format example:
+`scenario_geo.calculate_from_scenario_geo|building_height.calculate_from_raster_tiles`
+
+### Core Components (Summary)
+- **Pipeline Executor**: Orchestrates feature calculations with fallback
+- **Data Manager**: Manages context, configuration, and feature proxies
+- **BaseCalculator**: Parent class for all calculators
+- **Calculators**: Individual feature calculation implementations
 - **Services**: Direct database access layers (census, raster, vector)
 
 ### FastAPI vs Django MVT

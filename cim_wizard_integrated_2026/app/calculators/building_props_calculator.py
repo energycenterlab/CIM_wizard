@@ -3,14 +3,14 @@ Building Props Calculator - Independent class with pipeline executor injection
 """
 from typing import Optional, Dict, Any
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingPropsCalculator:
+
+class BuildingPropsCalculator(BaseCalculator):
     """Calculate building properties from building geometry"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def init(self):
         """Initialize building properties from building geometry for ALL buildings"""

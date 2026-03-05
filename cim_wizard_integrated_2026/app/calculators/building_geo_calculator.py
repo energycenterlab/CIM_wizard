@@ -16,14 +16,14 @@ try:
 except ImportError:
     OSMNX_AVAILABLE = False
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingGeoCalculator:
+
+class BuildingGeoCalculator(BaseCalculator):
     """Calculate building geometry data"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def calculate_from_scenario_census_geo(self) -> Optional[Dict[str, Any]]:
         """Get building footprints from integrated database (simplified for testing)"""

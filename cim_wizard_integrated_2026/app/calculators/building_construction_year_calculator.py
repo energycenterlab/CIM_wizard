@@ -6,15 +6,15 @@ import pandas as pd
 import geopandas as gpd
 import random
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingConstructionYearCalculator:
+
+class BuildingConstructionYearCalculator(BaseCalculator):
     """Calculate construction years based on census E8-E16 data"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
         
-        # Construction year ranges for E8-E16
         self.construction_year_ranges = {
             'E8': (1800, 1918),   # Before 1919
             'E9': (1919, 1945),   # 1919-1945

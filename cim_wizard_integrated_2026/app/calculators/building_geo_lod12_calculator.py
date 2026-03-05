@@ -5,14 +5,14 @@ from typing import Optional, Dict, Any, List
 import math
 import json
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingGeoLod12Calculator:
+
+class BuildingGeoLod12Calculator(BaseCalculator):
     """Calculate LoD 1.2 building surfaces from footprint and height for 3DCityDB compatibility"""
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
     
     def by_footprint_height(self) -> Optional[Dict[str, Any]]:
         """Generate LoD 1.2 semantic surfaces (simplified for pipeline)"""

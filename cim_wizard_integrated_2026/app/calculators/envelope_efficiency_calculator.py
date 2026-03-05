@@ -6,16 +6,16 @@ import random
 from typing import Optional, Dict, Any
 from sqlalchemy import and_
 
+from app.calculators.base_calculator import BaseCalculator
 
-class EnvelopeEfficiencyCalculator:
+
+class EnvelopeEfficiencyCalculator(BaseCalculator):
     """Assign envelope efficiency (low/medium/high) per building"""
 
     VALID_VALUES = ("low", "medium", "high")
 
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
 
     def assign_random(self) -> Optional[Dict[str, Any]]:
         """Assign random envelope efficiency (low/medium/high) per building and save to BuildingProperties"""

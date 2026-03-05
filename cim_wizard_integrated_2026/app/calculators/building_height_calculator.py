@@ -5,13 +5,13 @@ Uses cim_raster.dsm and cim_raster.dtm tables from PostGIS database.
 from typing import Optional, List
 from sqlalchemy import text
 
+from app.calculators.base_calculator import BaseCalculator
 
-class BuildingHeightCalculator:
+
+class BuildingHeightCalculator(BaseCalculator):
     
     def __init__(self, pipeline_executor):
-        self.pipeline = pipeline_executor
-        self.data_manager = pipeline_executor.data_manager
-        self.calculator_name = self.__class__.__name__
+        super().__init__(pipeline_executor)
 
     # ── Raster table configuration ──────────────────────────────────
     # Change these if your raster tables have different names/schemas.
