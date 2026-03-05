@@ -77,25 +77,6 @@ class CimWizardDataManager:
         self.building_id = None
         self.project_id = None
         
-        # Input data (actual data with _data suffix)
-        self.scenario_geo_data = None
-        self.building_geo_data = None
-        self.building_props_data = None
-        
-        # Calculated features (actual values)
-        self.building_height_data = None
-        self.building_area_data = None
-        self.building_volume_data = None
-        self.building_n_floors_data = None
-        self.scenario_census_boundary_data = None
-        self.census_population_data = None
-        self.building_population_data = None
-        self.building_n_families_data = None
-        self.building_type_data = None
-        self.building_construction_year_data = None
-        self.building_demographic_data = None
-        self.building_geo_lod12_data = None
-        
         # Service URLs (kept for compatibility but services are now direct)
         self.raster_service_url = "internal://raster_service"
         self.census_service_url = "internal://census_service"
@@ -110,22 +91,15 @@ class CimWizardDataManager:
         # Runtime method priority overrides: {feature_name: {method_name: priority}}
         self.method_priority_overrides: Dict[str, Dict[str, int]] = {}
         
-        # Feature proxies for chaining
-        self.scenario_geo = FeatureProxy('scenario_geo')
-        self.scenario_census_boundary = FeatureProxy('scenario_census_boundary')
-        self.building_geo = FeatureProxy('building_geo')
-        self.building_props = FeatureProxy('building_props')
-        self.building_height = FeatureProxy('building_height')
-        self.building_area = FeatureProxy('building_area')
-        self.building_volume = FeatureProxy('building_volume')
-        self.building_n_floors = FeatureProxy('building_n_floors')
-        self.census_population = FeatureProxy('census_population')
-        self.building_population = FeatureProxy('building_population')
-        self.building_type = FeatureProxy('building_type')
-        self.building_construction_year = FeatureProxy('building_construction_year')
-        self.building_n_families = FeatureProxy('building_n_families')
-        self.building_demographic = FeatureProxy('building_demographic')
-        self.building_geo_lod12 = FeatureProxy('building_geo_lod12')
+        # Dynamically create _data attributes and FeatureProxy instances
+        # from configuration so new features are available without editing
+        # this file.
+        for feature_name in self.configuration.get('features', {}):
+            data_attr = f"{feature_name}_data"
+            if not hasattr(self, data_attr):
+                setattr(self, data_attr, None)
+            if not hasattr(self, feature_name):
+                setattr(self, feature_name, FeatureProxy(feature_name))
     
     def load_configuration(self, config_path: str = None):
         """Load configuration from JSON file"""

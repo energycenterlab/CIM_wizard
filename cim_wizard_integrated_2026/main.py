@@ -11,16 +11,27 @@ from app.api import vector_routes, pipeline_routes, census_routes, raster_routes
 from app.db.database import engine, Base
 from app.db.database import create_all_schemas
 from app.core.settings import settings
+from app.core.config_sync import run_config_sync
 
 
-# Create database schemas on startup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup -- schema creation
     print("Creating database schemas...")
     create_all_schemas()
     Base.metadata.create_all(bind=engine)
     print("Database schemas created successfully")
+
+    # Config-driven sync: add missing DB columns, update normalizer
+    print("Running configuration sync...")
+    sync_result = run_config_sync(engine)
+    if sync_result["db_columns_created"]:
+        print(f"  New DB columns: {sync_result['db_columns_created']}")
+    if sync_result["normalizer_fields_added"]:
+        print(f"  Normalizer fields added: {sync_result['normalizer_fields_added']}")
+    print(f"  Features registered: {sync_result['feature_count']}")
+    print("Configuration sync complete")
+
     yield
     # Shutdown
     print("Shutting down...")

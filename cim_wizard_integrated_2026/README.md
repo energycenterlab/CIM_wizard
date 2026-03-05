@@ -237,28 +237,94 @@ overrides are supported).
 4. The executor tries methods in priority order; the first one whose
    dependencies are satisfied and returns a non-None value wins.
 
-### Creating a New Calculator
+### Configuration-Driven Development
+
+`configuration.json` is the single coordinator between calculators, database
+columns, the field normalizer, and the data manager.  There are no separate
+codegen or migration scripts to run.  The developer workflow is:
+
+1. **Stop** the backend.
+2. **Add** a calculator file under `app/calculators/` (inherit from
+   `BaseCalculator`).
+3. **Edit** `app/core/configuration.json` -- register the feature, its
+   methods, and optionally its `output` column mapping.
+4. Optionally add or update a route under `app/api/`.
+5. **Start** the backend.  On startup the application automatically:
+   - Creates any missing DB columns declared in `output` sections.
+   - Extends `normalization_config.json` with fields for new columns.
+   - Builds dynamic feature proxies and `_data` attributes in the data
+     manager -- no hardcoded list to maintain.
+
+#### Adding a New Calculator (step by step)
+
+**a) Create the calculator file** `app/calculators/solar_potential_calculator.py`:
 
 ```python
 from app.calculators.base_calculator import BaseCalculator
 
-class MyNewCalculator(BaseCalculator):
+class SolarPotentialCalculator(BaseCalculator):
     def __init__(self, pipeline_executor):
         super().__init__(pipeline_executor)
 
-    def my_method(self):
-        building_geo = self.get_feature("building_geo")
-        if not building_geo:
-            self.log_error("building_geo not available")
+    def estimate_from_area(self):
+        area = self.get_feature("building_area")
+        if area is None:
+            self.log_error("building_area not available")
             return None
-        # ... compute ...
-        self.set_feature("my_feature", result)
-        self.log_success("my_method", result, "computed successfully")
+        result = area * 0.15  # simplified
+        self.set_feature("solar_potential", result)
+        self.log_success("estimate_from_area", result, "kWp")
         return result
 ```
 
-Then register the calculator in `app/core/configuration.json` under
-`features` with the appropriate `class_path`, `class_name`, and `methods`.
+**b) Register in `configuration.json`:**
+
+```json
+"solar_potential": {
+  "constraints": {"datatype": "float", "value_range": [0, 100000]},
+  "class_path": "app.calculators.solar_potential_calculator",
+  "class_name": "SolarPotentialCalculator",
+  "output": [
+    {
+      "table": "cim_wizard_building_properties",
+      "schema": "cim_vector",
+      "column": "solar_potential_kwp",
+      "type": "Float"
+    }
+  ],
+  "methods": [
+    {
+      "priority": 1,
+      "input_dependencies": ["building_area"],
+      "method_name": "estimate_from_area"
+    }
+  ]
+}
+```
+
+**c) Restart the backend.**  The startup sync will:
+- Run `ALTER TABLE cim_vector.cim_wizard_building_properties ADD COLUMN "solar_potential_kwp" DOUBLE PRECISION` if the column does not yet exist.
+- Add a `solar_potential_kwp` entry in `normalization_config.json`.
+- Create `data_manager.solar_potential` (FeatureProxy) and
+  `data_manager.solar_potential_data` automatically.
+
+No manual migration or model editing required.
+
+#### Alembic (for tracked migrations)
+
+Alembic is configured for cases where you need a reviewable migration
+history (column renames, type changes, data backfills):
+
+```bash
+# Generate a migration from model changes
+alembic revision --autogenerate -m "describe change"
+
+# Apply pending migrations
+alembic upgrade head
+```
+
+For simple column additions driven by `configuration.json`, the startup
+sync handles it and Alembic is not required.
 
 ### CIM Wizard Views Endpoint
 
@@ -277,9 +343,11 @@ Chain format example:
 
 ### Core Components (Summary)
 - **Pipeline Executor**: Orchestrates feature calculations with fallback
-- **Data Manager**: Manages context, configuration, and feature proxies
+- **Data Manager**: Manages context, configuration, and dynamic feature proxies
 - **BaseCalculator**: Parent class for all calculators
 - **Calculators**: Individual feature calculation implementations
+- **Config Sync** (`app/core/config_sync.py`): Startup hook that syncs DB columns and normalizer from `configuration.json`
+- **Normalizer** (`app/core/normalizer.py`): Field-name aliasing and validation, auto-extended at startup
 - **Services**: Direct database access layers (census, raster, vector)
 
 ### FastAPI vs Django MVT

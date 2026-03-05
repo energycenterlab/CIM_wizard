@@ -34,7 +34,7 @@
         "required": true
       },
       "class_path": "app.calculators.building_geo_calculator",
-      "class_name": "BuildingGeoCalculator", 
+      "class_name": "BuildingGeoCalculator",
       "methods": [
         {
           "priority": 1,
@@ -71,6 +71,9 @@
       },
       "class_path": "app.calculators.building_height_calculator",
       "class_name": "BuildingHeightCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "height", "type": "Float"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -87,6 +90,9 @@
       },
       "class_path": "app.calculators.building_area_calculator",
       "class_name": "BuildingAreaCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "area", "type": "Float"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -103,6 +109,9 @@
       },
       "class_path": "app.calculators.building_volume_calculator",
       "class_name": "BuildingVolumeCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "volume", "type": "Float"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -119,6 +128,9 @@
       },
       "class_path": "app.calculators.building_n_floors_calculator",
       "class_name": "BuildingNFloorsCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "number_of_floors", "type": "Float"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -166,6 +178,9 @@
       },
       "class_path": "app.calculators.building_population_calculator",
       "class_name": "BuildingPopulationCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "n_people", "type": "Integer"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -186,6 +201,9 @@
       },
       "class_path": "app.calculators.building_type_calculator",
       "class_name": "BuildingTypeCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "type", "type": "String", "length": 50}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -201,6 +219,9 @@
       },
       "class_path": "app.calculators.building_residential_filter_calculator",
       "class_name": "BuildingResidentialFilterCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "filter_res", "type": "Boolean"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -217,6 +238,11 @@
       },
       "class_path": "app.calculators.building_construction_year_calculator",
       "class_name": "BuildingConstructionYearCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "const_year", "type": "Integer"},
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "const_period_census", "type": "String", "length": 10},
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "const_tabula", "type": "String", "length": 15}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -233,6 +259,9 @@
       },
       "class_path": "app.calculators.building_n_families_calculator",
       "class_name": "BuildingNFamiliesCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "n_family", "type": "Integer"}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -283,6 +312,9 @@
       },
       "class_path": "app.calculators.envelope_efficiency_calculator",
       "class_name": "EnvelopeEfficiencyCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "envelope_efficiency", "type": "String", "length": 20}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -298,6 +330,9 @@
       },
       "class_path": "app.calculators.fmu_assign_calculator",
       "class_name": "FmuAssignCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "fmu_file", "type": "String", "length": 255}
+      ],
       "methods": [
         {
           "priority": 1,
@@ -341,4 +376,4 @@
     "enable_caching": true,
     "validation_enabled": true
   }
-} 
+}
