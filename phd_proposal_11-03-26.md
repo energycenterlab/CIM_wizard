@@ -234,5 +234,5 @@ The following papers in `paper/sota/` are recommended for your literature review
 
 ---
 
-*Document generated from: phd_proposal.pptx and papers in paper/sota/*  
-*Last updated: March 2026*
+
+*Last updated: 11 March 2026*

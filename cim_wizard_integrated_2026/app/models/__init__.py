@@ -20,6 +20,13 @@ from app.models.raster import (
     BuildingHeightCache
 )
 
+from app.models.outputs import (
+    SimulationRun,
+    BuildingFrassinetto3,
+    Battery,
+    HeatingFrassinettoHp2
+)
+
 # Make all models available at package level
 __all__ = [
     # Vector models
@@ -36,5 +43,11 @@ __all__ = [
     'RasterModel',
     'DTMRaster',
     'DSMRaster',
-    'BuildingHeightCache'
+    'BuildingHeightCache',
+
+    # Output models (TimescaleDB hypertables)
+    'SimulationRun',
+    'BuildingFrassinetto3',
+    'Battery',
+    'HeatingFrassinettoHp2',
 ]

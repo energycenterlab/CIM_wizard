@@ -1,7 +1,7 @@
 """
 Database configuration for CIM Wizard Integrated
-Uses PostgreSQL with PostGIS extension
-Manages three schemas: cim_vector, cim_census, cim_raster
+Uses PostgreSQL with PostGIS + TimescaleDB extensions
+Manages schemas: cim_vector, cim_census, cim_raster, cim_network, outputs
 """
 
 from sqlalchemy import create_engine, text
@@ -52,9 +52,10 @@ def create_all_schemas():
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_topology"))
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_raster"))
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""))
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS timescaledb"))
         
         # Create schemas for different services
-        schemas = ['cim_vector', 'cim_census', 'cim_raster', 'cim_network']
+        schemas = ['cim_vector', 'cim_census', 'cim_raster', 'cim_network', 'outputs']
         for schema in schemas:
             # Possible errors: Schema already exists, insufficient privileges
             connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))

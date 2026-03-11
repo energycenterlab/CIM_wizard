@@ -1,4 +1,5 @@
-# CIM Wizard Database - initializes from init_backup.sql on first startup
+# CIM Wizard Database - PostgreSQL 15 + PostGIS + TimescaleDB
+# Initializes from init-db/ scripts on first startup
 
 services:
   cim-database:
@@ -8,6 +9,8 @@ services:
     image: cim-database:latest
     container_name: cim-integrateddb
     restart: unless-stopped
+
+    command: ["postgres", "-c", "shared_preload_libraries=timescaledb"]
 
     ports:
       - "15432:5432"
