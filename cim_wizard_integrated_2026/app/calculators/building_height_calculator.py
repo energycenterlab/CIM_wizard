@@ -3,7 +3,6 @@ Simple Building Height Calculator - DSM minus DTM
 Uses cim_raster.dsm and cim_raster.dtm tables from PostGIS database.
 """
 from typing import Optional, List
-from sqlalchemy import text
 
 from app.calculators.base_calculator import BaseCalculator
 
@@ -64,7 +63,7 @@ class BuildingHeightCalculator(BaseCalculator):
                 heights.append(self.DEFAULT_HEIGHT)
                 continue
             
-            height = self._query_height(db_session, lon, lat)
+            height = self._query_height(lon, lat)
             if height is not None:
                 raster_hits += 1
             else:
@@ -83,19 +82,9 @@ class BuildingHeightCalculator(BaseCalculator):
     
     # ── Helper methods ──────────────────────────────────────────────
     
-    def _check_raster_table(self, db_session, table_name: str) -> bool:
-        """Check if a raster table exists and has data. Rolls back on error."""
-        try:
-            result = db_session.execute(
-                text(f"SELECT COUNT(*) FROM {table_name}")
-            ).fetchone()
-            count = result[0] if result else 0
-            self.pipeline.log_info(self.calculator_name, f"{table_name}: {count} rows")
-            return count > 0
-        except Exception as e:
-            self.pipeline.log_warning(self.calculator_name, f"{table_name} not available: {e}")
-            db_session.rollback()  # Critical: clear the failed transaction
-            return False
+    def _check_raster_table(self, table_name: str) -> bool:
+        """Check if a raster table exists and has data (delegates to DataManager)."""
+        return self.data_manager.check_raster_table(table_name)
     
     def _get_centroid(self, building: dict):
         """Extract a representative point (centroid) from building geometry."""
@@ -117,7 +106,7 @@ class BuildingHeightCalculator(BaseCalculator):
             pass
         return None, None
     
-    def _query_height(self, db_session, lon: float, lat: float) -> Optional[float]:
+    def _query_height(self, lon: float, lat: float) -> Optional[float]:
         """Query DSM and DTM at a point via DataManager, return height = DSM - DTM (clamped)."""
         dsm_value = self.data_manager.query_raster_value(self.DSM_TABLE, lon, lat)
         if dsm_value is None:
