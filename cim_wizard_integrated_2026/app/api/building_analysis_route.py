@@ -204,6 +204,27 @@ async def execute_building_analysis(
                                 db_update_status["updated_records"] = total
                                 db_update_status["status"] = "success"
 
+                        elif feature_name == "building_geo_lod12":
+                            from app.models.vector import Building
+                            lod12_items = result.get('building_lod12_data', [])
+                            updated = 0
+                            for item in lod12_items:
+                                bid = item.get('building_id')
+                                if not bid:
+                                    continue
+                                bldg = db.query(Building).filter_by(
+                                    building_id=bid, lod=0
+                                ).first()
+                                if bldg:
+                                    bldg.building_surfaces_lod12 = {
+                                        'surfaces': item.get('surfaces'),
+                                        'metadata': item.get('metadata'),
+                                    }
+                                    updated += 1
+                            db.commit()
+                            db_update_status["updated_records"] = updated
+                            db_update_status["status"] = "success"
+
                         elif feature_name in _FEATURE_DB_MAP:
                             col_name, extractor = _FEATURE_DB_MAP[feature_name]
                             values = extractor(result)

@@ -15,79 +15,85 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         super().__init__(pipeline_executor)
     
     def by_footprint_height(self) -> Optional[Dict[str, Any]]:
-        """Generate LoD 1.2 semantic surfaces (simplified for pipeline)"""
+        """Generate LoD 1.2 semantic surfaces from footprint geometry and height."""
         try:
-            # Get required data
             building_geo = self.pipeline.get_feature_safely('building_geo', calculator_name=self.calculator_name)
             building_heights = self.pipeline.get_feature_safely('building_height', calculator_name=self.calculator_name)
-            
+
             if not building_geo:
                 self.pipeline.log_error(self.calculator_name, "No building_geo data available")
                 return None
-            
-            self.pipeline.log_info(self.calculator_name, "Generating LoD 1.2 surfaces for buildings")
-            
-            # Get buildings
+
             buildings = building_geo.get('buildings', [])
             if not buildings:
                 self.pipeline.log_error(self.calculator_name, "No buildings found in building_geo")
                 return None
-            
-            # Generate LoD 1.2 surfaces for all buildings
+
+            self.pipeline.log_info(
+                self.calculator_name,
+                f"Generating LoD 1.2 surfaces for {len(buildings)} buildings"
+            )
+
             building_lod12_data = []
+            skipped = 0
+
             for i, building in enumerate(buildings):
                 building_id = building.get('building_id')
                 geometry = building.get('geometry', {})
-                
-                # Get height for this building
-                height = building_heights[i] if building_heights and i < len(building_heights) else 12.0
-                
-                # Create simplified LoD 1.2 surfaces
-                surfaces = {
-                    'wall_surfaces': [{'type': 'WallSurface', 'height': height}],
-                    'roof_surface': {'type': 'RoofSurface', 'height': height},
-                    'ground_surface': {'type': 'GroundSurface', 'height': 0}
-                }
-                
+
+                height = (
+                    building_heights[i]
+                    if building_heights and i < len(building_heights)
+                    else 12.0
+                )
+
+                surfaces = self._generate_lod12_surfaces(geometry, height)
+                if surfaces is None:
+                    skipped += 1
+                    continue
+
+                wall_count = len(surfaces.get('wall_surfaces', []))
+                total_surfaces = wall_count + (1 if surfaces.get('roof_surface') else 0) \
+                                            + (1 if surfaces.get('ground_surface') else 0)
+
                 lod12_data = {
                     'building_id': building_id,
                     'surfaces': surfaces,
                     'metadata': {
-                        'total_surfaces': 3,  # walls + roof + floor
-                        'wall_count': 1,
+                        'total_surfaces': total_surfaces,
+                        'wall_count': wall_count,
                         'building_height': height,
                         'surface_types': ['WallSurface', 'RoofSurface', 'GroundSurface'],
                         'coordinate_system': 'EPSG:4326',
                         'lod_specification': '1.2',
                         'citydb_compatible': True,
-                        'generated_from': 'simplified_pipeline'
-                    }
+                        'generated_from': 'footprint_height',
+                    },
                 }
-                
                 building_lod12_data.append(lod12_data)
-            
-            # Create result
+
             result = {
                 'project_id': building_geo.get('project_id'),
                 'scenario_id': building_geo.get('scenario_id'),
                 'building_lod12_data': building_lod12_data,
                 'total_buildings': len(building_lod12_data),
+                'skipped_buildings': skipped,
                 'lod': 1.2,
-                'generation_method': 'simplified_pipeline'
+                'generation_method': 'footprint_height',
             }
-            
-            # Store in data manager
+
             self.data_manager.set_feature('building_geo_lod12', result)
-            
+
             self.pipeline.log_calculation_success(
-                self.calculator_name, 
-                'by_footprint_height', 
+                self.calculator_name,
+                'by_footprint_height',
                 result,
-                f"Generated LoD 1.2 surfaces for {len(building_lod12_data)} buildings"
+                f"Generated LoD 1.2 surfaces for {len(building_lod12_data)} buildings "
+                f"({skipped} skipped due to invalid geometry)"
             )
-            
+
             return result
-            
+
         except Exception as e:
             self.pipeline.log_calculation_failure(self.calculator_name, 'by_footprint_height', str(e))
             return None
