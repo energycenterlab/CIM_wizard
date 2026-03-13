@@ -3,4 +3,6 @@ deploy-to-server.sh
 DEPLOY_GUIDE.md
 paper/
 output/
+torino.geojson
+solferino.geojson
 

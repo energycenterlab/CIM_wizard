@@ -294,3 +294,115 @@ async def execute_building_analysis(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/lod12_geojson")
+async def get_lod12_geojson(
+    project_id: str,
+    scenario_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Return LoD 1.2 building surfaces as a GeoJSON FeatureCollection.
+
+    Each semantic surface (wall, roof, ground) is emitted as a separate
+    Feature with full 3D (Z) coordinates.  The result is directly usable
+    by CesiumJS with ``clampToGround: false`` and ``perPositionHeight: true``.
+
+    Query params:
+        project_id  – UUID of the project
+        scenario_id – UUID of the scenario
+    """
+    from sqlalchemy import and_
+    from app.models.vector import Building, BuildingProperties
+
+    rows = (
+        db.query(Building)
+        .join(
+            BuildingProperties,
+            Building.building_id == BuildingProperties.building_id,
+        )
+        .filter(
+            and_(
+                BuildingProperties.project_id == project_id,
+                BuildingProperties.scenario_id == scenario_id,
+            )
+        )
+        .filter(Building.building_surfaces_lod12.isnot(None))
+        .all()
+    )
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail="No LoD 1.2 data found for this project/scenario",
+        )
+
+    features: List[Dict[str, Any]] = []
+
+    for bldg in rows:
+        lod12 = bldg.building_surfaces_lod12
+        surfaces = lod12.get("surfaces", {})
+        metadata = lod12.get("metadata", {})
+        building_height = metadata.get("building_height")
+
+        shared_props = {
+            "building_id": bldg.building_id,
+            "lod": 1.2,
+            "building_height": building_height,
+        }
+
+        for wall in surfaces.get("wall_surfaces", []):
+            features.append({
+                "type": "Feature",
+                "geometry": wall.get("geometry"),
+                "properties": {
+                    **shared_props,
+                    "surface_type": "WallSurface",
+                    "surface_id": wall.get("surface_id"),
+                    "area_m2": wall.get("properties", {}).get("area_m2"),
+                    "orientation": wall.get("properties", {}).get("orientation"),
+                    "azimuth_degrees": wall.get("properties", {}).get("azimuth_degrees"),
+                },
+            })
+
+        roof = surfaces.get("roof_surface")
+        if roof:
+            features.append({
+                "type": "Feature",
+                "geometry": roof.get("geometry"),
+                "properties": {
+                    **shared_props,
+                    "surface_type": "RoofSurface",
+                    "surface_id": roof.get("surface_id"),
+                    "area_m2": roof.get("properties", {}).get("area_m2"),
+                    "roof_type": roof.get("properties", {}).get("roof_type"),
+                },
+            })
+
+        ground = surfaces.get("ground_surface")
+        if ground:
+            features.append({
+                "type": "Feature",
+                "geometry": ground.get("geometry"),
+                "properties": {
+                    **shared_props,
+                    "surface_type": "GroundSurface",
+                    "surface_id": ground.get("surface_id"),
+                    "area_m2": ground.get("properties", {}).get("area_m2"),
+                },
+            })
+
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "metadata": {
+            "project_id": project_id,
+            "scenario_id": scenario_id,
+            "total_buildings": len(rows),
+            "total_surfaces": len(features),
+            "lod": 1.2,
+            "coordinate_system": "EPSG:4326",
+            "height_reference": "relative_to_ground",
+        },
+    }
