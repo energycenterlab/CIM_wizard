@@ -51,7 +51,7 @@ A semantic layer is needed to deal with digital shadows and digital twins consis
 
 ## 3. Research Gaps in ECDT
 
-Three major research gaps motivate this PhD:
+Four major research gaps motivate this PhD:
 
 ### Gap 1: Heterogeneous Platform for City Information Model from Sparse Data Sources
 
@@ -90,11 +90,25 @@ In reality:
 
 Working with **actual data** from an energy community is essential to validate and improve digital twin frameworks under real-world conditions.
 
+### Gap 4: Lack of Text-to-Spatio-Temporal LLMs for ECDT
+
+Despite rapid progress in large language models, there is still no mature and domain-grounded approach for translating natural language queries into **spatio-temporal database operations** tailored to energy community digital twins.
+
+Current limitations include:
+
+- Generic text-to-SQL systems are weak on **spatial operators** (geometry predicates, topology, buffers, CRS handling)
+- Existing approaches do not jointly model **time-series semantics** (time windows, resampling, aggregation, alignment) with spatial context
+- Public benchmarks rarely represent **energy-domain entities** (buildings, feeders, transformers, prosumers) and their relational constraints
+- LLM outputs can be syntactically valid but **semantically unsafe** for operational analytics without schema-aware validation and ontology grounding
+
+As a result, non-expert stakeholders cannot reliably query ECDT data using natural language, and expert users still require manual SQL/STSQL authoring. This motivates a dedicated **txt2STSQL** research stream with benchmark design, constrained decoding, and semantic validation for trustworthy query generation in ECDT environments.
+
 ---
 
 ## 4. Research Plan and Methodology
 
 ### Phase I: Urban Energy Model (UEM) — Foundation
+what we call, CIM Wizard
 
 **Objective:** Develop an urban energy model to host buildings and grid data (spatial data) with simulation results (time series data).
 
@@ -146,16 +160,22 @@ Working with **actual data** from an energy community is essential to validate a
 
 ### Phase V: Edge Computing and Fault Detection
 
-**Objective:** Deploy an embedded board for edge computing in the energy community to co-simulate with the COESI platform (digital shadow co-simulator).
+**Objective:** Deploy a secure edge module inside smart electric boxes in buildings (COESI Gateway) to co-simulate with the COESI platform (digital shadow co-simulator), while enforcing privacy-preserving data exchange.
 
 **Deliverables:**
 
 - Embedded board deployment for local data collection and processing
+- COESI Gateway architecture (device identity, secure boot, signed OTA updates, encrypted telemetry)
 - Co-simulation with COESI platform
 - **Fault detection** by comparing actual data from the embedded board with predicted data from COESI
 - Quantification of residuals and anomalies
+- Privacy-aware feature sharing policy: transmit high-resolution derived features/events while keeping raw sensitive traces local
+- Building-level non-intrusive load monitoring (NILM) and appliance state/event extraction at the edge
+- Federated/continual learning workflow across gateways for anomaly detection without centralizing raw data
+- Physics-informed residual analytics (model-based + data-driven hybrid FDD) for HVAC, heat pumps, PV, and battery systems
+- Trustworthy operations dashboard with confidence scores, drift indicators, and explainable alerts
 
-**Rationale:** Fault Detection and Diagnosis (FDD) at whole-building or community level is crucial for continuous commissioning. Comparing predicted vs. measured data enables identification of anomalies and operational faults.
+**Rationale:** Recent research in edge AI for smart grids/buildings, privacy-preserving analytics, and hybrid model-based/data-driven FDD shows that moving intelligence to building gateways improves observability and response time while reducing privacy risk. A COESI Gateway inside smart electric boxes enables richer signals than standard smart meters (e.g., sub-minute load signatures, event traces, power quality indicators, DER operation states) to be transformed into secure, semantically structured features before transmission. This supports actionable fault diagnosis, community-level coordination, and cyber-resilient digital twin operations.
 
 ---
 
