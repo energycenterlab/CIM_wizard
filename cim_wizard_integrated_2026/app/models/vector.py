@@ -4,6 +4,7 @@ Uses cim_vector schema
 """
 
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger, func, ForeignKeyConstraint
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from geoalchemy2 import Geometry
 from app.db.database import Base
@@ -29,10 +30,8 @@ class ProjectScenario(Base):
     project_crs = Column(Integer, default=4326)
     census_boundary = Column(Geometry('MULTIPOLYGON', srid=4326), nullable=True)
     
-    # Additional fields (these columns may not exist in all database versions)
-    # cosimulator_config_mongo_path = Column(String, nullable=True)
-    # network_mongo_path = Column(JSON, nullable=True)
-    # results_mongo_path = Column(String, nullable=True)
+    # Grid link (nullable FK to cim_network.network_scenarios)
+    grid_id = Column(UUID(as_uuid=True), nullable=True)
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -57,6 +56,13 @@ class Building(Base):
     
     # Census link
     census_id = Column(BigInteger, nullable=True, index=True)
+    
+    # Terrain and naming
+    z_value = Column(Float, nullable=True)
+    building_name = Column(String(100), nullable=True)
+    
+    # PV reverse lookup (denormalized list of pv_id UUIDs)
+    pv_ids = Column(ARRAY(UUID(as_uuid=True)), default=list)
     
     # LoD 1.2 data
     building_surfaces_lod12 = Column(JSON, nullable=True)
@@ -163,3 +169,26 @@ class GridLine(Base):
     
     # Relationships
     # Note: project_scenario relationship removed due to missing foreign key constraints
+
+
+class PV(Base):
+    """PV-suitable roof polygon, linked to a building"""
+    __tablename__ = 'pv'
+    __table_args__ = {'schema': 'cim_vector'}
+
+    pv_id = Column(UUID(as_uuid=True), primary_key=True)
+    building_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+
+    fid = Column(BigInteger, nullable=True)
+    slope = Column(Float, nullable=True)
+    num = Column(Float, nullable=True)
+    area_reale = Column(Float, nullable=True)
+    number = Column(Integer, nullable=True)
+    s = Column(Float, nullable=True)
+    index_righ = Column(BigInteger, nullable=True)
+    id_pod = Column(Float, nullable=True)
+
+    pv_geometry = Column(Geometry('MULTIPOLYGON', srid=4326), nullable=False, index=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

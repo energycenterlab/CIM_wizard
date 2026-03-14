@@ -69,7 +69,7 @@ def _row_to_dict(row, geom_key: str = "geometry") -> dict:
     return d
 
 
-def _fetch_lines(db: Session, scenario_id: str, limit: int, offset: int) -> list:
+def _fetch_lines(db: Session, grid_id: str, limit: int, offset: int) -> list:
     """Fetch lines with all attributes using raw SQL."""
     cols, has_geom = _get_line_columns()
     parts = [f'nl."{c}"' for c in cols]
@@ -80,15 +80,15 @@ def _fetch_lines(db: Session, scenario_id: str, limit: int, offset: int) -> list
         SELECT {select_list}
         FROM cim_network.network_lines nl
         JOIN cim_network.scenario_lines sl ON sl.line_id = nl.line_id
-        WHERE sl.scenario_id = :scenario_id
+        WHERE sl.grid_id = :grid_id
         ORDER BY nl.line_id
         LIMIT :limit OFFSET :offset
     """)
-    result = db.execute(sql, {"scenario_id": scenario_id, "limit": limit, "offset": offset})
+    result = db.execute(sql, {"grid_id": grid_id, "limit": limit, "offset": offset})
     return [_row_to_dict(row) for row in result]
 
 
-def _fetch_buses(db: Session, scenario_id: str, limit: int, offset: int) -> list:
+def _fetch_buses(db: Session, grid_id: str, limit: int, offset: int) -> list:
     """Fetch buses with all attributes using raw SQL."""
     cols, has_geom = _get_bus_columns()
     parts = [f'nb."{c}"' for c in cols]
@@ -99,11 +99,11 @@ def _fetch_buses(db: Session, scenario_id: str, limit: int, offset: int) -> list
         SELECT {select_list}
         FROM cim_network.network_buses nb
         JOIN cim_network.scenario_buses sb ON sb.bus_id = nb.bus_id
-        WHERE sb.scenario_id = :scenario_id
+        WHERE sb.grid_id = :grid_id
         ORDER BY nb.bus_id
         LIMIT :limit OFFSET :offset
     """)
-    result = db.execute(sql, {"scenario_id": scenario_id, "limit": limit, "offset": offset})
+    result = db.execute(sql, {"grid_id": grid_id, "limit": limit, "offset": offset})
     return [_row_to_dict(row) for row in result]
 
 
@@ -121,64 +121,64 @@ async def get_network_scenarios(
             .limit(limit)
             .all()
         )
-        return [{"scenario_id": s.scenario_id} for s in scenarios]
+        return [{"grid_id": str(s.grid_id)} for s in scenarios]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/lines/{scenario_id}")
+@router.get("/lines/{grid_id}")
 async def get_network_lines(
-    scenario_id: str,
+    grid_id: str,
     limit: int = Query(1000, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     """
-    Get grid lines for a network scenario.
+    Get grid lines for a network scenario (grid_id).
     Joins scenario_lines with network_lines on line_id.
     Returns all attributes (geometry + other columns) for each line.
     """
     try:
-        return _fetch_lines(db, scenario_id, limit, offset)
+        return _fetch_lines(db, grid_id, limit, offset)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/buses/{scenario_id}")
+@router.get("/buses/{grid_id}")
 async def get_network_buses(
-    scenario_id: str,
+    grid_id: str,
     limit: int = Query(1000, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     """
-    Get grid buses for a network scenario.
+    Get grid buses for a network scenario (grid_id).
     Joins scenario_buses with network_buses on bus_id.
     Returns all attributes (geometry + other columns) for each bus.
     """
     try:
-        return _fetch_buses(db, scenario_id, limit, offset)
+        return _fetch_buses(db, grid_id, limit, offset)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/grid/{scenario_id}")
+@router.get("/grid/{grid_id}")
 async def get_network_grid(
-    scenario_id: str,
+    grid_id: str,
     limit_lines: int = Query(1000, ge=1, le=10000),
     limit_buses: int = Query(1000, ge=1, le=10000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
 ):
     """
-    Get both grid lines and buses for a network scenario in one response.
+    Get both grid lines and buses for a network scenario (grid_id) in one response.
     Returns all attributes for each line and bus.
     """
     try:
-        lines = _fetch_lines(db, scenario_id, limit_lines, offset)
-        buses = _fetch_buses(db, scenario_id, limit_buses, offset)
+        lines = _fetch_lines(db, grid_id, limit_lines, offset)
+        buses = _fetch_buses(db, grid_id, limit_buses, offset)
         return {
-            "scenario_id": scenario_id,
+            "grid_id": grid_id,
             "lines": lines,
             "buses": buses,
         }
