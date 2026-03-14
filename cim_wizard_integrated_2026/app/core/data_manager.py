@@ -639,9 +639,12 @@ class CimWizardDataManager:
         """
         Return a GeoJSON FeatureCollection with building geometries merged
         with their properties.  Handles baseline / delta merging.
+        Includes building-level columns (z_value, building_name, pv_ids),
+        grid data (if grid_id assigned), and PV data (if pv_ids present).
         """
         from geoalchemy2.shape import to_shape
         from shapely.geometry import mapping
+        from sqlalchemy import text
         from app.models.vector import Building, BuildingProperties
 
         session = self._require_session()
@@ -668,6 +671,28 @@ class CimWizardDataManager:
                         out[k] = v
             return out
 
+        # Pre-load PV data keyed by building_id for buildings that have PVs
+        pv_map = {}
+        try:
+            pv_rows = session.execute(text("""
+                SELECT pv_id, building_id, fid, slope, num, area_reale, number, s,
+                       index_righ, id_pod, ST_AsGeoJSON(pv_geometry)::text AS geojson
+                FROM cim_vector.pv
+            """)).mappings().all()
+            import json as _json
+            for r in pv_rows:
+                bid = str(r["building_id"])
+                entry = {k: r[k] for k in ("pv_id", "fid", "slope", "num", "area_reale",
+                                            "number", "s", "index_righ", "id_pod")}
+                entry["pv_id"] = str(entry["pv_id"])
+                try:
+                    entry["geometry"] = _json.loads(r["geojson"])
+                except Exception:
+                    entry["geometry"] = None
+                pv_map.setdefault(bid, []).append(entry)
+        except Exception:
+            pass
+
         def _build_features(query_rows, delta_map=None):
             features = []
             for props, building in query_rows:
@@ -677,11 +702,20 @@ class CimWizardDataManager:
                     continue
                 base = _props_dict(props)
                 merged = _merge(base, delta_map.get((building.building_id, lod))) if delta_map else base
+
+                bid_str = str(building.building_id)
+                merged["z_value"] = building.z_value
+                merged["building_name"] = building.building_name
+                merged["pv_ids"] = [str(p) for p in building.pv_ids] if building.pv_ids else []
+
+                if bid_str in pv_map:
+                    merged["pv_data"] = pv_map[bid_str]
+
                 features.append({
                     "type": "Feature",
                     "geometry": geom,
                     "properties": {
-                        "building_id": str(building.building_id),
+                        "building_id": bid_str,
                         "lod": building.lod,
                         **merged,
                     },
@@ -707,7 +741,22 @@ class CimWizardDataManager:
             delta_map = {(r.building_id, r.lod): r for r in delta_rows}
             features = _build_features(base_query, delta_map)
 
-        return {"type": "FeatureCollection", "features": features}
+        # Include grid data if grid_id is assigned to this scenario
+        grid_info = None
+        try:
+            grid_row = session.execute(text("""
+                SELECT grid_id FROM cim_vector.cim_wizard_project_scenario
+                WHERE project_id = :pid AND scenario_id = :sid AND grid_id IS NOT NULL
+            """), {"pid": project_id, "sid": scenario_id}).fetchone()
+            if grid_row:
+                grid_info = {"grid_id": str(grid_row[0])}
+        except Exception:
+            pass
+
+        result = {"type": "FeatureCollection", "features": features}
+        if grid_info:
+            result["grid"] = grid_info
+        return result
 
     def get_buildings_at_point(self, lng: float, lat: float) -> List[Dict[str, Any]]:
         from geoalchemy2 import func

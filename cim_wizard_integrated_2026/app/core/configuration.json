@@ -340,6 +340,78 @@
           "method_name": "frassinetto"
         }
       ]
+    },
+    "building_z_value": {
+      "constraints": {
+        "datatype": "float",
+        "required": false
+      },
+      "class_path": "app.calculators.building_z_value_calculator",
+      "class_name": "BuildingZValueCalculator",
+      "output": [
+        {"table": "cim_wizard_building", "schema": "cim_vector", "column": "z_value", "type": "Float"}
+      ],
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo"],
+          "method_name": "calculate_from_dtm"
+        }
+      ]
+    },
+    "building_name": {
+      "constraints": {
+        "datatype": "string",
+        "required": false
+      },
+      "class_path": "app.calculators.building_name_calculator",
+      "class_name": "BuildingNameCalculator",
+      "output": [
+        {"table": "cim_wizard_building", "schema": "cim_vector", "column": "building_name", "type": "String", "length": 100}
+      ],
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo"],
+          "method_name": "assign_sequential"
+        }
+      ]
+    },
+    "grid_generator": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "app.calculators.grid_generator_calculator",
+      "class_name": "GridGeneratorCalculator",
+      "output": [
+        {"table": "cim_wizard_project_scenario", "schema": "cim_vector", "column": "grid_id", "type": "UUID"}
+      ],
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["project_id", "scenario_id"],
+          "method_name": "assign_grid"
+        }
+      ]
+    },
+    "pv_generator": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "app.calculators.pv_generator_calculator",
+      "class_name": "PvGeneratorCalculator",
+      "output": [
+        {"table": "cim_wizard_building", "schema": "cim_vector", "column": "pv_ids", "type": "UUID[]"}
+      ],
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["project_id", "scenario_id"],
+          "method_name": "assign_pv_to_buildings"
+        }
+      ]
     }
   },
   "predefined_pipelines": {

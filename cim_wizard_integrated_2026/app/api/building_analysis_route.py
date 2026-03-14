@@ -119,6 +119,10 @@ async def execute_building_analysis(
              "description": "Assign random envelope efficiency (low/medium/high) per building"},
             {"feature_name": "fmu_assign", "method_name": "frassinetto",
              "description": "Assign FMU file identifier (frassinetto) to all building-scenarios"},
+            {"feature_name": "building_z_value", "method_name": "calculate_from_dtm",
+             "description": "Calculate average DTM z-value at building footprint"},
+            {"feature_name": "building_name", "method_name": "assign_sequential",
+             "description": "Assign sequential building names (BUI-0001, BUI-0002, …)"},
         ]
 
         results = {}
@@ -406,3 +410,122 @@ async def get_lod12_geojson(
             "height_reference": "relative_to_ground",
         },
     }
+
+
+# ── Grid generator endpoint ──────────────────────────────────────────
+
+@router.post("/assign_grid")
+async def assign_grid(
+    request_data: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Assign a grid_id to a project scenario.
+
+    Body: { "project_id": "...", "scenario_id": "...", "grid_id": "..." }
+    """
+    project_id = request_data.get("project_id")
+    scenario_id = request_data.get("scenario_id")
+    grid_id = request_data.get("grid_id")
+
+    if not all([project_id, scenario_id, grid_id]):
+        raise HTTPException(status_code=400, detail="project_id, scenario_id, and grid_id are required")
+
+    executor, data_manager = get_pipeline_executor(db)
+    from app.calculators.grid_generator_calculator import GridGeneratorCalculator
+    calc = GridGeneratorCalculator(executor)
+    result = calc.assign_grid(project_id, scenario_id, grid_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="grid_id not found or scenario not found")
+    return result
+
+
+@router.get("/grid/{project_id}/{scenario_id}")
+async def get_grid_for_scenario(
+    project_id: str,
+    scenario_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get grid data (lines + buses) for a project scenario via its grid_id.
+    """
+    from sqlalchemy import text
+
+    row = db.execute(
+        text("""
+            SELECT grid_id FROM cim_vector.cim_wizard_project_scenario
+            WHERE project_id = :pid AND scenario_id = :sid
+        """),
+        {"pid": project_id, "sid": scenario_id},
+    ).fetchone()
+
+    if not row or not row[0]:
+        raise HTTPException(status_code=404, detail="No grid_id assigned to this scenario")
+
+    grid_id = str(row[0])
+
+    lines = db.execute(text("""
+        SELECT nl.*, ST_AsGeoJSON(nl.geometry)::text AS geojson
+        FROM cim_network.network_lines nl
+        JOIN cim_network.scenario_lines sl ON sl.line_id = nl.line_id
+        WHERE sl.grid_id = :gid
+    """), {"gid": grid_id}).mappings().all()
+
+    buses = db.execute(text("""
+        SELECT nb.*, ST_AsGeoJSON(nb.geometry)::text AS geojson
+        FROM cim_network.network_buses nb
+        JOIN cim_network.scenario_buses sb ON sb.bus_id = nb.bus_id
+        WHERE sb.grid_id = :gid
+    """), {"gid": grid_id}).mappings().all()
+
+    import json
+    from datetime import date, datetime
+
+    def _row_to_dict(r):
+        d = dict(r)
+        geojson_str = d.pop("geojson", None)
+        geom = d.pop("geometry", None)
+        if geojson_str:
+            try:
+                d["geometry"] = json.loads(geojson_str)
+            except json.JSONDecodeError:
+                d["geometry"] = None
+        for k, v in list(d.items()):
+            if isinstance(v, (datetime, date)):
+                d[k] = v.isoformat()
+        return d
+
+    return {
+        "project_id": project_id,
+        "scenario_id": scenario_id,
+        "grid_id": grid_id,
+        "lines": [_row_to_dict(r) for r in lines],
+        "buses": [_row_to_dict(r) for r in buses],
+    }
+
+
+# ── PV generator endpoint ────────────────────────────────────────────
+
+@router.post("/assign_pv")
+async def assign_pv(
+    request_data: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Spatial join PV polygons to buildings in a scenario.
+
+    Body: { "project_id": "...", "scenario_id": "..." }
+    """
+    project_id = request_data.get("project_id")
+    scenario_id = request_data.get("scenario_id")
+
+    if not all([project_id, scenario_id]):
+        raise HTTPException(status_code=400, detail="project_id and scenario_id are required")
+
+    executor, data_manager = get_pipeline_executor(db)
+    from app.calculators.pv_generator_calculator import PvGeneratorCalculator
+    calc = PvGeneratorCalculator(executor)
+    result = calc.assign_pv_to_buildings(project_id, scenario_id)
+    if not result:
+        raise HTTPException(status_code=500, detail="PV assignment failed")
+    return result
