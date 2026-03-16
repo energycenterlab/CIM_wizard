@@ -691,7 +691,7 @@ class CimWizardDataManager:
                     entry["geometry"] = None
                 pv_map.setdefault(bid, []).append(entry)
         except Exception:
-            pass
+            session.rollback()
 
         def _build_features(query_rows, delta_map=None):
             features = []
@@ -751,7 +751,7 @@ class CimWizardDataManager:
             if grid_row:
                 grid_info = {"grid_id": str(grid_row[0])}
         except Exception:
-            pass
+            session.rollback()
 
         result = {"type": "FeatureCollection", "features": features}
         if grid_info:

@@ -1,4 +1,4 @@
-# CIM Database - PostgreSQL 15 + PostGIS + TimescaleDB
+# CIM Database - PostgreSQL 15 + PostGIS + TimescaleDB + 3DCityDB
 
 The database initializes from scripts in `init-db/` on **first startup** (alphabetical order).
 
@@ -11,8 +11,21 @@ docker compose -f docker-compose.cimdb.yml up --build -d
 
 On first run the init scripts execute automatically:
 
-1. `init_backup.sql` — restores the base schema (`cim_vector`, `cim_census`, etc.)
-2. `outputs_schema.sql` — creates the `outputs` schema with TimescaleDB hypertables
+1. `00_3dcitydb_setup.sh` — creates 3DCityDB schema (SRID=4326) + Energy ADE + Utility Network ADE
+2. `init_backup.sql` — restores the base schema (`cim_vector`, `cim_census`, etc.)
+3. `outputs_schema.sql` — creates the `outputs` schema with TimescaleDB hypertables
+
+## 3DCityDB
+
+The Docker image includes the [3DCityDB v5](https://github.com/3dcitydb/3dcitydb) schema
+with CityGML support, plus two Application Domain Extensions:
+
+- **Energy ADE** — energy modeling for buildings (thermal zones, energy systems, schedules)
+- **Utility Network ADE** — utility networks (pipes, cables, nodes, topology)
+
+The `citydb` schema is created automatically with SRID=4326 (WGS84) to match CIM Wizard.
+CIM Wizard buildings and building properties can be linked to CityGML city objects
+in the `citydb` schema for standards-based interoperability.
 
 ## Requirements
 
