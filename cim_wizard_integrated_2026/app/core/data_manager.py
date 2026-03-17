@@ -481,6 +481,27 @@ class CimWizardDataManager:
             logger.error("update_census_boundary failed: %s", e)
             return False
 
+    def clear_project_scenario_grid_id(
+        self, project_id: str, scenario_id: str
+    ) -> bool:
+        """
+        Clear (set to NULL) the grid_id for the given project scenario.
+        Returns True if the row existed and had a grid_id cleared, False otherwise.
+        """
+        from sqlalchemy import text
+
+        session = self._require_session()
+        result = session.execute(
+            text("""
+                UPDATE cim_vector.cim_wizard_project_scenario
+                SET grid_id = NULL, updated_at = now()
+                WHERE project_id = :pid AND scenario_id = :sid AND grid_id IS NOT NULL
+            """),
+            {"pid": project_id, "sid": scenario_id},
+        )
+        session.commit()
+        return result.rowcount > 0
+
     def delete_project_data(
         self,
         project_id: str,

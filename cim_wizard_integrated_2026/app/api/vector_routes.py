@@ -102,6 +102,35 @@ async def create_scenario(
         raise HTTPException(status_code=500, detail=f"Failed to create scenario: {str(e)}")
 
 
+@router.put("/projects/{project_id}/scenarios/{scenario_id}/clear-grid")
+async def clear_project_scenario_grid(
+    project_id: str,
+    scenario_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Clear the grid_id from cim_vector.cim_wizard_project_scenario for the given
+    project_id and scenario_id, if one is set.
+    """
+    try:
+        dm = _dm(db)
+        scenario = dm.get_scenario(project_id, scenario_id)
+        if not scenario:
+            raise HTTPException(status_code=404, detail="Project scenario not found")
+        cleared = dm.clear_project_scenario_grid_id(project_id, scenario_id)
+        return {
+            "success": True,
+            "project_id": project_id,
+            "scenario_id": scenario_id,
+            "grid_cleared": cleared,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to clear grid: {str(e)}")
+
+
 @router.get("/project_scenario_details/{project_id}/{scenario_id}")
 async def get_project_scenario_details(
     project_id: str,
