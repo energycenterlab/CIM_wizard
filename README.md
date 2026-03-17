@@ -1,6 +1,6 @@
 # CIM Wizard - Integrated System Documentation
 
-> **Date:** 2026-02-13  
+> **Date:** 2026-03-10  
 > **Scope:** Architecture, calculator pipeline, API compliance, deployment  
 
 ---
@@ -17,15 +17,23 @@
   - [2.6 Endpoint Routes](#26-endpoint-routes)
 - [3. Calculator Reference](#3-calculator-reference)
   - [3.1 Full Calculator Inventory](#31-full-calculator-inventory)
-  - [3.2 Building Analysis Pipeline (9 steps)](#32-building-analysis-pipeline-9-steps)
-  - [3.3 Complete Chain Pipeline (16 steps)](#33-complete-chain-pipeline-16-steps)
-  - [3.4 What Is Missing from Building Analysis](#34-what-is-missing-from-building-analysis)
+  - [3.2 Building Analysis Pipeline (22 steps)](#32-building-analysis-pipeline-22-steps)
+  - [3.3 Legacy Complete Chain (deprecated)](#33-legacy-complete-chain-deprecated)
 - [4. Database Schema](#4-database-schema)
+  - [4.1 CIM Wizard schemas (cim_vector, cim_census, cim_raster, cim_network)](#41-cim-wizard-schemas)
+  - [4.2 Outputs schema (TimescaleDB)](#42-outputs-schema-timescaledb)
+  - [4.3 3DCityDB schema with Energy ADE and Utility Network ADE](#43-3dcitydb-schema-with-energy-ade-and-utility-network-ade)
 - [5. API Endpoint Reference](#5-api-endpoint-reference)
-  - [DELETE Project Data](#delete-project-data)
+  - [5.1 Core Endpoints](#51-core-endpoints)
+  - [5.2 Grid Endpoints](#52-grid-endpoints)
+  - [5.3 PV Endpoints](#53-pv-endpoints)
+  - [5.4 3DCityDB / CityJSON Endpoints](#54-3dcitydb--cityjson-endpoints)
+  - [5.5 Pipeline Endpoints (Generic)](#55-pipeline-endpoints-generic)
+  - [5.6 DELETE Project Data](#56-delete-project-data)
 - [6. Backend Field Normalizer](#6-backend-field-normalizer)
 - [7. Issues and Recommendations](#7-issues-and-recommendations)
 - [8. Running the System](#8-running-the-system)
+- [9. Deployment to Server](#9-deployment-to-server)
 
 ---
 
@@ -35,7 +43,7 @@ The CIM Wizard system consists of three interconnected projects:
 
 | Project | Role | Technology | Port |
 |---------|------|------------|------|
-| **cim-database** | Dockerized PostgreSQL/PostGIS database | PostgreSQL 15 + PostGIS | `15432` |
+| **cim-database** | Dockerized PostgreSQL/PostGIS database | PostgreSQL 15 + PostGIS + TimescaleDB + 3DCityDB | `15432` |
 | **cim_wizard_integrated_2026** | Backend API server | Python / FastAPI / SQLAlchemy | `8000` |
 | **coesi-frontend-main_2026** | Frontend web application | React / TypeScript / Vite | `5173` |
 
@@ -46,8 +54,9 @@ Client (Frontend / Postman / Script)
          v
 +---------------------------+
 | FastAPI Endpoints         |      app/api/
-| (vector_routes,           |      - building_analysis_route.py  (16-step pipeline)
-|  building_analysis_route, |      - pipeline_routes.py          (generic pipeline API)
+| (vector_routes,           |      - building_analysis_route.py  (22-step pipeline + grid/pv/citydb)
+|  building_analysis_route, |      - network_routes.py           (grid network data)
+|  network_routes,          |      - pipeline_routes.py          (generic pipeline API)
 |  pipeline_routes)         |      - vector_routes.py            (CRUD + schema)
 +---------------------------+
          |
@@ -62,16 +71,19 @@ Client (Frontend / Postman / Script)
          |                          | - Building CRUD           |
          | Dynamically loads        | - BuildingProperties CRUD |
          | from configuration.json  | - Raster queries          |
-         v                          | - Normalizer sync         |
+         v                          | - Grid / PV / CityDB      |
 +---------------------------+       +---------------------------+
 | BaseCalculator            |                    |
 |  +-- Calculator (height)  |                    v
-|  +-- Calculator (area)    |       +---------------------------+
-|  +-- Calculator (volume)  |       | PostgreSQL/PostGIS        |
-|  +-- Calculator (pop.)    |       | cim_vector, cim_census,   |
-|  +-- Calculator (type)    |       | cim_raster schemas        |
-|  +-- ... (18 total)       |       +---------------------------+
-+---------------------------+
+|  +-- Calculator (area)    |       +------------------------------------+
+|  +-- Calculator (volume)  |       | PostgreSQL 15 + PostGIS            |
+|  +-- Calculator (pop.)    |       | + TimescaleDB + 3DCityDB           |
+|  +-- Calculator (type)    |       |                                    |
+|  +-- Calculator (grid)    |       | Schemas:                           |
+|  +-- Calculator (pv)      |       |   cim_vector, cim_census,          |
+|  +-- Calculator (citydb)  |       |   cim_raster, cim_network,         |
+|  +-- ... (22 total)       |       |   outputs, citydb, citydb_pkg      |
++---------------------------+       +------------------------------------+
 ```
 
 Key architectural rule: only CimWizardDataManager touches the database. Routes and calculators delegate all persistence to DataManager methods.
@@ -263,7 +275,7 @@ Each route creates its own DataManager + PipelineExecutor and defines its own ca
 
 ### 3.1 Full Calculator Inventory
 
-There are **16 calculators** registered in `configuration.json`. Each one targets specific columns in the database:
+There are **22 calculators** registered in `configuration.json`. Each one targets specific columns in the database:
 
 | # | Feature Name | Calculator Class | Method(s) | DB Column(s) Populated |
 |---|-------------|-----------------|-----------|----------------------|
@@ -273,7 +285,7 @@ There are **16 calculators** registered in `configuration.json`. Each one target
 | 4 | `building_props` | BuildingPropsCalculator | `init` | Initializes rows in `cim_wizard_building_properties` (skeleton records) |
 | 5 | `building_height` | BuildingHeightCalculator | `calculate_from_raster_tiles` | `height` on `cim_wizard_building_properties` |
 | 6 | `building_area` | BuildingAreaCalculator | `calculate_from_geometry` | `area` on `cim_wizard_building_properties` |
-| 7 | `filter_res` | BuildingResidentialFilterCalculator | `calculate_filter_res` | `type` on `cim_wizard_building_properties` (residential vs non-residential) |
+| 7 | `filter_res` | BuildingResidentialFilterCalculator | `calculate_filter_res` | `filter_res` on `cim_wizard_building_properties` |
 | 8 | `building_volume` | BuildingVolumeCalculator | `calculate_from_height_and_area` | `volume` on `cim_wizard_building_properties` |
 | 9 | `building_n_floors` | BuildingNFloorsCalculator | `estimate_by_height` | `number_of_floors` on `cim_wizard_building_properties` |
 | 10 | `census_population` | CensusPopulationCalculator | `calculate_from_census_boundary` | *(intermediate -- total population from census sections)* |
@@ -283,15 +295,23 @@ There are **16 calculators** registered in `configuration.json`. Each one target
 | 14 | `building_construction_year` | BuildingConstructionYearCalculator | `by_census_osm` | `const_year`, `const_period_census`, `const_tabula` on `cim_wizard_building_properties` |
 | 15 | `building_demographic` | BuildingDemographicCalculator | `by_census_osm` | Orchestrates n_people + n_family from census integration |
 | 16 | `building_geo_lod12` | BuildingGeoLod12Calculator | `by_footprint_height` | `building_surfaces_lod12` on `cim_wizard_building` (3D geometry) |
+| 17 | `envelope_efficiency` | EnvelopeEfficiencyCalculator | `assign_random` | `envelope_efficiency` on `cim_wizard_building_properties` |
+| 18 | `fmu_assign` | FmuAssignCalculator | `frassinetto` | `fmu_file` on `cim_wizard_building_properties` |
+| 19 | `building_z_value` | BuildingZValueCalculator | `calculate_from_dtm` | `z_value` on `cim_wizard_building` |
+| 20 | `building_name` | BuildingNameCalculator | `assign_sequential` | `building_name` on `cim_wizard_building` (BUI-0001 format) |
+| 21 | `grid_generator` | GridGeneratorCalculator | `assign_grid` | `grid_id` on `cim_wizard_project_scenario` |
+| 22 | `pv_generator` | PvGeneratorCalculator | `assign_pv_to_buildings` | `pv_ids` on `cim_wizard_building` |
 
-### 3.2 Building Analysis Pipeline (16 steps)
+Additionally, `CitydbMapperCalculator` provides `map_scenario_to_citydb` (writes to `citydb` schema) and `generate_cityjson` (reads from `cim_vector` and returns CityJSON v1.1).
+
+### 3.2 Building Analysis Pipeline (22 steps)
 
 **Endpoint:** `POST /api/v1/building/execute_building_analysis`
 
-This is the main pipeline used by the frontend and Postman. It runs all 16 calculators and populates every DB column:
+This is the main pipeline used by the frontend and Postman. It runs 22 calculators sequentially and populates every DB column:
 
 ```
-Step  Feature                    Method                           DB Column
+Step  Feature                    Method                           DB Column / Target
 ----  -------------------------  -------------------------------  -------------------------
  1    scenario_geo               calculate_from_scenario_geo      project_boundary, project_center
  2    scenario_census_boundary   calculate_from_census_api        census_boundary
@@ -299,7 +319,7 @@ Step  Feature                    Method                           DB Column
  4    building_props             init                             building_properties (skeleton)
  5    building_height            calculate_from_raster_tiles      height
  6    building_area              calculate_from_geometry           area
- 7    filter_res                 calculate_filter_res             type (residential filter)
+ 7    filter_res                 calculate_filter_res             filter_res (residential filter)
  8    building_volume            calculate_from_height_and_area   volume
  9    building_n_floors          estimate_by_height               number_of_floors
 10    census_population          calculate_from_census_boundary   (intermediate: total pop)
@@ -309,29 +329,13 @@ Step  Feature                    Method                           DB Column
 14    building_construction_year by_census_osm                    const_year, const_period_census, const_tabula
 15    building_demographic       by_census_osm                    (orchestrates n_people + n_family)
 16    building_geo_lod12         by_footprint_height              building_surfaces_lod12
+17    envelope_efficiency        assign_random                    envelope_efficiency
+18    fmu_assign                 frassinetto                      fmu_file
+19    building_z_value           calculate_from_dtm               z_value (avg DTM under footprint)
+20    building_name              assign_sequential                building_name (BUI-0001, ...)
 ```
 
-**Dependency chain for steps 10-16:**
-
-```
-census_population
-  depends on: scenario_census_boundary
-
-building_population
-  depends on: building_volume, census_population
-
-building_n_families
-  depends on: building_population
-
-building_construction_year
-  depends on: scenario_census_boundary, building_type
-
-building_demographic
-  depends on: building_population, building_n_families
-
-building_geo_lod12
-  depends on: building_geo, building_height
-```
+Steps 21 (grid_generator) and 22 (pv_generator) are not part of the automatic pipeline; they are triggered via their own POST endpoints.
 
 ### 3.3 Legacy Complete Chain (deprecated)
 
@@ -343,7 +347,14 @@ This is an older implementation in `complete_chain_route.py`. It has known issue
 
 ## 4. Database Schema
 
-### Entity Relationship (Logical)
+The database image (`cim-database/Dockerfile`) is built as a multi-stage Docker image combining:
+
+- **PostgreSQL 15** with **PostGIS 3.4** (base spatial database)
+- **TimescaleDB** (time-series hypertables in the `outputs` schema)
+- **3DCityDB v4** (CityGML schema in the `citydb` / `citydb_pkg` schemas)
+- **Energy ADE** and **Utility Network ADE** (3DCityDB extensions)
+
+### 4.1 CIM Wizard schemas
 
 ```
 +-----------------------------------------------+
@@ -358,6 +369,7 @@ This is an older implementation in `complete_chain_route.py`. It has known issue
 |      project_zoom   INTEGER [default: 15]     |
 |      project_crs    INTEGER [default: 4326]   |
 |      census_boundary GEOMETRY(MULTIPOLY,4326) |
+|  FK  grid_id        UUID  --> cim_network.network_scenarios.grid_id
 |      created_at     TIMESTAMP WITH TZ         |
 |      updated_at     TIMESTAMP WITH TZ         |
 +--------------+--------------------------------+
@@ -370,16 +382,18 @@ This is an older implementation in `complete_chain_route.py`. It has known issue
 |  PK  building_id  VARCHAR(100)  ----------+   |
 |  PK  lod          INTEGER [default: 0]    |   |
 |      project_id   VARCHAR(100)            |   |
-|      height       FLOAT                   |   |  <-- building_height calculator
-|      area         FLOAT                   |   |  <-- building_area calculator
-|      volume       FLOAT                   |   |  <-- building_volume calculator
-|      number_of_floors  FLOAT              |   |  <-- building_n_floors calculator
-|      type         VARCHAR(50)             |   |  <-- filter_res / building_type calculator
-|      const_period_census  VARCHAR(10)     |   |  <-- building_construction_year calculator
-|      const_year   INTEGER                 |   |  <-- building_construction_year calculator
-|      const_tabula VARCHAR(15)             |   |  <-- building_construction_year calculator
-|      n_people     INTEGER                 |   |  <-- building_population calculator
-|      n_family     INTEGER                 |   |  <-- building_n_families calculator
+|      height       FLOAT                   |   |
+|      area         FLOAT                   |   |
+|      volume       FLOAT                   |   |
+|      number_of_floors  FLOAT              |   |
+|      type         VARCHAR(50)             |   |
+|      envelope_efficiency VARCHAR(20)      |   |
+|      fmu_file     VARCHAR(255)            |   |
+|      const_period_census  VARCHAR(10)     |   |
+|      const_year   INTEGER                 |   |
+|      const_tabula VARCHAR(15)             |   |
+|      n_people     INTEGER                 |   |
+|      n_family     INTEGER                 |   |
 |      created_at   TIMESTAMP WITH TZ       |   |
 |      updated_at   TIMESTAMP WITH TZ       |   |
 +-------------------------------------------+   |
@@ -390,15 +404,33 @@ This is an older implementation in `complete_chain_route.py`. It has known issue
 |-----------------------------------------------|
 |  PK  building_id   VARCHAR(100)               |
 |      lod           INTEGER [default: 0]       |
-|      building_geometry  GEOMETRY(GEOM,4326)   |  <-- building_geo calculator
+|      building_geometry  GEOMETRY(GEOM,4326)   |
 |      building_geometry_source  VARCHAR(50)    |
-|      census_id     BIGINT  ---------------+   |
-|      building_surfaces_lod12   JSON       |   |  <-- building_geo_lod12 calculator
-|      created_at    TIMESTAMP WITH TZ      |   |
-|      updated_at    TIMESTAMP WITH TZ      |   |
-+-------------------------------------------+   |
-                                                | census_id = SEZ2011 (logical FK)
-                                                v
+|      census_id     BIGINT                     |
+|      z_value       DOUBLE PRECISION           |
+|      building_name VARCHAR(100)               |
+|      pv_ids        UUID[]  (GIN indexed)      |
+|      building_surfaces_lod12   JSON           |
+|      created_at    TIMESTAMP WITH TZ          |
+|      updated_at    TIMESTAMP WITH TZ          |
++-----------------------------------------------+
+
++-----------------------------------------------+
+|  cim_vector.pv                                |
+|-----------------------------------------------|
+|  PK  pv_id         UUID                       |
+|  FK  building_id   UUID  --> cim_wizard_building.building_id
+|      fid           BIGINT                     |
+|      slope         FLOAT                      |
+|      num           FLOAT                      |
+|      area_reale    FLOAT                      |
+|      number        INTEGER                    |
+|      s             FLOAT                      |
+|      index_righ    BIGINT                     |
+|      id_pod        FLOAT                      |
+|      pv_geometry   GEOMETRY(MULTIPOLY,4326)   |
++-----------------------------------------------+
+
 +-----------------------------------------------+
 |  cim_census.censusgeo                         |
 |-----------------------------------------------|
@@ -409,28 +441,111 @@ This is an older implementation in `complete_chain_route.py`. It has known issue
 |      E1..E31  (building age columns)          |
 |      ST1..ST15 (housing stock columns)        |
 +-----------------------------------------------+
+
+cim_network schema:
+  network_scenarios (PK: grid_id UUID)
+  scenario_buses    (grid_id FK, bus_id)
+  scenario_lines    (grid_id FK, line_id)
+  network_buses     (PK: bus_id, geometry POINT)
+  network_lines     (PK: line_id, geometry LINESTRING)
 ```
 
-No explicit foreign keys are enforced in the database. All relationships are logical and maintained by application logic.
+### 4.2 Outputs schema (TimescaleDB)
+
+The `outputs` schema stores simulation time-series data as TimescaleDB hypertables, partitioned on `time_step` (BIGINT, discrete step index).
+
+| Table | Purpose | Partition key |
+|-------|---------|---------------|
+| `outputs.simulation_run` | Metadata per run (step_size_ms, simulation_start) | -- |
+| `outputs.building_frassinetto3` | Building thermal outputs (t_building, heating_load_target) | `time_step` |
+| `outputs.battery` | Battery outputs (i, v, soc, p_net_batt) | `time_step` |
+| `outputs.heating_frassinetto_hp2` | Heat pump outputs (en_el, cop, cr, ...) | `time_step` |
+
+Each hypertable row references `cim_vector.cim_wizard_building_properties` via a composite FK on `(scenario_id, building_id, lod)`.
+
+### 4.3 3DCityDB schema with Energy ADE and Utility Network ADE
+
+The `citydb` schema is the standard 3DCityDB v4 schema for CityGML data. It is created by the official `create-db.sql` script at first container startup (see `cim-database/init-db/00_3dcitydb_setup.sh`). SRID is set to 4326 (WGS84).
+
+Key tables used by CIM Wizard:
+
+| Table | Purpose | SQLAlchemy Model |
+|-------|---------|------------------|
+| `citydb.citymodel` | CityGML CityModel (one per scenario) | `CityModel` |
+| `citydb.cityobject` | Root for all features (buildings, surfaces) | `CityObject` |
+| `citydb.cityobject_member` | CityModel-to-CityObject link | `CityObjectMember` |
+| `citydb.building` | CityGML Building (shares id with cityobject) | `CityBuilding` |
+| `citydb.thematic_surface` | Wall/Roof/Ground surfaces (objectclass 33/34/35) | `ThematicSurface` |
+| `citydb.surface_geometry` | Hierarchical geometry storage (PolygonZ) | `SurfaceGeometry` |
+| `citydb.cityobject_genericattrib` | Key-value attributes (U-values, thermal zone data) | `CityObjectGenericAttrib` |
+
+The `citydb_pkg` schema contains PL/pgSQL functions for 3DCityDB maintenance.
+
+SQLAlchemy models are in `app/models/citydb.py`. These models map to pre-existing tables; they are not created by `Base.metadata.create_all()`.
 
 ---
 
 ## 5. API Endpoint Reference
 
-### Core Endpoints
+### 5.1 Core Endpoints
 
 | Method | Route | Purpose |
 |--------|-------|---------|
 | GET | `/api/v1/vector/projects` | List all projects (with pagination) |
 | GET | `/api/v1/vector/pscenarios/{project_id}` | Get scenarios for a project |
-| GET | `/api/v1/vector/get_buildings_geojson/{project_id}/{scenario_id}` | Get buildings as GeoJSON FeatureCollection |
+| GET | `/api/v1/vector/get_buildings_geojson/{project_id}/{scenario_id}` | Get buildings as GeoJSON FeatureCollection (includes building_properties, z_value, building_name, pv_data if available, grid info if available) |
 | GET | `/api/v1/vector/schema` | Get normalization schema (all entities) |
 | GET | `/api/v1/vector/schema/{entity_name}` | Get normalization schema for one entity |
-| POST | `/api/v1/building/execute_building_analysis` | Create project + run full 16-step pipeline (physical + demographic + 3D) |
+| GET | `/api/v1/building/lod12_geojson?project_id=...&scenario_id=...` | Get LOD 1.2 surfaces as 3D GeoJSON FeatureCollection |
+| POST | `/api/v1/building/execute_building_analysis` | Create project + run full 22-step pipeline (physical + demographic + 3D) |
 | POST | `/api/v1/complete/execute_complete_chain` | *Deprecated* -- use building_analysis endpoint instead |
 | DELETE | `/api/v1/vector/delete` | Flexible delete (building, scenario, or entire project) |
 
-### Pipeline Endpoints (Generic)
+### 5.2 Grid Endpoints
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| POST | `/api/v1/building/assign_grid` | Assign a `grid_id` to a project scenario. Body: `{ "project_id": "...", "scenario_id": "...", "grid_id": "..." }` |
+| GET | `/api/v1/building/grid/{project_id}/{scenario_id}` | Get grid data (lines + buses) for a scenario that has a grid_id assigned |
+
+### 5.3 PV Endpoints
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| POST | `/api/v1/building/assign_pv` | Spatial-join PV polygons to buildings in a scenario. Updates `cim_vector.pv.building_id` and `cim_wizard_building.pv_ids`. Body: `{ "project_id": "...", "scenario_id": "..." }` |
+
+PV data is also included in the `get_buildings_geojson` response when a building has `pv_ids` assigned.
+
+### 5.4 3DCityDB / CityJSON Endpoints
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| POST | `/api/v1/building/map_to_citydb` | Map all buildings in a scenario to 3DCityDB tables (citymodel, cityobject, building, thematic_surface, surface_geometry, generic attributes). Idempotent. Body: `{ "project_id": "...", "scenario_id": "..." }` |
+| GET | `/api/v1/building/cityjson/{project_id}/{scenario_id}` | Return a CityJSON v1.1 document for a scenario. Includes Building CityObjects with LOD 1.2 Solid geometry, semantic surfaces with TABULA U-values, and child +Energy-ThermalZone objects. Does not require `/map_to_citydb` to have been called first. |
+
+**CityJSON mapping:**
+
+| CIM Wizard concept | CityJSON / 3DCityDB representation |
+|--------------------|------------------------------------|
+| project-scenario | CityModel (gmlid = scenario_id) |
+| building | Building CityObject (gmlid = building_id) |
+| LOD 1.2 wall/roof/ground | Semantic surfaces in Solid geometry with TABULA U-values |
+| thermal zone (1 per building) | +Energy-ThermalZone child (id = building_id + "-z1") |
+| envelope_efficiency, fmu_file | ThermalZone attributes (envelopeEfficiency, energySystemModel) |
+
+**TABULA U-values (W/m2K) applied per construction period:**
+
+| Period | Years | Wall | Roof | Ground |
+|--------|-------|------|------|--------|
+| TABULA_1 | pre-1900 | 1.70 | 2.20 | 1.60 |
+| TABULA_2 | 1901-1920 | 1.60 | 2.00 | 1.50 |
+| TABULA_3 | 1921-1945 | 1.48 | 1.80 | 1.40 |
+| TABULA_4 | 1946-1960 | 1.30 | 1.60 | 1.20 |
+| TABULA_5 | 1961-1975 | 1.10 | 1.20 | 1.00 |
+| TABULA_6 | 1976-1990 | 0.80 | 0.80 | 0.80 |
+| TABULA_7 | 1991-2005+ | 0.50 | 0.40 | 0.50 |
+
+### 5.5 Pipeline Endpoints (Generic)
 
 | Method | Route | Purpose |
 |--------|-------|---------|
@@ -441,6 +556,10 @@ No explicit foreign keys are enforced in the database. All relationships are log
 | GET | `/api/v1/pipeline/configuration` | Get full configuration.json |
 | GET | `/api/v1/pipeline/available_features` | List available calculated features |
 | GET | `/api/v1/pipeline/predefined_pipelines` | List predefined pipelines |
+
+### 5.6 DELETE Project Data
+
+See below for details.
 
 ### POST Create Project Request
 
@@ -601,15 +720,15 @@ No Python code changes needed. Restart the server or call `reload_config()`.
 
 | # | Issue | Location | Impact | Status |
 |---|-------|----------|--------|--------|
-| 1 | `filter_res` column missing in DB model | `vector.py`, `building_analysis_route.py` | Residential filter results never saved to DB | TODO: Add `filter_res = Column(Boolean)` to BuildingProperties model |
-| 2 | `complete_chain_route.py` is deprecated | `complete_chain_route.py` | Non-UUID IDs, no DB saving, wrong method names | Use `building_analysis_route.py` which now runs all 16 steps |
+| 1 | `complete_chain_route.py` is deprecated | `complete_chain_route.py` | Non-UUID IDs, no DB saving, wrong method names | Use `building_analysis_route.py` which now runs all 22 steps |
 
 ### Minor Issues
 
 | # | Issue | Location | Impact |
 |---|-------|----------|--------|
-| 5 | No explicit foreign keys in DB | cim-database schema | No referential integrity enforcement |
-| 6 | Frontend normalizer field mismatches | `normalizers.ts` | Frontend should call `GET /schema` to get canonical names |
+| 2 | No explicit foreign keys in most CIM Wizard tables | cim-database schema | No referential integrity enforcement (by design -- maintained by app logic) |
+| 3 | Frontend normalizer field mismatches | `normalizers.ts` | Frontend should call `GET /schema` to get canonical names |
+| 4 | Energy ADE / Utility Network ADE may not install cleanly | `cim-database/init-db/00_3dcitydb_setup.sh` | The gioagu ADE scripts are designed for 3DCityDB v3/v4 and may produce warnings on the edge image. Core 3DCityDB schema works correctly. |
 
 ---
 
@@ -668,6 +787,75 @@ DATABASE_URL=postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/ci
 
 | Service | Host | Port | Credentials |
 |---------|------|------|-------------|
-| PostgreSQL/PostGIS | localhost | 15432 | `cim_wizard_user` / `cim_wizard_password` |
+| PostgreSQL/PostGIS + TimescaleDB + 3DCityDB | localhost | 15432 | `cim_wizard_user` / `cim_wizard_password` |
 | FastAPI Backend | localhost | 8000 | -- |
 | React Frontend | localhost | 5173 | -- |
+
+---
+
+## 9. Deployment to Server
+
+The production server is at `130.192.238.11`. The deployment script `deploy-to-server.sh` uses `rsync` + `sshpass` to push local code.
+
+### Full redeployment (code + fresh DB)
+
+```bash
+# 1. Deploy code
+./deploy-to-server.sh
+
+# 2. On the server
+ssh eclabuser@130.192.238.11
+cd ~/cim
+./run-docker.sh down
+
+# 3. Rebuild DB (destroys data -- only for fresh setup)
+cd cim-database
+docker compose -f docker-compose.cimdb.yml build --no-cache
+docker compose -f docker-compose.cimdb.yml up -d
+
+# 4. Restart backend
+cd ~/cim
+./run-docker.sh backend-up
+```
+
+### Incremental deployment (keep existing data)
+
+When only schema changes or code updates are needed and existing data must be preserved:
+
+```bash
+# 1. Deploy code
+./deploy-to-server.sh
+
+# 2. On the server: restart backend only (no DB rebuild)
+ssh eclabuser@130.192.238.11
+cd ~/cim
+./run-docker.sh backend-down
+./run-docker.sh backend-up
+
+# 3. Apply SQL migrations if needed (additive, IF NOT EXISTS)
+docker exec -i cim-integrateddb psql -U cim_wizard_user -d cim_wizard_integrated \
+  < cim-database/migrations/add_outputs_schema.sql
+
+docker exec -i cim-integrateddb psql -U cim_wizard_user -d cim_wizard_integrated \
+  < cim-database/migrations/add_grid_id_building_cols_pv_table.sql
+
+# 4. Install 3DCityDB on existing database (if not already done)
+docker exec -i cim-integrateddb bash -c '
+  psql -v ON_ERROR_STOP=1 -U cim_wizard_user -d cim_wizard_integrated \
+    -f /3dcitydb/create-db.sql \
+    -v srid=4326 \
+    -v srs_name="urn:ogc:def:crs:EPSG::4326" \
+    -v changelog=no
+'
+```
+
+### Loading PV data
+
+To load PV GeoJSON data into `cim_vector.pv`:
+
+```bash
+conda activate webgis
+cd pv/scripts
+python load_pv_geojson.py            # local DB
+python load_pv_geojson.py --server   # server DB (130.192.238.11)
+```

@@ -529,3 +529,69 @@ async def assign_pv(
     if not result:
         raise HTTPException(status_code=500, detail="PV assignment failed")
     return result
+
+
+# ── CityDB / CityJSON endpoints ─────────────────────────────────────
+
+@router.post("/map_to_citydb")
+async def map_to_citydb(
+    request_data: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Map all buildings in a project-scenario to the 3DCityDB ``citydb``
+    schema.  Creates a CityModel for the scenario, one CityObject per
+    building with LOD 1.2 thematic surfaces and TABULA-derived U-values,
+    plus thermal-zone generic attributes.
+
+    Body: ``{ "project_id": "...", "scenario_id": "..." }``
+    """
+    project_id = request_data.get("project_id")
+    scenario_id = request_data.get("scenario_id")
+
+    if not all([project_id, scenario_id]):
+        raise HTTPException(
+            status_code=400,
+            detail="project_id and scenario_id are required",
+        )
+
+    executor, _ = get_pipeline_executor(db)
+    from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
+
+    calc = CitydbMapperCalculator(executor)
+    try:
+        result = calc.map_scenario_to_citydb(project_id, scenario_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CityDB mapping failed: {e}")
+    return result
+
+
+@router.get("/cityjson/{project_id}/{scenario_id}")
+async def get_cityjson(
+    project_id: str,
+    scenario_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Return a CityJSON v1.1 document for a project-scenario.
+
+    Every building with LOD 1.2 surface data becomes a ``Building``
+    CityObject with a ``Solid`` geometry, semantic surfaces carrying
+    TABULA U-values, and a child ``+Energy-ThermalZone`` object.
+
+    Does **not** require ``/map_to_citydb`` to have been called first;
+    it reads directly from the CIM Wizard tables.
+    """
+    executor, _ = get_pipeline_executor(db)
+    from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
+
+    calc = CitydbMapperCalculator(executor)
+    cityjson = calc.generate_cityjson(project_id, scenario_id)
+
+    if not cityjson.get("CityObjects"):
+        raise HTTPException(
+            status_code=404,
+            detail="No buildings found for this project/scenario",
+        )
+
+    return cityjson

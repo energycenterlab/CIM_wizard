@@ -28,6 +28,16 @@ from app.models.outputs import (
     HeatingFrassinettoHp2
 )
 
+from app.models.citydb import (
+    CityModel,
+    CityObject,
+    CityObjectMember,
+    CityBuilding,
+    ThematicSurface,
+    SurfaceGeometry,
+    CityObjectGenericAttrib,
+)
+
 # Make all models available at package level
 __all__ = [
     # Vector models
@@ -37,10 +47,10 @@ __all__ = [
     'GridBus',
     'GridLine',
     'PV',
-    
+
     # Census models
     'CensusGeo',
-    
+
     # Raster models
     'RasterModel',
     'DTMRaster',
@@ -52,4 +62,13 @@ __all__ = [
     'BuildingFrassinetto3',
     'Battery',
     'HeatingFrassinettoHp2',
+
+    # 3DCityDB models (citydb schema, managed by 3DCityDB init scripts)
+    'CityModel',
+    'CityObject',
+    'CityObjectMember',
+    'CityBuilding',
+    'ThematicSurface',
+    'SurfaceGeometry',
+    'CityObjectGenericAttrib',
 ]

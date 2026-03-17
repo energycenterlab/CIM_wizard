@@ -412,6 +412,33 @@
           "method_name": "assign_pv_to_buildings"
         }
       ]
+    },
+    "citydb_mapper": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "app.calculators.citydb_mapper_calculator",
+      "class_name": "CitydbMapperCalculator",
+      "output": [
+        {"table": "citymodel", "schema": "citydb", "column": "id", "type": "Integer"},
+        {"table": "cityobject", "schema": "citydb", "column": "id", "type": "Integer"},
+        {"table": "building", "schema": "citydb", "column": "id", "type": "Integer"},
+        {"table": "thematic_surface", "schema": "citydb", "column": "id", "type": "Integer"},
+        {"table": "surface_geometry", "schema": "citydb", "column": "id", "type": "Integer"}
+      ],
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["project_id", "scenario_id"],
+          "method_name": "map_scenario_to_citydb"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["project_id", "scenario_id"],
+          "method_name": "generate_cityjson"
+        }
+      ]
     }
   },
   "predefined_pipelines": {
