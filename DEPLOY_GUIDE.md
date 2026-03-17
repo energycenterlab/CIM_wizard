@@ -99,3 +99,57 @@ After starting:
 # Server: stop, then start with new code
 ssh eclabuser@130.192.238.11 "cd ~/cim && ./run-docker.sh down && ./run-docker.sh up"
 ```
+
+---
+
+## Populating the Server Database
+
+The server DB is empty because `init_backup.sql` (~2.1 GB) is excluded from `deploy-to-server.sh`. To populate it:
+
+### Option A: Copy init_backup + run fresh DB init
+
+1. **Copy init_backup.sql** (one-time, ~2.1 GB):
+
+   ```bash
+   ./deploy-init-to-server.sh
+   ```
+   Or manually:
+   ```bash
+   rsync -avz --progress cim-database/init-db/init_backup.sql \
+     eclabuser@130.192.238.11:~/cim/cim-database/init-db/
+   ```
+
+2. **On the server, recreate the DB** (destroys existing data):
+
+   ```bash
+   ssh eclabuser@130.192.238.11
+   cd ~/cim
+   ./run-docker.sh down
+   cd cim-database
+   docker compose -f docker-compose.cimdb.yml down -v   # -v removes volume
+   docker compose -f docker-compose.cimdb.yml up -d
+   cd ~/cim && ./run-docker.sh backend-up
+   ```
+
+   Init scripts run on first startup and will restore schema + data from `init_backup.sql`.
+
+### Option B: Load PV data only (schema exists from backend)
+
+If the backend has already created empty tables (via `create_all`), you can load PV data from your local machine:
+
+```bash
+cd pv/scripts
+python load_pv_geojson.py   # targets server 130.192.238.11:15432
+```
+
+Ensure port 15432 is reachable from your machine. If not, copy `pv/` to the server and run there:
+
+```bash
+# Copy pv folder to server
+rsync -avz pv/ eclabuser@130.192.238.11:~/cim/pv/
+
+# On server (connects to localhost:15432)
+ssh eclabuser@130.192.238.11
+cd ~/cim/pv/scripts
+DATABASE_URL="postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" python load_pv_geojson.py
+```

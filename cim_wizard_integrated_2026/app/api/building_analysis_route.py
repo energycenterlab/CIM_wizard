@@ -3,9 +3,11 @@ Building Analysis Pipeline Route - Executes building-specific calculators
 Focuses on physical building properties without demographic calculations
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import Dict, Any, List
+import json as _json
 import uuid
 
 from app.db.database import get_db
@@ -529,6 +531,78 @@ async def assign_pv(
     if not result:
         raise HTTPException(status_code=500, detail="PV assignment failed")
     return result
+
+
+@router.get("/pv_buildings/{project_id}/{scenario_id}")
+async def get_pv_with_building_info(
+    project_id: str,
+    scenario_id: str,
+    lod: int = Query(0),
+    db: Session = Depends(get_db),
+):
+    """
+    Return all PV polygons that belong to buildings in the given
+    project/scenario, enriched with building height and z_value.
+    """
+    result = db.execute(text("""
+        SELECT
+            pv.pv_id,
+            pv.building_id,
+            pv.fid,
+            pv.slope,
+            pv.num,
+            pv.area_reale,
+            pv.number,
+            pv.s,
+            pv.index_righ,
+            pv.id_pod,
+            ST_AsGeoJSON(pv.pv_geometry)::text AS pv_geojson,
+            b.z_value,
+            bp.height AS building_height
+        FROM cim_vector.pv pv
+        JOIN cim_vector.cim_wizard_building b
+          ON pv.building_id = CAST(b.building_id AS uuid)
+         AND b.lod = :lod
+        JOIN cim_vector.cim_wizard_building_properties bp
+          ON bp.building_id = b.building_id
+         AND bp.project_id = :pid
+         AND bp.scenario_id = :sid
+         AND bp.lod = b.lod
+        ORDER BY pv.building_id, pv.pv_id
+    """), {"pid": project_id, "sid": scenario_id, "lod": lod}).mappings().all()
+
+    features = []
+    for r in result:
+        try:
+            geom = _json.loads(r["pv_geojson"])
+        except Exception:
+            geom = None
+        features.append({
+            "type": "Feature",
+            "geometry": geom,
+            "properties": {
+                "pv_id": str(r["pv_id"]),
+                "building_id": str(r["building_id"]),
+                "fid": r["fid"],
+                "slope": r["slope"],
+                "num": r["num"],
+                "area_reale": r["area_reale"],
+                "number": r["number"],
+                "s": r["s"],
+                "index_righ": r["index_righ"],
+                "id_pod": r["id_pod"],
+                "building_height": r["building_height"],
+                "z_value": r["z_value"],
+            },
+        })
+
+    return {
+        "type": "FeatureCollection",
+        "project_id": project_id,
+        "scenario_id": scenario_id,
+        "total_pv": len(features),
+        "features": features,
+    }
 
 
 # ── CityDB / CityJSON endpoints ─────────────────────────────────────
