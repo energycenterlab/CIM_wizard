@@ -17,9 +17,9 @@ import json as _json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
-from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_SetSRID, ST_Force2D
+from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_SetSRID, ST_AsGeoJSON
 
 from app.calculators.base_calculator import BaseCalculator
 from app.models.citydb import (
@@ -214,7 +214,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 gmlid=f"poly-{ts_co.id}",
                 parent_id=sg_root.id,
                 root_id=sg_root.id,
-                geometry=ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), 4326)),
+                geometry=ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), 4326),
                 cityobject_id=ts_co.id,
             )
             session.add(sg_poly)
@@ -347,6 +347,175 @@ class CitydbMapperCalculator(BaseCalculator):
             builder.add_thermal_zone(bid, props)
 
         return builder.build(scenario_id)
+
+    # ------------------------------------------------------------------
+    # GET helper -- generate CityJSON v1.1 from 3DCityDB tables
+    # ------------------------------------------------------------------
+
+    def generate_cityjson_from_citydb(
+        self, citymodel_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Build a CityJSON v1.1 document by reading directly from the
+        ``citydb`` schema tables.  ``citymodel_id`` is the CityModel.gmlid
+        (equal to the scenario_id used during mapping).
+
+        Returns ``None`` when no CityModel with that gmlid exists.
+        """
+        session: Session = self.data_manager.db_session
+
+        citymodel = (
+            session.query(CityModel)
+            .filter(CityModel.gmlid == citymodel_id)
+            .first()
+        )
+        if not citymodel:
+            return None
+
+        building_rows = (
+            session.query(CityObject, CityBuilding)
+            .join(CityObjectMember, CityObject.id == CityObjectMember.cityobject_id)
+            .join(CityBuilding, CityObject.id == CityBuilding.id)
+            .filter(
+                CityObjectMember.citymodel_id == citymodel.id,
+                CityObject.objectclass_id == OC_BUILDING,
+            )
+            .all()
+        )
+
+        builder = _CityJSONBuilder()
+
+        for co, cb in building_rows:
+            bid = co.gmlid
+
+            gen_attrs = (
+                session.query(CityObjectGenericAttrib)
+                .filter(CityObjectGenericAttrib.cityobject_id == co.id)
+                .all()
+            )
+
+            attrs: Dict[str, Any] = {}
+            if co.name:
+                attrs["name"] = co.name
+            if cb.measured_height is not None:
+                attrs["measuredHeight"] = round(cb.measured_height, 2)
+            if cb.storeys_above_ground is not None:
+                attrs["storeysAboveGround"] = int(cb.storeys_above_ground)
+
+            tz_attrs: Dict[str, Any] = {"isCooled": False, "isHeated": True}
+            for ga in gen_attrs:
+                val = _ga_typed_value(ga)
+                if val is None:
+                    continue
+                if ga.attrname == "thermalZone_volume_m3":
+                    tz_attrs["volume"] = round(float(val), 2)
+                    attrs["volume"] = round(float(val), 2)
+                elif ga.attrname == "thermalZone_floorArea_m2":
+                    tz_attrs["floorArea"] = round(float(val), 2)
+                    attrs["footprintArea"] = round(float(val), 2)
+                elif ga.attrname == "thermalZone_numberOfFloors":
+                    tz_attrs["numberOfFloors"] = int(val)
+                elif ga.attrname == "energySystem_envelopeEfficiency":
+                    tz_attrs["envelopeEfficiency"] = val
+                elif ga.attrname == "energySystem_fmuFile":
+                    tz_attrs["energySystemModel"] = val
+
+            surface_rows = (
+                session.query(
+                    ThematicSurface,
+                    CityObject,
+                    func.ST_AsGeoJSON(SurfaceGeometry.geometry).label("geojson"),
+                )
+                .join(CityObject, ThematicSurface.id == CityObject.id)
+                .outerjoin(
+                    SurfaceGeometry,
+                    and_(
+                        SurfaceGeometry.cityobject_id == ThematicSurface.id,
+                        SurfaceGeometry.geometry.isnot(None),
+                    ),
+                )
+                .filter(ThematicSurface.building_id == co.id)
+                .all()
+            )
+
+            boundaries: List[List[List[int]]] = []
+            sem_surfaces: List[dict] = []
+            sem_values: List[Optional[int]] = []
+
+            for ts, ts_co, geojson_str in surface_rows:
+                if not geojson_str:
+                    continue
+
+                geojson = _json.loads(geojson_str)
+                sem_type = _OC_SEM_TYPE.get(ts.objectclass_id, "GenericSurface")
+
+                u_attr = (
+                    session.query(CityObjectGenericAttrib)
+                    .filter(
+                        CityObjectGenericAttrib.cityobject_id == ts.id,
+                        CityObjectGenericAttrib.attrname == "u_value_w_m2k",
+                    )
+                    .first()
+                )
+
+                sem_entry: Dict[str, Any] = {"type": sem_type}
+                if u_attr and u_attr.realval is not None:
+                    sem_entry["u_value"] = u_attr.realval
+
+                for ring in geojson.get("coordinates", []):
+                    indices = builder._ring_to_indices(ring)
+                    boundaries.append([indices])
+                    sem_surfaces.append(sem_entry)
+                    sem_values.append(len(sem_surfaces) - 1)
+
+            geometry: list = []
+            if boundaries:
+                geom_entry: Dict[str, Any] = {
+                    "type": "Solid",
+                    "lod": "1.2",
+                    "boundaries": [boundaries],
+                }
+                if sem_surfaces:
+                    geom_entry["semantics"] = {
+                        "surfaces": sem_surfaces,
+                        "values": [sem_values],
+                    }
+                geometry.append(geom_entry)
+
+            builder._city_objects[bid] = {
+                "type": "Building",
+                "attributes": {k: v for k, v in attrs.items() if v is not None},
+                "geometry": geometry,
+                "children": [f"{bid}-z1"],
+            }
+
+            builder._city_objects[f"{bid}-z1"] = {
+                "type": "+Energy-ThermalZone",
+                "attributes": {k: v for k, v in tz_attrs.items() if v is not None},
+                "parents": [bid],
+            }
+
+        return builder.build(citymodel_id)
+
+
+# ── Helper utilities ─────────────────────────────────────────────────
+
+_OC_SEM_TYPE = {
+    OC_ROOF_SURFACE: "RoofSurface",
+    OC_WALL_SURFACE: "WallSurface",
+    OC_GROUND_SURFACE: "GroundSurface",
+}
+
+
+def _ga_typed_value(ga: CityObjectGenericAttrib):
+    """Extract the Python-typed value from a generic-attribute row."""
+    if ga.datatype == DT_STRING:
+        return ga.strval
+    if ga.datatype == DT_REAL:
+        return ga.realval
+    if ga.datatype == DT_INTEGER:
+        return ga.intval
+    return ga.strval or ga.realval or ga.intval
 
 
 # ======================================================================
