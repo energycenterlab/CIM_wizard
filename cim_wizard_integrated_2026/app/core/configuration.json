@@ -302,6 +302,16 @@
           "priority": 1,
           "input_dependencies": ["building_geo", "building_height"],
           "method_name": "by_footprint_height"
+        },
+        {
+          "priority": 2,
+          "input_dependencies": ["building_geo", "building_height", "building_n_floors"],
+          "method_name": "by_footprint_height_floors"
+        },
+        {
+          "priority": 3,
+          "input_dependencies": ["building_geo", "building_height", "building_n_floors", "building_n_families"],
+          "method_name": "by_mixed_use"
         }
       ]
     },

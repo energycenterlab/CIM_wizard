@@ -115,8 +115,6 @@ async def execute_building_analysis(
              "description": "Estimate construction year, census period, and TABULA classification"},
             {"feature_name": "building_demographic", "method_name": "by_census_osm",
              "description": "Orchestrate demographic calculation (population + families)"},
-            {"feature_name": "building_geo_lod12", "method_name": "by_footprint_height",
-             "description": "Generate LoD 1.2 3D building geometry from footprint and height"},
             {"feature_name": "envelope_efficiency", "method_name": "assign_random",
              "description": "Assign random envelope efficiency (low/medium/high) per building"},
             {"feature_name": "fmu_assign", "method_name": "frassinetto",
@@ -209,27 +207,6 @@ async def execute_building_analysis(
                                         )
                                 db_update_status["updated_records"] = total
                                 db_update_status["status"] = "success"
-
-                        elif feature_name == "building_geo_lod12":
-                            from app.models.vector import Building
-                            lod12_items = result.get('building_lod12_data', [])
-                            updated = 0
-                            for item in lod12_items:
-                                bid = item.get('building_id')
-                                if not bid:
-                                    continue
-                                bldg = db.query(Building).filter_by(
-                                    building_id=bid, lod=0
-                                ).first()
-                                if bldg:
-                                    bldg.building_surfaces_lod12 = {
-                                        'surfaces': item.get('surfaces'),
-                                        'metadata': item.get('metadata'),
-                                    }
-                                    updated += 1
-                            db.commit()
-                            db_update_status["updated_records"] = updated
-                            db_update_status["status"] = "success"
 
                         elif feature_name in _FEATURE_DB_MAP:
                             col_name, extractor = _FEATURE_DB_MAP[feature_name]
@@ -613,15 +590,27 @@ async def map_to_citydb(
     db: Session = Depends(get_db),
 ):
     """
-    Map all buildings in a project-scenario to the 3DCityDB ``citydb``
-    schema.  Creates a CityModel for the scenario, one CityObject per
-    building with LOD 1.2 thematic surfaces and TABULA-derived U-values,
-    plus thermal-zone generic attributes.
+    Generate LOD 1.2 geometry and map all buildings in a project-scenario
+    to the 3DCityDB ``citydb`` schema.
 
-    Body: ``{ "project_id": "...", "scenario_id": "..." }``
+    Body::
+
+        {
+            "project_id": "...",
+            "scenario_id": "...",
+            "lod12_method": "by_footprint_height"
+        }
+
+    ``lod12_method`` (optional, default ``"by_footprint_height"``):
+
+    * ``"by_footprint_height"`` – basic single-zone LOD 1.2
+    * ``"by_footprint_height_floors"`` – per-storey walls/floors, one thermal zone per floor
+    * ``"by_mixed_use"`` – basement + commercial ground floor + residential
+      apartments with per-apartment thermal zones
     """
     project_id = request_data.get("project_id")
     scenario_id = request_data.get("scenario_id")
+    lod12_method = request_data.get("lod12_method", "by_footprint_height")
 
     if not all([project_id, scenario_id]):
         raise HTTPException(
@@ -629,43 +618,53 @@ async def map_to_citydb(
             detail="project_id and scenario_id are required",
         )
 
+    valid_methods = ("by_footprint_height", "by_footprint_height_floors", "by_mixed_use")
+    if lod12_method not in valid_methods:
+        raise HTTPException(
+            status_code=400,
+            detail=f"lod12_method must be one of {valid_methods}",
+        )
+
     executor, _ = get_pipeline_executor(db)
     from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
 
     calc = CitydbMapperCalculator(executor)
     try:
-        result = calc.map_scenario_to_citydb(project_id, scenario_id)
+        result = calc.map_scenario_to_citydb(project_id, scenario_id, lod12_method)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CityDB mapping failed: {e}")
     return result
 
 
-@router.get("/cityjson/{project_id}/{scenario_id}")
+@router.get("/cityjson/{citymodel_id}")
 async def get_cityjson(
-    project_id: str,
-    scenario_id: str,
+    citymodel_id: str,
     db: Session = Depends(get_db),
 ):
     """
-    Return a CityJSON v1.1 document for a project-scenario.
+    Return a CityJSON v1.1 document for a city model.
 
-    Every building with LOD 1.2 surface data becomes a ``Building``
-    CityObject with a ``Solid`` geometry, semantic surfaces carrying
-    TABULA U-values, and a child ``+Energy-ThermalZone`` object.
+    ``citymodel_id`` equals the ``scenario_id`` used during
+    ``POST /map_to_citydb``.  Reads directly from the 3DCityDB
+    ``citydb`` schema including multi-zone thermal zones.
 
-    Does **not** require ``/map_to_citydb`` to have been called first;
-    it reads directly from the CIM Wizard tables.
+    Requires ``/map_to_citydb`` to have been called first.
     """
     executor, _ = get_pipeline_executor(db)
     from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
 
     calc = CitydbMapperCalculator(executor)
-    cityjson = calc.generate_cityjson(project_id, scenario_id)
+    cityjson = calc.generate_cityjson_from_citydb(citymodel_id)
 
+    if cityjson is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"CityModel '{citymodel_id}' not found",
+        )
     if not cityjson.get("CityObjects"):
         raise HTTPException(
             status_code=404,
-            detail="No buildings found for this project/scenario",
+            detail="CityModel exists but has no mapped buildings",
         )
 
     return cityjson

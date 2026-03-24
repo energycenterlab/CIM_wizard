@@ -229,31 +229,61 @@ async def upsert_building_properties(
     db: Session = Depends(get_db),
 ):
     """
-    Store or update modified building properties for a non-baseline scenario.
-    Rejects if scenario_id == project_id.
-    """
-    if scenario_id == project_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot modify baseline scenario via this endpoint. Use pipeline/calculators for baseline.",
-        )
+    Flexible update/nullify for building properties in a project scenario.
 
+    Supports three body formats:
+
+    1. Single building -- flat object with building_id + fields:
+       { "building_id": "...", "height": 12.5, "n_people": null }
+
+    2. Multiple buildings -- list under "modifications":
+       { "modifications": [ { "building_id": "...", "height": null }, ... ] }
+
+    3. Bulk (all buildings in the scenario) -- "fields" without building_id:
+       { "fields": { "envelope_efficiency": "medium", "fmu_file": null } }
+
+    Setting a field value to null clears it in the database.
+    """
     dm = _dm(db)
     scenario = dm.get_scenario(project_id, scenario_id)
     if not scenario:
         raise HTTPException(status_code=404, detail="Scenario not found")
 
-    if "modifications" in request_body:
-        modifications = request_body["modifications"]
-        if not isinstance(modifications, list):
-            raise HTTPException(status_code=400, detail="modifications must be a list")
-    else:
-        modifications = [request_body]
-
-    if not modifications:
-        raise HTTPException(status_code=400, detail="At least one modification required")
-
     try:
+        # --- Format 3: bulk update all buildings in the scenario ---
+        if "fields" in request_body and "building_id" not in request_body:
+            fields = request_body["fields"]
+            if not isinstance(fields, dict):
+                raise HTTPException(status_code=400, detail="fields must be an object")
+            updates = {k: v for k, v in fields.items() if k in _BP_EDITABLE_FIELDS}
+            if not updates:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No editable fields provided. Allowed: {sorted(_BP_EDITABLE_FIELDS)}",
+                )
+            lod = request_body.get("lod", 0)
+            updated = dm.bulk_update_building_properties(
+                project_id, scenario_id, lod, **updates,
+            )
+            return {
+                "action": "bulk_update",
+                "project_id": project_id,
+                "scenario_id": scenario_id,
+                "fields_updated": list(updates.keys()),
+                "buildings_affected": updated,
+            }
+
+        # --- Format 1 & 2: per-building modifications ---
+        if "modifications" in request_body:
+            modifications = request_body["modifications"]
+            if not isinstance(modifications, list):
+                raise HTTPException(status_code=400, detail="modifications must be a list")
+        else:
+            modifications = [request_body]
+
+        if not modifications:
+            raise HTTPException(status_code=400, detail="At least one modification required")
+
         upserted = 0
         for mod in modifications:
             building_id = mod.get("building_id")
@@ -278,7 +308,7 @@ async def upsert_building_properties(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to upsert building properties: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update building properties: {str(e)}")
 
 
 # ── Spatial query endpoints ───────────────────────────────────────────

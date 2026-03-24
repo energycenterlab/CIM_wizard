@@ -48,6 +48,8 @@ OC_GROUND_SURFACE = 35
 _OC_LABEL: Dict[int, str] = {
     25: "BuildingPart",
     26: "Building",
+    30: "CeilingSurface",
+    32: "FloorSurface",
     33: "RoofSurface",
     34: "WallSurface",
     35: "GroundSurface",
@@ -81,6 +83,38 @@ def _ga_dict(db: Session, cityobject_id: int) -> Dict[str, Any]:
         .all()
     )
     return {r.attrname: _ga_value(r) for r in rows}
+
+
+def _reconstruct_zones(ga: Dict[str, Any]) -> List[dict]:
+    """Rebuild thermal-zone list from ``tz:<zone_id>:*`` generic attributes."""
+    zone_map: Dict[str, Dict[str, Any]] = {}
+    for key, val in ga.items():
+        if not key.startswith("tz:"):
+            continue
+        parts = key.split(":", 2)
+        if len(parts) < 3:
+            continue
+        zid, field = parts[1], parts[2]
+        zone_map.setdefault(zid, {"zone_id": zid})[field] = val
+
+    zones: List[dict] = []
+    for zid, fields in zone_map.items():
+        zones.append({
+            "zone_id": zid,
+            "usage": fields.get("usage"),
+            "volume_m3": fields.get("volume_m3"),
+            "floor_area_m2": fields.get("floor_area_m2"),
+            "is_heated": str(fields.get("is_heated", "True")).lower() == "true",
+            "is_cooled": str(fields.get("is_cooled", "False")).lower() == "true",
+            "storey_index": fields.get("storey_index"),
+            "apartment_index": fields.get("apartment_index"),
+        })
+
+    zones.sort(key=lambda z: (
+        int(z.get("storey_index") or 0),
+        int(z.get("apartment_index") or 0),
+    ))
+    return zones
 
 
 def _resolve_citymodel(db: Session, citymodel_id: str) -> CityModel:
@@ -348,6 +382,24 @@ async def get_building_detail(
             "u_value_w_m2k": ts_ga.get("u_value_w_m2k"),
         })
 
+    tz_count = ga.get("thermalZone_count")
+    if tz_count is not None and int(tz_count) > 1:
+        thermal_zones = _reconstruct_zones(ga)
+    else:
+        thermal_zones = [{
+            "zone_id": "z1",
+            "usage": "residential",
+            "volume_m3": ga.get("thermalZone_volume_m3"),
+            "floor_area_m2": ga.get("thermalZone_floorArea_m2"),
+            "number_of_floors": (
+                int(ga["thermalZone_numberOfFloors"])
+                if ga.get("thermalZone_numberOfFloors") is not None
+                else None
+            ),
+            "is_heated": True,
+            "is_cooled": False,
+        }]
+
     return {
         "id": co.id,
         "gmlid": co.gmlid,
@@ -368,15 +420,7 @@ async def get_building_detail(
             "envelope_efficiency": ga.get("energySystem_envelopeEfficiency"),
             "fmu_file": ga.get("energySystem_fmuFile"),
         },
-        "thermal_zone": {
-            "volume_m3": ga.get("thermalZone_volume_m3"),
-            "floor_area_m2": ga.get("thermalZone_floorArea_m2"),
-            "number_of_floors": (
-                int(ga["thermalZone_numberOfFloors"])
-                if ga.get("thermalZone_numberOfFloors") is not None
-                else None
-            ),
-        },
+        "thermal_zones": thermal_zones,
         "generic_attributes": ga,
         "surfaces": surfaces,
     }

@@ -20,9 +20,10 @@
   - [3.2 Building Analysis Pipeline (22 steps)](#32-building-analysis-pipeline-22-steps)
   - [3.3 Legacy Complete Chain (deprecated)](#33-legacy-complete-chain-deprecated)
 - [4. Database Schema](#4-database-schema)
-  - [4.1 CIM Wizard schemas (cim_vector, cim_census, cim_raster, cim_network)](#41-cim-wizard-schemas)
+  - [4.1 CIM Wizard schemas (as-is)](#41-cim-wizard-schemas-as-is)
   - [4.2 Outputs schema (TimescaleDB)](#42-outputs-schema-timescaledb)
   - [4.3 3DCityDB schema with Energy ADE and Utility Network ADE](#43-3dcitydb-schema-with-energy-ade-and-utility-network-ade)
+  - [4.4 Willing schema (target ECDT)](#44-willing-schema-target-ecdt)
 - [5. API Endpoint Reference](#5-api-endpoint-reference)
   - [5.1 Core Endpoints](#51-core-endpoints)
   - [5.2 Grid Endpoints](#52-grid-endpoints)
@@ -34,6 +35,40 @@
 - [7. Issues and Recommendations](#7-issues-and-recommendations)
 - [8. Running the System](#8-running-the-system)
 - [9. Deployment to Server](#9-deployment-to-server)
+- [10. How to]
+  - [how to add new calculator's method]
+  - [how to add new calculator]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+  - [how to ]
+
 
 ---
 
@@ -354,7 +389,11 @@ The database image (`cim-database/Dockerfile`) is built as a multi-stage Docker 
 - **3DCityDB v4** (CityGML schema in the `citydb` / `citydb_pkg` schemas)
 - **Energy ADE** and **Utility Network ADE** (3DCityDB extensions)
 
-### 4.1 CIM Wizard schemas
+### 4.1 CIM Wizard schemas (as-is)
+
+Current database schemas as implemented. See `paper/generate_data_list_xlsx.py` and `paper/data-list.md` for the target ECDT data inventory.
+
+#### cim_vector, cim_census, cim_raster, cim_network
 
 ```
 +-----------------------------------------------+
@@ -448,6 +487,12 @@ cim_network schema:
   scenario_lines    (grid_id FK, line_id)
   network_buses     (PK: bus_id, geometry POINT)
   network_lines     (PK: line_id, geometry LINESTRING)
+
+cim_raster schema (height/z calculators use dtm, dsm):
+  dtm, dsm          PostGIS raster (DEM/DSM)
+  dtm_raster,       Alternative storage (RasterService)
+  dsm_raster
+  building_height_cache  Cached DSM−DTM heights per building
 ```
 
 ### 4.2 Outputs schema (TimescaleDB)
@@ -483,6 +528,26 @@ The `citydb_pkg` schema contains PL/pgSQL functions for 3DCityDB maintenance.
 
 SQLAlchemy models are in `app/models/citydb.py`. These models map to pre-existing tables; they are not created by `Base.metadata.create_all()`.
 
+### 4.4 Willing schema (target ECDT)
+
+Target schema for Energy Community Digital Twin, derived from `paper/data-list.md` and `paper/generate_data_list_xlsx.py`. Not yet implemented; serves as a roadmap.
+
+| Domain | Target tables / concepts | Data source |
+|--------|--------------------------|-------------|
+| **Geography** | building_footprint, roof_geometry, thermal_zones, openings | cim_vector (extend), CityGML LoD2/3 |
+| **Grid** | substation, feeder_topology, line_geometry, metering_points | cim_network (extend), CIM |
+| **Envelope** | u_values (wall, roof, floor), glazing, infiltration | building_properties (extend), TABULA |
+| **Systems** | hvac, dhw, lighting, appliances | New: cim_systems |
+| **Consumption** | electricity, gas, heat (agg + disaggregated) | outputs (extend), smart meter, **simulators** |
+| **Occupant** | occupancy_schedule, window_opening, thermostat_override | New: cim_occupant, **occupant models** |
+| **Generation** | pv (extend), wind, biomass | cim_vector.pv (extend), registry |
+| **Storage & grid** | battery, ev, import_export, tariffs | New: cim_storage, cim_grid_interaction |
+| **Weather** | temperature, irradiance, wind | New: cim_weather (or external TMY) |
+| **Measurements** | P, Q, V, meter_health, pseudo_measurements | New: cim_measurements (TimescaleDB) |
+| **Metadata** | building_id, meter_id, provenance | Extend identifiers, add provenance |
+
+**Synthesis note:** Consumption and occupant behavior data can be **synthesized by simulators and models** (e.g. EnergyPlus, COESI, occupant behavior models) when real measurements are unavailable — see generation logic in `paper/generate_data_list_xlsx.py`.
+
 ---
 
 ## 5. API Endpoint Reference
@@ -493,7 +558,10 @@ SQLAlchemy models are in `app/models/citydb.py`. These models map to pre-existin
 |--------|-------|---------|
 | GET | `/api/v1/vector/projects` | List all projects (with pagination) |
 | GET | `/api/v1/vector/pscenarios/{project_id}` | Get scenarios for a project |
+| GET | `/api/v1/vector/project_scenario_details/{project_id}/{scenario_id}` | Get details for a specific project scenario |
 | GET | `/api/v1/vector/get_buildings_geojson/{project_id}/{scenario_id}` | Get buildings as GeoJSON FeatureCollection (includes building_properties, z_value, building_name, pv_data if available, grid info if available) |
+| GET | `/api/v1/vector/buildingproperties/{project_id}/{scenario_id}` | Query building properties for a scenario (supports building_id, lod, pagination) |
+| PUT | `/api/v1/vector/projects/{project_id}/scenarios/{scenario_id}/buildingproperties` | Flexible update/nullify building properties (single, batch, or bulk). See detailed docs below. |
 | GET | `/api/v1/vector/schema` | Get normalization schema (all entities) |
 | GET | `/api/v1/vector/schema/{entity_name}` | Get normalization schema for one entity |
 | GET | `/api/v1/building/lod12_geojson?project_id=...&scenario_id=...` | Get LOD 1.2 surfaces as 3D GeoJSON FeatureCollection |
@@ -507,21 +575,41 @@ SQLAlchemy models are in `app/models/citydb.py`. These models map to pre-existin
 |--------|-------|---------|
 | POST | `/api/v1/building/assign_grid` | Assign a `grid_id` to a project scenario. Body: `{ "project_id": "...", "scenario_id": "...", "grid_id": "..." }` |
 | GET | `/api/v1/building/grid/{project_id}/{scenario_id}` | Get grid data (lines + buses) for a scenario that has a grid_id assigned |
+| PUT | `/api/v1/vector/projects/{project_id}/scenarios/{scenario_id}/clear-grid` | Clear (set to NULL) the grid_id from a project scenario |
 
 ### 5.3 PV Endpoints
 
 | Method | Route | Purpose |
 |--------|-------|---------|
 | POST | `/api/v1/building/assign_pv` | Spatial-join PV polygons to buildings in a scenario. Updates `cim_vector.pv.building_id` and `cim_wizard_building.pv_ids`. Body: `{ "project_id": "...", "scenario_id": "..." }` |
+| GET | `/api/v1/building/pv_buildings/{project_id}/{scenario_id}` | Get all PV polygons for buildings in the scenario as GeoJSON FeatureCollection, enriched with `building_height` and `z_value` |
 
 PV data is also included in the `get_buildings_geojson` response when a building has `pv_ids` assigned.
 
 ### 5.4 3DCityDB / CityJSON Endpoints
 
+There are two sets of CityJSON/CityDB endpoints:
+
+**A) CIM Wizard source (reads from cim_vector tables)**
+
 | Method | Route | Purpose |
 |--------|-------|---------|
 | POST | `/api/v1/building/map_to_citydb` | Map all buildings in a scenario to 3DCityDB tables (citymodel, cityobject, building, thematic_surface, surface_geometry, generic attributes). Idempotent. Body: `{ "project_id": "...", "scenario_id": "..." }` |
-| GET | `/api/v1/building/cityjson/{project_id}/{scenario_id}` | Return a CityJSON v1.1 document for a scenario. Includes Building CityObjects with LOD 1.2 Solid geometry, semantic surfaces with TABULA U-values, and child +Energy-ThermalZone objects. Does not require `/map_to_citydb` to have been called first. |
+| GET | `/api/v1/building/cityjson/{project_id}/{scenario_id}` | Return CityJSON v1.1 built from CIM Wizard tables. Does NOT require `/map_to_citydb`. |
+
+**B) 3DCityDB source (reads from citydb schema, requires `/map_to_citydb` first)**
+
+All endpoints below use `citymodel_id` which equals the `scenario_id` used during `POST /map_to_citydb`.
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET | `/api/v1/citydb/cityjson/{citymodel_id}` | CityJSON v1.1 built from 3DCityDB tables (citydb schema) |
+| GET | `/api/v1/citydb/{citymodel_id}` | CityModel metadata: envelope, name, member-count breakdown |
+| GET | `/api/v1/citydb/{citymodel_id}/cityobjects/{cityobject_id}` | Any CityObject by numeric ID |
+| GET | `/api/v1/citydb/{citymodel_id}/buildings` | List all buildings in the CityModel with generic attributes |
+| GET | `/api/v1/citydb/{citymodel_id}/buildings/{building_id}` | Building detail: physical properties, energy system, thermal zone, surfaces |
+| GET | `/api/v1/citydb/{citymodel_id}/buildings/{building_id}/surfaces` | List thematic surfaces (wall, roof, ground) with U-values |
+| GET | `/api/v1/citydb/{citymodel_id}/buildings/{building_id}/surfaces/{surface_id}` | Surface detail with GeoJSON geometry and generic attributes |
 
 **CityJSON mapping:**
 
@@ -656,6 +744,283 @@ For `delete_project`, the response also includes a `scenarios_affected` array li
 - A `building` geometry row is only deleted when no other scenario still references that `building_id` in `building_properties`. This prevents data loss when multiple scenarios share the same physical building.
 - If a `project_id` has no matching `project_scenario` records, the endpoint returns `404 Not Found`.
 - On any unexpected error the transaction is rolled back and a `500 Internal Server Error` is returned with a description.
+
+### PUT Update/Nullify Building Properties
+
+A single flexible endpoint that supports three modes for modifying building property fields.
+
+```
+PUT /api/v1/vector/projects/{project_id}/scenarios/{scenario_id}/buildingproperties
+Content-Type: application/json
+```
+
+#### Editable fields
+
+`height`, `area`, `volume`, `number_of_floors`, `type`, `const_period_census`, `const_year`, `const_tabula`, `n_people`, `n_family`, `envelope_efficiency`, `fmu_file`
+
+#### Mode 1: Update a single building
+
+Send a flat object with `building_id` and the fields to update. Setting a value to `null` clears it in the database.
+
+```json
+{
+  "building_id": "000d3106-3e9f-47b2-8ec6-fbe20edb4a8a",
+  "height": 14.2,
+  "n_people": null,
+  "envelope_efficiency": "high"
+}
+```
+
+Response:
+
+```json
+{
+  "upserted": 1,
+  "scenario_id": "def-456"
+}
+```
+
+#### Mode 2: Update multiple buildings in one request
+
+Wrap modifications in a `modifications` array. Each entry requires a `building_id`.
+
+```json
+{
+  "modifications": [
+    { "building_id": "000d3106-...", "height": 14.2, "type": "SFH" },
+    { "building_id": "11223344-...", "height": null, "n_people": 3 },
+    { "building_id": "55667788-...", "envelope_efficiency": null }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "upserted": 3,
+  "scenario_id": "def-456"
+}
+```
+
+#### Mode 3: Bulk update all buildings in the scenario
+
+Omit `building_id` and provide a `fields` object. Every building in the scenario is updated with the given values.
+
+```json
+{
+  "fields": {
+    "envelope_efficiency": "medium",
+    "fmu_file": null
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "action": "bulk_update",
+  "project_id": "abc-123",
+  "scenario_id": "def-456",
+  "fields_updated": ["envelope_efficiency", "fmu_file"],
+  "buildings_affected": 54
+}
+```
+
+### PUT Clear Grid ID
+
+Remove the grid association from a project scenario.
+
+```
+PUT /api/v1/vector/projects/{project_id}/scenarios/{scenario_id}/clear-grid
+```
+
+No request body is needed. Response:
+
+```json
+{
+  "success": true,
+  "project_id": "abc-123",
+  "scenario_id": "def-456",
+  "grid_cleared": true
+}
+```
+
+`grid_cleared` is `true` if a grid_id was present and removed, `false` if the scenario had no grid_id.
+
+### GET PV Buildings
+
+Return all PV polygons for buildings in a project scenario as a GeoJSON FeatureCollection, enriched with building height and terrain elevation.
+
+```
+GET /api/v1/building/pv_buildings/{project_id}/{scenario_id}?lod=0
+```
+
+Response:
+
+```json
+{
+  "type": "FeatureCollection",
+  "project_id": "53985b6a-...",
+  "scenario_id": "53985b6a-...",
+  "total_pv": 312,
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "MultiPolygon", "coordinates": [...] },
+      "properties": {
+        "pv_id": "8ba5569f-...",
+        "building_id": "000d3106-...",
+        "fid": 29116,
+        "slope": 33.39,
+        "area_reale": 8.08,
+        "number": 4,
+        "s": 6.9,
+        "building_height": 12.5,
+        "z_value": 287.3
+      }
+    }
+  ]
+}
+```
+
+### 3DCityDB / CityJSON Workflow
+
+The CityDB integration follows a two-step workflow:
+
+**Step 1: Map CIM Wizard data to 3DCityDB**
+
+```
+POST /api/v1/building/map_to_citydb
+Content-Type: application/json
+
+{ "project_id": "53985b6a-...", "scenario_id": "53985b6a-..." }
+```
+
+Response:
+
+```json
+{
+  "citymodel_id": 1,
+  "scenario_id": "53985b6a-...",
+  "mapped_buildings": 54,
+  "total_buildings": 54
+}
+```
+
+This creates a CityModel in the `citydb` schema with `gmlid = scenario_id`. Each building becomes a CityObject with thematic surfaces, geometry, and generic attributes (TABULA U-values, thermal zone data).
+
+**Step 2: Query the CityModel via the hierarchical REST API**
+
+The `citymodel_id` in all GET endpoints below is the `scenario_id`.
+
+Get the CityModel metadata:
+
+```
+GET /api/v1/citydb/53985b6a-...
+```
+
+```json
+{
+  "id": 1,
+  "gmlid": "53985b6a-...",
+  "name": "CIM-Scenario-53985b6a",
+  "members": { "total": 216, "Building": 54, "WallSurface": 108, "RoofSurface": 27, "GroundSurface": 27 }
+}
+```
+
+List all buildings:
+
+```
+GET /api/v1/citydb/53985b6a-.../buildings
+```
+
+```json
+{
+  "citymodel_id": "53985b6a-...",
+  "total_buildings": 54,
+  "buildings": [
+    {
+      "gmlid": "000d3106-...",
+      "name": "BUI-0001",
+      "measured_height": 12.5,
+      "storeys_above_ground": 4,
+      "envelope_efficiency": "medium",
+      "thermal_zone_volume_m3": 3750.0,
+      "surface_count": 6
+    }
+  ]
+}
+```
+
+Get a single building with all detail:
+
+```
+GET /api/v1/citydb/53985b6a-.../buildings/000d3106-...
+```
+
+```json
+{
+  "gmlid": "000d3106-...",
+  "name": "BUI-0001",
+  "building": {
+    "measured_height": 12.5,
+    "measured_height_unit": "m",
+    "storeys_above_ground": 4
+  },
+  "energy_system": {
+    "envelope_efficiency": "medium",
+    "fmu_file": "frassinetto3"
+  },
+  "thermal_zone": {
+    "volume_m3": 3750.0,
+    "floor_area_m2": 300.0,
+    "number_of_floors": 4
+  },
+  "surfaces": [
+    { "gmlid": "1-wall-N", "surface_type": "WallSurface", "u_value_w_m2k": 1.30 },
+    { "gmlid": "1-roof", "surface_type": "RoofSurface", "u_value_w_m2k": 1.60 },
+    { "gmlid": "1-ground", "surface_type": "GroundSurface", "u_value_w_m2k": 1.20 }
+  ]
+}
+```
+
+Get a surface with geometry:
+
+```
+GET /api/v1/citydb/53985b6a-.../buildings/000d3106-.../surfaces/1-wall-N
+```
+
+```json
+{
+  "gmlid": "1-wall-N",
+  "surface_type": "WallSurface",
+  "u_value_w_m2k": 1.30,
+  "geometries": [
+    {
+      "gmlid": "poly-2",
+      "geometry": { "type": "Polygon", "coordinates": [...] }
+    }
+  ]
+}
+```
+
+Get CityJSON v1.1 from the 3DCityDB schema:
+
+```
+GET /api/v1/citydb/cityjson/53985b6a-...
+```
+
+This returns a full CityJSON v1.1 document built from the `citydb` tables, including Building CityObjects with LOD 1.2 Solid geometry, semantic surfaces with TABULA U-values, and +Energy-ThermalZone child objects.
+
+Alternatively, get CityJSON directly from CIM Wizard tables (no map_to_citydb step needed):
+
+```
+GET /api/v1/building/cityjson/53985b6a-.../53985b6a-...
+```
+
+Both endpoints return the same CityJSON v1.1 structure. The `citydb` variant reads from the mapped 3DCityDB tables; the `building` variant reads from CIM Wizard tables directly.
 
 ---
 

@@ -925,6 +925,34 @@ class CimWizardDataManager:
         session.commit()
         return True
 
+    def bulk_update_building_properties(
+        self,
+        project_id: str,
+        scenario_id: str,
+        lod: int = 0,
+        **fields,
+    ) -> int:
+        """
+        Update specific fields on ALL BuildingProperties rows matching
+        the given project/scenario/lod.  Supports setting fields to None
+        (NULL in the DB).  Returns the number of rows affected.
+        """
+        from app.models.vector import BuildingProperties
+
+        session = self._require_session()
+        rows = session.query(BuildingProperties).filter(and_(
+            BuildingProperties.project_id == project_id,
+            BuildingProperties.scenario_id == scenario_id,
+            BuildingProperties.lod == lod,
+        )).all()
+
+        for row in rows:
+            for k, v in fields.items():
+                setattr(row, k, v)
+
+        session.commit()
+        return len(rows)
+
     def get_building_properties(
         self,
         project_id: str,

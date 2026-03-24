@@ -47,6 +47,8 @@ TABULA_U_VALUES: Dict[str, Dict[str, float]] = {
 
 # 3DCityDB v4 objectclass IDs (CityGML 2.0)
 OC_BUILDING = 26
+OC_CEILING_SURFACE = 30
+OC_FLOOR_SURFACE = 32
 OC_ROOF_SURFACE = 33
 OC_WALL_SURFACE = 34
 OC_GROUND_SURFACE = 35
@@ -65,15 +67,26 @@ class CitydbMapperCalculator(BaseCalculator):
     # ------------------------------------------------------------------
 
     def map_scenario_to_citydb(
-        self, project_id: str, scenario_id: str
+        self,
+        project_id: str,
+        scenario_id: str,
+        lod12_method: str = "by_footprint_height",
     ) -> Dict[str, Any]:
         """
-        Persist every building in a project-scenario into the ``citydb``
-        schema.  Idempotent: skips buildings already mapped.
+        Generate LOD 1.2 geometry (if missing) and persist every building
+        in a project-scenario into the ``citydb`` schema.
+
+        ``lod12_method`` selects the LOD 1.2 generation strategy:
+            * ``"by_footprint_height"``        – basic single-zone
+            * ``"by_footprint_height_floors"`` – per-storey zones
+            * ``"by_mixed_use"``               – basement + commercial + residential
         """
         session: Session = self.data_manager.db_session
 
         from app.models.vector import Building, BuildingProperties
+        from app.calculators.building_geo_lod12_calculator import (
+            BuildingGeoLod12Calculator,
+        )
 
         citymodel = self._upsert_citymodel(session, scenario_id, project_id)
 
@@ -90,24 +103,71 @@ class CitydbMapperCalculator(BaseCalculator):
             .all()
         )
 
+        lod12_calc = BuildingGeoLod12Calculator(self.pipeline)
+        lod12_generated = 0
         mapped = 0
+
         for props, building in rows:
             try:
+                if not building.building_surfaces_lod12:
+                    lod12 = self._run_lod12(
+                        lod12_calc, lod12_method, building, props,
+                    )
+                    if lod12:
+                        building.building_surfaces_lod12 = {
+                            "surfaces": lod12.get("surfaces"),
+                            "storeys": lod12.get("storeys"),
+                            "thermal_zones": lod12.get("thermal_zones"),
+                            "metadata": lod12.get("metadata"),
+                        }
+                        lod12_generated += 1
+
                 self._map_building(session, building, props, citymodel)
                 mapped += 1
             except Exception as e:
                 logger.warning(
-                    "Failed to map building %s: %s", building.building_id, e
+                    "Failed to map building %s: %s", building.building_id, e,
                 )
                 session.rollback()
 
         session.commit()
         return {
             "citymodel_id": citymodel.id,
+            "gmlid": scenario_id,
             "scenario_id": scenario_id,
+            "lod12_method": lod12_method,
+            "lod12_generated": lod12_generated,
             "mapped_buildings": mapped,
             "total_buildings": len(rows),
         }
+
+    @staticmethod
+    def _run_lod12(lod12_calc, method: str, building, props) -> Optional[dict]:
+        """Invoke the right LOD 1.2 generation method for a single building."""
+        geom = None
+        if building.building_geometry:
+            from geoalchemy2.shape import to_shape
+            from shapely.geometry import mapping
+            try:
+                geom = mapping(to_shape(building.building_geometry))
+            except Exception:
+                geom = None
+
+        if not geom:
+            return None
+
+        height = props.height or 12.0
+        n_floors = int(props.number_of_floors) if props.number_of_floors else max(1, round(height / 3.0))
+
+        if method == "by_mixed_use":
+            n_families = int(props.n_family) if props.n_family else max(1, n_floors - 1) * 2
+            return lod12_calc.generate_lod12_mixed_use(
+                geom, height, n_floors, n_families,
+            )
+        elif method == "by_footprint_height_floors":
+            return lod12_calc.generate_lod12_with_floors(geom, height, n_floors)
+        else:
+            return lod12_calc._generate_lod12_surfaces(geom, height)
 
     # ---- citymodel ----
 
@@ -177,7 +237,11 @@ class CitydbMapperCalculator(BaseCalculator):
             u_vals = TABULA_U_VALUES.get(props.const_tabula or "", {})
             self._map_surfaces(session, co.id, lod12.get("surfaces", {}), u_vals)
 
-        self._store_thermal_zone_attrs(session, co.id, props)
+        thermal_zones = (lod12 or {}).get("thermal_zones")
+        if thermal_zones:
+            self._store_multi_thermal_zone_attrs(session, co.id, thermal_zones, props)
+        else:
+            self._store_thermal_zone_attrs(session, co.id, props)
 
         session.flush()
         return co
@@ -263,7 +327,15 @@ class CitydbMapperCalculator(BaseCalculator):
                 ground.get("surface_id", "ground"),
             )
 
-    # ---- generic attributes for thermal zone data ----
+        for floor_surf in surfaces.get("floor_surfaces", []):
+            _insert_one(
+                floor_surf.get("geometry"),
+                OC_FLOOR_SURFACE,
+                None,
+                floor_surf.get("surface_id", "floor"),
+            )
+
+    # ---- generic attributes for thermal zone data (legacy single zone) ----
 
     def _store_thermal_zone_attrs(self, session, co_id: int, props):
         entries: List[Tuple[str, int, str, Any]] = []
@@ -287,6 +359,62 @@ class CitydbMapperCalculator(BaseCalculator):
             )
             setattr(ga, col, value)
             session.add(ga)
+
+    # ---- generic attributes for multiple thermal zones ----
+
+    def _store_multi_thermal_zone_attrs(
+        self, session, co_id: int, thermal_zones: List[dict], props,
+    ):
+        """Persist per-zone metadata as generic attributes on the building.
+
+        Each zone attribute is prefixed with ``tz:<zone_id>:``, making the
+        zones discoverable and queryable from the generic-attribute table.
+        Global energy-system attributes are stored without a prefix.
+        """
+        session.add(CityObjectGenericAttrib(
+            attrname="thermalZone_count",
+            datatype=DT_INTEGER, intval=len(thermal_zones),
+            cityobject_id=co_id,
+        ))
+
+        for tz in thermal_zones:
+            zid = tz.get("zone_id", "tz-unknown")
+            prefix = f"tz:{zid}"
+
+            zone_entries: List[Tuple[str, int, str, Any]] = [
+                (f"{prefix}:usage", DT_STRING, "strval", tz.get("usage")),
+                (f"{prefix}:volume_m3", DT_REAL, "realval", tz.get("volume_m3")),
+                (f"{prefix}:floor_area_m2", DT_REAL, "realval", tz.get("floor_area_m2")),
+                (f"{prefix}:is_heated", DT_STRING, "strval", str(tz.get("is_heated", True))),
+                (f"{prefix}:is_cooled", DT_STRING, "strval", str(tz.get("is_cooled", False))),
+                (f"{prefix}:storey_index", DT_INTEGER, "intval", tz.get("storey_index")),
+            ]
+            if tz.get("apartment_index") is not None:
+                zone_entries.append(
+                    (f"{prefix}:apartment_index", DT_INTEGER, "intval", tz["apartment_index"])
+                )
+
+            for name, dtype, col, value in zone_entries:
+                if value is None:
+                    continue
+                ga = CityObjectGenericAttrib(
+                    attrname=name, datatype=dtype, cityobject_id=co_id,
+                )
+                setattr(ga, col, value)
+                session.add(ga)
+
+        if props.envelope_efficiency:
+            session.add(CityObjectGenericAttrib(
+                attrname="energySystem_envelopeEfficiency",
+                datatype=DT_STRING, strval=props.envelope_efficiency,
+                cityobject_id=co_id,
+            ))
+        if props.fmu_file:
+            session.add(CityObjectGenericAttrib(
+                attrname="energySystem_fmuFile",
+                datatype=DT_STRING, strval=props.fmu_file,
+                cityobject_id=co_id,
+            ))
 
     # ------------------------------------------------------------------
     # GET helper -- generate CityJSON v1.1 from CIM Wizard data
@@ -325,6 +453,7 @@ class CitydbMapperCalculator(BaseCalculator):
             bid = str(building.building_id)
             lod12 = building.building_surfaces_lod12 or {}
             surfaces = lod12.get("surfaces", {})
+            thermal_zones = lod12.get("thermal_zones")
             u_vals = TABULA_U_VALUES.get(props.const_tabula or "", {})
 
             building_attrs: Dict[str, Any] = {}
@@ -343,8 +472,14 @@ class CitydbMapperCalculator(BaseCalculator):
             if building.z_value is not None:
                 building_attrs["terrainHeight"] = round(building.z_value, 2)
 
-            builder.add_building(bid, building_attrs, surfaces, u_vals)
-            builder.add_thermal_zone(bid, props)
+            builder.add_building(
+                bid, building_attrs, surfaces, u_vals,
+                thermal_zones=thermal_zones,
+            )
+            if thermal_zones:
+                builder.add_thermal_zones(bid, thermal_zones)
+            else:
+                builder.add_thermal_zone(bid, props)
 
         return builder.build(scenario_id)
 
@@ -402,23 +537,31 @@ class CitydbMapperCalculator(BaseCalculator):
             if cb.storeys_above_ground is not None:
                 attrs["storeysAboveGround"] = int(cb.storeys_above_ground)
 
-            tz_attrs: Dict[str, Any] = {"isCooled": False, "isHeated": True}
-            for ga in gen_attrs:
-                val = _ga_typed_value(ga)
-                if val is None:
-                    continue
-                if ga.attrname == "thermalZone_volume_m3":
-                    tz_attrs["volume"] = round(float(val), 2)
-                    attrs["volume"] = round(float(val), 2)
-                elif ga.attrname == "thermalZone_floorArea_m2":
-                    tz_attrs["floorArea"] = round(float(val), 2)
-                    attrs["footprintArea"] = round(float(val), 2)
-                elif ga.attrname == "thermalZone_numberOfFloors":
-                    tz_attrs["numberOfFloors"] = int(val)
-                elif ga.attrname == "energySystem_envelopeEfficiency":
-                    tz_attrs["envelopeEfficiency"] = val
-                elif ga.attrname == "energySystem_fmuFile":
-                    tz_attrs["energySystemModel"] = val
+            ga_map = {ga.attrname: _ga_typed_value(ga) for ga in gen_attrs}
+            tz_count = ga_map.get("thermalZone_count")
+            multi_zone = tz_count is not None and int(tz_count) > 1
+
+            reconstructed_zones: List[dict] = []
+            if multi_zone:
+                reconstructed_zones = _reconstruct_zones_from_ga(ga_map)
+            else:
+                tz_attrs: Dict[str, Any] = {"isCooled": False, "isHeated": True}
+                for ga in gen_attrs:
+                    val = _ga_typed_value(ga)
+                    if val is None:
+                        continue
+                    if ga.attrname == "thermalZone_volume_m3":
+                        tz_attrs["volume"] = round(float(val), 2)
+                        attrs["volume"] = round(float(val), 2)
+                    elif ga.attrname == "thermalZone_floorArea_m2":
+                        tz_attrs["floorArea"] = round(float(val), 2)
+                        attrs["footprintArea"] = round(float(val), 2)
+                    elif ga.attrname == "thermalZone_numberOfFloors":
+                        tz_attrs["numberOfFloors"] = int(val)
+                    elif ga.attrname == "energySystem_envelopeEfficiency":
+                        tz_attrs["envelopeEfficiency"] = val
+                    elif ga.attrname == "energySystem_fmuFile":
+                        tz_attrs["energySystemModel"] = val
 
             surface_rows = (
                 session.query(
@@ -482,18 +625,27 @@ class CitydbMapperCalculator(BaseCalculator):
                     }
                 geometry.append(geom_entry)
 
-            builder._city_objects[bid] = {
-                "type": "Building",
-                "attributes": {k: v for k, v in attrs.items() if v is not None},
-                "geometry": geometry,
-                "children": [f"{bid}-z1"],
-            }
-
-            builder._city_objects[f"{bid}-z1"] = {
-                "type": "+Energy-ThermalZone",
-                "attributes": {k: v for k, v in tz_attrs.items() if v is not None},
-                "parents": [bid],
-            }
+            if multi_zone and reconstructed_zones:
+                children = [f"{bid}-{rz['zone_id']}" for rz in reconstructed_zones]
+                builder._city_objects[bid] = {
+                    "type": "Building",
+                    "attributes": {k: v for k, v in attrs.items() if v is not None},
+                    "geometry": geometry,
+                    "children": children,
+                }
+                builder.add_thermal_zones(bid, reconstructed_zones)
+            else:
+                builder._city_objects[bid] = {
+                    "type": "Building",
+                    "attributes": {k: v for k, v in attrs.items() if v is not None},
+                    "geometry": geometry,
+                    "children": [f"{bid}-z1"],
+                }
+                builder._city_objects[f"{bid}-z1"] = {
+                    "type": "+Energy-ThermalZone",
+                    "attributes": {k: v for k, v in tz_attrs.items() if v is not None},
+                    "parents": [bid],
+                }
 
         return builder.build(citymodel_id)
 
@@ -501,10 +653,59 @@ class CitydbMapperCalculator(BaseCalculator):
 # ── Helper utilities ─────────────────────────────────────────────────
 
 _OC_SEM_TYPE = {
+    OC_CEILING_SURFACE: "CeilingSurface",
+    OC_FLOOR_SURFACE: "FloorSurface",
     OC_ROOF_SURFACE: "RoofSurface",
     OC_WALL_SURFACE: "WallSurface",
     OC_GROUND_SURFACE: "GroundSurface",
 }
+
+
+def _reconstruct_zones_from_ga(ga_map: Dict[str, Any]) -> List[dict]:
+    """Rebuild thermal-zone dicts from ``tz:<zone_id>:*`` generic attributes."""
+    zone_ids: Dict[str, Dict[str, Any]] = {}
+    for key, val in ga_map.items():
+        if not key.startswith("tz:"):
+            continue
+        parts = key.split(":", 2)
+        if len(parts) < 3:
+            continue
+        zid, field = parts[1], parts[2]
+        zone_ids.setdefault(zid, {"zone_id": zid})[field] = val
+
+    zones: List[dict] = []
+    for zid, fields in zone_ids.items():
+        zones.append({
+            "zone_id": zid,
+            "usage": fields.get("usage"),
+            "volume_m3": _safe_float(fields.get("volume_m3")),
+            "floor_area_m2": _safe_float(fields.get("floor_area_m2")),
+            "is_heated": str(fields.get("is_heated", "True")).lower() == "true",
+            "is_cooled": str(fields.get("is_cooled", "False")).lower() == "true",
+            "storey_index": _safe_int(fields.get("storey_index")),
+            "apartment_index": _safe_int(fields.get("apartment_index")),
+        })
+
+    zones.sort(key=lambda z: (z.get("storey_index") or 0, z.get("apartment_index") or 0))
+    return zones
+
+
+def _safe_float(v) -> Optional[float]:
+    if v is None:
+        return None
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_int(v) -> Optional[int]:
+    if v is None:
+        return None
+    try:
+        return int(float(v))
+    except (ValueError, TypeError):
+        return None
 
 
 def _ga_typed_value(ga: CityObjectGenericAttrib):
@@ -558,6 +759,7 @@ class _CityJSONBuilder:
         attrs: dict,
         surfaces: dict,
         u_vals: dict,
+        thermal_zones: Optional[List[dict]] = None,
     ):
         boundaries: List[List[List[int]]] = []
         sem_surfaces: List[dict] = []
@@ -587,6 +789,9 @@ class _CityJSONBuilder:
         if ground:
             _add_surface(ground.get("geometry"), "GroundSurface", "ground")
 
+        for floor_s in surfaces.get("floor_surfaces", []):
+            _add_surface(floor_s.get("geometry"), "FloorSurface", None)
+
         geometry = []
         if boundaries:
             geom_entry: Dict[str, Any] = {
@@ -603,16 +808,22 @@ class _CityJSONBuilder:
 
         clean_attrs = {k: v for k, v in attrs.items() if v is not None}
 
+        if thermal_zones:
+            children = [f"{building_id}-{tz['zone_id']}" for tz in thermal_zones]
+        else:
+            children = [f"{building_id}-z1"]
+
         self._city_objects[building_id] = {
             "type": "Building",
             "attributes": clean_attrs,
             "geometry": geometry,
-            "children": [f"{building_id}-z1"],
+            "children": children,
         }
 
-    # ---- add thermal zone ----
+    # ---- add thermal zone(s) ----
 
     def add_thermal_zone(self, building_id: str, props):
+        """Legacy single-zone thermal zone from BuildingProperties."""
         tz_id = f"{building_id}-z1"
         attrs: Dict[str, Any] = {"isCooled": False, "isHeated": True}
         if props.volume is not None:
@@ -631,6 +842,30 @@ class _CityJSONBuilder:
             "attributes": attrs,
             "parents": [building_id],
         }
+
+    def add_thermal_zones(self, building_id: str, thermal_zones: List[dict]):
+        """Create one ``+Energy-ThermalZone`` child per zone definition."""
+        for tz in thermal_zones:
+            tz_id = f"{building_id}-{tz['zone_id']}"
+            attrs: Dict[str, Any] = {
+                "usage": tz.get("usage"),
+                "isCooled": tz.get("is_cooled", False),
+                "isHeated": tz.get("is_heated", True),
+            }
+            if tz.get("volume_m3") is not None:
+                attrs["volume"] = round(tz["volume_m3"], 2)
+            if tz.get("floor_area_m2") is not None:
+                attrs["floorArea"] = round(tz["floor_area_m2"], 2)
+            if tz.get("storey_index") is not None:
+                attrs["storeyIndex"] = tz["storey_index"]
+            if tz.get("apartment_index") is not None:
+                attrs["apartmentIndex"] = tz["apartment_index"]
+
+            self._city_objects[tz_id] = {
+                "type": "+Energy-ThermalZone",
+                "attributes": {k: v for k, v in attrs.items() if v is not None},
+                "parents": [building_id],
+            }
 
     # ---- serialise ----
 
