@@ -71,15 +71,19 @@ class CitydbMapperCalculator(BaseCalculator):
         project_id: str,
         scenario_id: str,
         lod12_method: str = "by_footprint_height",
+        force_lod12: bool = False,
     ) -> Dict[str, Any]:
         """
-        Generate LOD 1.2 geometry (if missing) and persist every building
-        in a project-scenario into the ``citydb`` schema.
+        Generate LOD 1.2 geometry and persist every building in a
+        project-scenario into the ``citydb`` schema.
 
         ``lod12_method`` selects the LOD 1.2 generation strategy:
             * ``"by_footprint_height"``        – basic single-zone
             * ``"by_footprint_height_floors"`` – per-storey zones
             * ``"by_mixed_use"``               – basement + commercial + residential
+
+        Set ``force_lod12=True`` to regenerate LOD 1.2 even for buildings
+        that already have it (e.g. to switch from basic to mixed-use).
         """
         session: Session = self.data_manager.db_session
 
@@ -109,7 +113,7 @@ class CitydbMapperCalculator(BaseCalculator):
 
         for props, building in rows:
             try:
-                if not building.building_surfaces_lod12:
+                if force_lod12 or not building.building_surfaces_lod12:
                     lod12 = self._run_lod12(
                         lod12_calc, lod12_method, building, props,
                     )
@@ -143,7 +147,12 @@ class CitydbMapperCalculator(BaseCalculator):
 
     @staticmethod
     def _run_lod12(lod12_calc, method: str, building, props) -> Optional[dict]:
-        """Invoke the right LOD 1.2 generation method for a single building."""
+        """Invoke the right LOD 1.2 generation method for a single building.
+
+        Always returns a dict with top-level keys ``surfaces``,
+        ``storeys`` (may be ``None``), ``thermal_zones`` (may be ``None``),
+        and ``metadata``, or ``None`` on failure.
+        """
         geom = None
         if building.building_geometry:
             from geoalchemy2.shape import to_shape
@@ -164,10 +173,21 @@ class CitydbMapperCalculator(BaseCalculator):
             return lod12_calc.generate_lod12_mixed_use(
                 geom, height, n_floors, n_families,
             )
-        elif method == "by_footprint_height_floors":
+        if method == "by_footprint_height_floors":
             return lod12_calc.generate_lod12_with_floors(geom, height, n_floors)
-        else:
-            return lod12_calc._generate_lod12_surfaces(geom, height)
+
+        raw = lod12_calc._generate_lod12_surfaces(geom, height)
+        if raw is None:
+            return None
+        return {
+            "surfaces": raw,
+            "storeys": None,
+            "thermal_zones": None,
+            "metadata": {
+                "building_height": height,
+                "generation_method": "footprint_height",
+            },
+        }
 
     # ---- citymodel ----
 
@@ -235,7 +255,7 @@ class CitydbMapperCalculator(BaseCalculator):
         lod12 = building.building_surfaces_lod12
         if lod12:
             u_vals = TABULA_U_VALUES.get(props.const_tabula or "", {})
-            self._map_surfaces(session, co.id, lod12.get("surfaces", {}), u_vals)
+            self._map_surfaces(session, co.id, lod12.get("surfaces") or {}, u_vals)
 
         thermal_zones = (lod12 or {}).get("thermal_zones")
         if thermal_zones:

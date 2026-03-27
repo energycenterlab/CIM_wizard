@@ -376,6 +376,19 @@ async def get_lod12_geojson(
                 },
             })
 
+        for floor_s in surfaces.get("floor_surfaces", []):
+            features.append({
+                "type": "Feature",
+                "geometry": floor_s.get("geometry"),
+                "properties": {
+                    **shared_props,
+                    "surface_type": "FloorSurface",
+                    "surface_id": floor_s.get("surface_id"),
+                    "area_m2": floor_s.get("properties", {}).get("area_m2"),
+                    "z_height": floor_s.get("properties", {}).get("height_m"),
+                },
+            })
+
     return {
         "type": "FeatureCollection",
         "features": features,
@@ -607,10 +620,14 @@ async def map_to_citydb(
     * ``"by_footprint_height_floors"`` – per-storey walls/floors, one thermal zone per floor
     * ``"by_mixed_use"`` – basement + commercial ground floor + residential
       apartments with per-apartment thermal zones
+
+    ``force_lod12`` (optional, default ``false``): when ``true``,
+    regenerate LOD 1.2 even for buildings that already have it.
     """
     project_id = request_data.get("project_id")
     scenario_id = request_data.get("scenario_id")
     lod12_method = request_data.get("lod12_method", "by_footprint_height")
+    force_lod12 = request_data.get("force_lod12", False)
 
     if not all([project_id, scenario_id]):
         raise HTTPException(
@@ -630,7 +647,9 @@ async def map_to_citydb(
 
     calc = CitydbMapperCalculator(executor)
     try:
-        result = calc.map_scenario_to_citydb(project_id, scenario_id, lod12_method)
+        result = calc.map_scenario_to_citydb(
+            project_id, scenario_id, lod12_method, force_lod12=force_lod12,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CityDB mapping failed: {e}")
     return result
