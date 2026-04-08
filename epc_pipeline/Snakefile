@@ -1,0 +1,130 @@
+configfile: "config.yaml"
+
+GPKG = config["gpkg"]
+RAW_LAYERS = config["raw_layers"]
+PER_LAYER_DIR = "data/raw/per_layer"
+DONE_DIR = "data/raw"
+
+LAYER_MAP = {l["name"]: l for l in RAW_LAYERS}
+LAYERS = list(LAYER_MAP.keys())
+
+layers_aoi = ["ace", "ape_dg"]
+
+def bbox_args():
+    b = config.get("bbox", None)
+    if not b:
+        return ""
+    if not (isinstance(b, (list, tuple)) and len(b) == 4):
+        raise ValueError("config['bbox'] deve essere una lista di 4 valori: [xmin, ymin, xmax, ymax].")
+    xmin, ymin, xmax, ymax = b
+    return f' {xmin} {ymin} {xmax} {ymax}'
+
+rule all:
+    input:
+        GPKG,
+        expand(f"{PER_LAYER_DIR}/{{layer}}.gpkg",
+            layer=LAYERS),
+        config["gpkg_clean"],
+        config["aoi"],
+        expand(f"data/raw/{{layeraoi}}_geocoded.gpkg", layeraoi=layers_aoi),
+        config['gpkg_clean_geocoded']
+
+rule geocoding:
+    input:
+        script="scripts/local_geocoding.py",
+        gpkg=config["gpkg_clean"],
+    output:
+        gpkg_geocoded=f"data/raw/{{layeraoi}}_geocoded.gpkg",
+    params:
+        layer=lambda wc: wc.layeraoi,
+    shell:
+        """
+        python {input.script} \
+            --in {input.gpkg} \
+            --out {output.gpkg_geocoded} \
+            --layer {params.layer}
+        """
+
+rule merge_clean_geocoded:
+    input:
+        layer_gpkgs = expand(f"data/raw/{{layeraoi}}_geocoded.gpkg", layeraoi=layers_aoi) + [config['gpkg_clean']],
+        script = "scripts/merge_aoi.py"
+    output:
+        config['gpkg_clean_geocoded']
+    shell:
+        """
+        python {input.script} \
+          --out-gpkg {output} \
+          --in-gpkgs {input.layer_gpkgs}
+          """
+
+
+
+rule save_csv_to_gpkg:
+    input:
+        csv = lambda wc: LAYER_MAP[wc.layer]["csv"],
+        metadata = lambda wc: LAYER_MAP[wc.layer]["metadata"],
+        script = "scripts/csv_to_gpkg.py"
+    output:
+        layer_gpkg = f"{PER_LAYER_DIR}/{{layer}}.gpkg",
+    params:
+        layer=lambda wc: wc.layer,
+    shell:
+        """
+        python {input.script} \
+            --csv {input.csv} \
+            --metadata {input.metadata} \
+            --gpkg {output.layer_gpkg} \
+            --layer {params.layer}      
+        """
+
+rule merge_layer_gpkgs:
+    input:
+        layer_gpkgs=expand(f"{PER_LAYER_DIR}/{{layer}}.gpkg", layer=LAYERS),
+        script="scripts/merge_gpkgs.py"
+    output:
+        GPKG
+    shell:
+        """
+        python {input.script} \
+          --out-gpkg {output} \
+          --in-gpkgs {input.layer_gpkgs}
+          """
+
+rule clean_gpkg:
+    input:
+        gpkg=config["gpkg"],
+        script="scripts/clean_ape.py"
+    output:
+        gpkg_clean=config["gpkg_clean"]
+    shell:
+        """
+        python {input.script} \
+          --in-gpkg {input.gpkg} \
+          --out-gpkg {output.gpkg_clean}
+        """
+
+
+
+
+rule clip_gpkg:
+    input:
+        gpkg = config['gpkg_clean_geocoded'],
+        script = "scripts/clip_to_bbox.py"
+    output:
+        aoi=config["aoi"]
+    params:
+        bbox=bbox_args()
+    run:
+        if {params.bbox} == "":
+            print("No bounding box specified, skipping clipping.")
+        else:
+            shell("""
+            python {input.script} \
+                --in-gpkg {input.gpkg} \
+                --out-gpkg {output.aoi} \
+                --bbox {params.bbox}
+            """)
+
+
+

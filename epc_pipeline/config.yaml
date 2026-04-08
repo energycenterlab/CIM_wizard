@@ -1,0 +1,40 @@
+raw_layers:
+  - name: "ape_vi" # visione di insieme
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_export_bo_ape_18895-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_export_bo_ape_18895-all.json"
+  - name: "ape_dg" # sezione dati generali
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_dati_generali_v2_8405-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_dati_generali_v2_8405-all.json"
+  - name: "ape_de" # sezione dati energetici
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_datigen_energetici_v2_8407-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_datigen_energetici_v2_8407-all.json"
+  - name: "ape_co" # sezione consumi
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_datigen_consumi_v2_8406-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_datigen_consumi_v2_8406-all.json"
+  - name: "ape_im" # sezione impianti
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_datigen_impianti_v2_8399-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_datigen_impianti_v2_8399-all.json"
+  - name: "ape_imde" # sezione dati energetici sezione impianti
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_certif_servener_19211-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_certif_servener_19211-all.json"
+  - name: "ape_dtag" # sezione dati tecnici aggiuntivi
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_dati_xml_2015_v2_8401-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_dati_xml_2015_v2_8401-all.json"
+  - name: "ape_dter" # sezione dati tecnici edificio riferimento
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_dati_xml_ed_rif_2015_v2_8403-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_dati_xml_ed_rif_2015_v2_8403-all.json"
+  - name: "ape_dtre" # sezione dati tecnici edificio real
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_dati_xml_ed_reale_2015_v2_8402-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_dati_xml_ed_reale_2015_v2_8402-all.json"
+  - name: "ace" # dettaglio ace
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_export_bo_ace_18894-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Sicee_v_t_export_bo_ace_18894-all.json"
+  - name: "cit" # catasto impianti
+    csv: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Od_vista_dettaglio_impianti_14907-all.csv"
+    metadata: "C:/Users/Mocci/Documents/QgisProjects/PED_TO/data/regpie-Od_vista_dettaglio_impianti_14907-all.json"
+gpkg: "data/raw/raw_data.gpkg"
+gpkg_clean: "data/raw/clean_data.gpkg"
+gpkg_clean_geocoded: "data/raw/clean_geocoded_data.gpkg"
+audit: "data/raw/audit_report.txt"
+bbox: [7.6480207258492543, 45.0566249091594528, 7.6647201380294510, 45.0710368613256307] # EPSG:4326
+aoi: "data/raw/aoi.gpkg"
