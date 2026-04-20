@@ -167,14 +167,15 @@ class CitydbMapperCalculator(BaseCalculator):
 
         height = props.height or 12.0
         n_floors = int(props.number_of_floors) if props.number_of_floors else max(1, round(height / 3.0))
+        z_offset = float(building.z_value) if building.z_value is not None else 0.0
 
         if method == "by_mixed_use":
             n_families = int(props.n_family) if props.n_family else max(1, n_floors - 1) * 2
             return lod12_calc.generate_lod12_mixed_use(
-                geom, height, n_floors, n_families,
+                geom, height, n_floors, n_families, z_offset=z_offset,
             )
         if method == "by_footprint_height_floors":
-            return lod12_calc.generate_lod12_with_floors(geom, height, n_floors)
+            return lod12_calc.generate_lod12_with_floors(geom, height, n_floors, z_offset=z_offset)
 
         raw = lod12_calc._generate_lod12_surfaces(geom, height)
         if raw is None:

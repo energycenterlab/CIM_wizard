@@ -255,12 +255,13 @@ class BuildingGeoLod12Calculator(BaseCalculator):
     # ==================================================================
 
     def generate_lod12_with_floors(
-        self, geometry: dict, height: float, n_floors: int,
+        self, geometry: dict, height: float, n_floors: int, z_offset: float = 0.0,
     ) -> Optional[Dict[str, Any]]:
         """Generate LOD 1.2 surfaces with per-storey walls and floor slabs.
 
         Returns a dict with ``surfaces``, ``storeys``, ``thermal_zones``,
         and ``metadata``, or ``None`` on invalid input.
+        ``z_offset`` is the terrain elevation (DTM).
         """
         ring = self._validated_ring(geometry)
         if ring is None:
@@ -276,8 +277,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         thermal_zones: List[dict] = []
 
         for f in range(n_floors):
-            z_min = f * storey_h
-            z_max = (f + 1) * storey_h
+            z_min = z_offset + f * storey_h
+            z_max = z_offset + (f + 1) * storey_h
             label = f"F{f}"
 
             walls = self._generate_wall_surfaces_for_range(
@@ -312,8 +313,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
 
         surfaces = {
             "wall_surfaces": all_walls,
-            "roof_surface": self._generate_roof_surface(ring, height),
-            "ground_surface": self._generate_ground_surface(ring),
+            "roof_surface": self._generate_roof_surface(ring, z_offset + height),
+            "ground_surface": self._generate_ground_surface(ring, z_offset),
             "floor_surfaces": floor_surfaces,
         }
 
@@ -353,17 +354,18 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         n_floors: int,
         n_families: int,
         basement_height: float = BASEMENT_HEIGHT,
+        z_offset: float = 0.0,
     ) -> Optional[Dict[str, Any]]:
         """Generate LOD 1.2 for a mixed-use building.
 
         Layout (bottom-to-top)::
 
-            basement        z ∈ [-basement_height, 0]       1 TZ  (storage)
-            ground floor    z ∈ [0, storey_h]               1 TZ  (commercial)
-            floors 1..R     z ∈ [storey_h, height]          per-apartment TZs
+            basement        z ∈ [z_offset - basement_height, z_offset]   1 TZ  (storage)
+            ground floor    z ∈ [z_offset, z_offset + storey_h]          1 TZ  (commercial)
+            floors 1..R     z ∈ [z_offset + storey_h, z_offset + height] per-apartment TZs
 
         ``n_families`` apartments are distributed across R = n_floors - 1
-        residential floors.
+        residential floors. ``z_offset`` is the terrain elevation (DTM).
         """
         ring = self._validated_ring(geometry)
         if ring is None:
@@ -384,8 +386,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         thermal_zones: List[dict] = []
 
         # ── basement ─────────────────────────────────────────────
-        bz_min = -basement_height
-        bz_max = 0.0
+        bz_min = z_offset - basement_height
+        bz_max = z_offset
         all_walls.extend(
             self._generate_wall_surfaces_for_range(ring, bz_min, bz_max, "B")
         )
@@ -413,8 +415,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         })
 
         # ── ground floor (commercial) ────────────────────────────
-        gz_min = 0.0
-        gz_max = storey_h
+        gz_min = z_offset
+        gz_max = z_offset + storey_h
         all_walls.extend(
             self._generate_wall_surfaces_for_range(ring, gz_min, gz_max, "G")
         )
@@ -444,8 +446,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         # ── residential floors ───────────────────────────────────
         for r in range(residential_floors):
             f_idx = r + 1
-            z_min = f_idx * storey_h
-            z_max = (f_idx + 1) * storey_h
+            z_min = z_offset + f_idx * storey_h
+            z_max = z_offset + (f_idx + 1) * storey_h
             label = f"F{f_idx}"
 
             all_walls.extend(
@@ -486,8 +488,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
 
         surfaces = {
             "wall_surfaces": all_walls,
-            "roof_surface": self._generate_roof_surface(ring, height),
-            "ground_surface": self._generate_ground_surface(ring),
+            "roof_surface": self._generate_roof_surface(ring, z_offset + height),
+            "ground_surface": self._generate_ground_surface(ring, z_offset),
             "floor_surfaces": floor_surfaces,
         }
 
@@ -921,13 +923,13 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             self.pipeline.log_error(self.calculator_name, f"Failed to generate roof surface: {str(e)}")
             return None
     
-    def _generate_ground_surface(self, exterior_ring: List[List[float]]) -> Dict[str, Any]:
-        """Generate ground surface (bottom surface at ground level)"""
+    def _generate_ground_surface(self, exterior_ring: List[List[float]], z_offset: float = 0.0) -> Dict[str, Any]:
+        """Generate ground surface (bottom surface at terrain elevation z_offset)"""
         try:
-            # Create ground coordinates at height 0
+            # Create ground coordinates at terrain elevation
             ground_coordinates = []
             for point in exterior_ring:
-                ground_coordinates.append([point[0], point[1], 0.0])
+                ground_coordinates.append([point[0], point[1], z_offset])
             
             # Reverse order for proper normal direction (pointing up)
             ground_coordinates.reverse()
