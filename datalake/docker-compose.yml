@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+
+  mongodb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datalake_mongodb
+    restart: unless-stopped
+    ports:
+      - "27018:27017"        # host:container — default +1
+    volumes:
+      - mongodb_data:/data/db           # permanent data
+      - mongodb_config:/data/configdb   # permanent config
+    environment:
+      - MONGODB_INITDB_DATABASE=datalake
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
