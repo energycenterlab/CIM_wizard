@@ -51,6 +51,8 @@ def load_geojson(
     description: str = "",
     collection: str = "default",
     tags: list[str] | None = None,
+    crs: str = "EPSG:4326",
+    location: str | None = None,
 ) -> str:
     """
     Load a GeoJSON file into MongoDB.
@@ -88,9 +90,10 @@ def load_geojson(
         data_type="geojson",
         is_geo=True,
         file_path=os.path.abspath(file_path),
-        crs="EPSG:4326",
+        crs=crs,
         bbox=bbox,
         geo_type=geo_type,
+        location=location,
         collection=collection,
         tags=tags,
         file_size_bytes=file_size,
