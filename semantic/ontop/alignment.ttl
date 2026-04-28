@@ -1,0 +1,26 @@
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix bot:    <https://w3id.org/bot#> .
+@prefix sosa:   <http://www.w3.org/ns/sosa/> .
+@prefix ssn:    <http://www.w3.org/ns/ssn/> .
+@prefix geo:    <http://www.opengis.net/ont/geosparql#> .
+@prefix time:   <http://www.w3.org/2006/time#> .
+@prefix citygml: <http://www.opengis.net/ont/citygml#> .
+
+<http://example.org/my-smartcity-alignment>
+    a owl:Ontology ;
+    rdfs:comment "Alignment bridging CityGML, BOT, SOSA, GeoSPARQL, and Time." .
+
+citygml:Building  a owl:Class .
+citygml:Room      a owl:Class .
+citygml:CityObject a owl:Class .
+
+citygml:Building   owl:equivalentClass bot:Building .
+citygml:Room       owl:equivalentClass bot:Space .
+citygml:CityObject rdfs:subClassOf     bot:Zone .
+
+bot:Zone    rdfs:subClassOf geo:Feature .
+bot:Element rdfs:subClassOf geo:Feature .
+
+bot:Space   rdfs:subClassOf sosa:FeatureOfInterest .
+bot:Element rdfs:subClassOf sosa:FeatureOfInterest .

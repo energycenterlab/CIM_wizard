@@ -1,0 +1,18 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix bot:  <https://w3id.org/bot#> .
+
+<https://w3id.org/bot-0.3.2> a owl:Ontology .
+
+bot:Zone     a owl:Class .
+bot:Building a owl:Class ; rdfs:subClassOf bot:Zone .
+bot:Space    a owl:Class ; rdfs:subClassOf bot:Zone .
+bot:Element  a owl:Class .
+bot:Interface a owl:Class .
+bot:Site     a owl:Class ; rdfs:subClassOf bot:Zone .
+bot:Storey   a owl:Class ; rdfs:subClassOf bot:Zone .
+
+bot:containsZone     a owl:ObjectProperty ; rdfs:domain bot:Zone     ; rdfs:range bot:Zone .
+bot:containsBuilding a owl:ObjectProperty ; rdfs:domain bot:Zone     ; rdfs:range bot:Building .
+bot:containsElement  a owl:ObjectProperty ; rdfs:domain bot:Zone     ; rdfs:range bot:Element .
+bot:hasSpace         a owl:ObjectProperty ; rdfs:domain bot:Building ; rdfs:range bot:Space .

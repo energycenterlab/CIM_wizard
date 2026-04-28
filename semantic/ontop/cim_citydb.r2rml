@@ -1,0 +1,565 @@
+@prefix rr:      <http://www.w3.org/ns/r2rml#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix bot:     <https://w3id.org/bot#> .
+@prefix citygml: <http://www.opengis.net/ont/citygml#> .
+@prefix geo:     <http://www.opengis.net/ont/geosparql#> .
+@prefix sosa:    <http://www.w3.org/ns/sosa/> .
+@prefix ssn:     <http://www.w3.org/ns/ssn/> .
+@prefix time:    <http://www.w3.org/2006/time#> .
+@prefix schema:  <https://schema.org/> .
+@prefix cim:     <http://data.cimwizard.org/energy/> .
+@prefix :        <http://data.cimwizard.org/> .
+
+# ============================================================
+# 1. BUILDINGS
+# ============================================================
+
+<#TM_Building>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT b.id,
+               f.identifier,
+               f.name,
+               f.creation_date,
+               b.measured_height,
+               CAST(b.storeys_above_ground AS INTEGER) AS storeys_above_ground,
+               CAST(b.storeys_below_ground AS INTEGER) AS storeys_below_ground,
+               b.building_parent_id
+        FROM citydb.building b
+        JOIN citydb.feature f ON b.id = f.id
+        WHERE b.objectclass_id = 26
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/building/{id}" ;
+        rr:class bot:Building ;
+        rr:class citygml:Building
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate rdfs:label ;
+        rr:objectMap [ rr:column "identifier" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate schema:name ;
+        rr:objectMap [ rr:column "name" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate schema:height ;
+        rr:objectMap [ rr:column "measured_height" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:storeysAboveGround ;
+        rr:objectMap [ rr:column "storeys_above_ground" ; rr:datatype xsd:integer ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate schema:dateCreated ;
+        rr:objectMap [ rr:column "creation_date" ; rr:datatype xsd:dateTime ]
+    ] .
+
+<#TM_Building_ParentOf>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, building_parent_id
+        FROM citydb.building
+        WHERE building_parent_id IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/building/{building_parent_id}"
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate bot:containsBuilding ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/building/{id}" ]
+    ] .
+
+# ============================================================
+# 2. GEOMETRY
+# ============================================================
+
+<#TM_Geometry>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id,
+               '<http://www.opengis.net/def/crs/EPSG/0/4326> ' || ST_AsText(geometry) AS wkt
+        FROM citydb.geometry_data
+        WHERE geometry IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/geometry/{id}" ;
+        rr:class geo:Geometry
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate geo:asWKT ;
+        rr:objectMap [ rr:column "wkt" ; rr:datatype geo:wktLiteral ]
+    ] .
+
+<#TM_Building_HasGeometry>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, feature_id
+        FROM citydb.geometry_data
+        WHERE feature_id IS NOT NULL AND geometry IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/building/{feature_id}"
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate geo:hasGeometry ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/geometry/{id}" ]
+    ] .
+
+<#TM_Envelope>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id,
+               '<http://www.opengis.net/def/crs/EPSG/0/4326> ' || ST_AsText(envelope) AS wkt
+        FROM citydb.feature
+        WHERE envelope IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/envelope/{id}" ;
+        rr:class geo:Geometry
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate geo:asWKT ;
+        rr:objectMap [ rr:column "wkt" ; rr:datatype geo:wktLiteral ]
+    ] .
+
+# ============================================================
+# 3. ENERGY BUILDING EXTENSION
+# ============================================================
+
+<#TM_EnergyBuilding>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, type, CAST(is_protected AS BOOLEAN) AS is_protected,
+               constr_weight, attic_thm_status, basement_thm_status
+        FROM citydb.ng2_building
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/building/{id}"
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:buildingType ;
+        rr:objectMap [ rr:column "type" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:isProtected ;
+        rr:objectMap [ rr:column "is_protected" ; rr:datatype xsd:boolean ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:constructionWeight ;
+        rr:objectMap [ rr:column "constr_weight" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:atticThermalStatus ;
+        rr:objectMap [ rr:column "attic_thm_status" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:basementThermalStatus ;
+        rr:objectMap [ rr:column "basement_thm_status" ; rr:datatype xsd:string ]
+    ] .
+
+# ============================================================
+# 4. THERMAL ZONES
+# ============================================================
+
+<#TM_ThermalZone>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT p.id, p.building_id,
+               p.heat_capacity, p.heat_capacity_uom,
+               p.infiltration_rate,
+               CAST(p.is_heated AS BOOLEAN) AS is_heated,
+               CAST(p.is_cooled AS BOOLEAN) AS is_cooled
+        FROM citydb.ng2_building_partition p
+        JOIN citydb.objectclass oc ON p.objectclass_id = oc.id
+        WHERE LOWER(oc.classname) LIKE '%thermalzone%'
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/thermalzone/{id}" ;
+        rr:class bot:Space ;
+        rr:class sosa:FeatureOfInterest
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:heatCapacity ;
+        rr:objectMap [ rr:column "heat_capacity" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:infiltrationRate ;
+        rr:objectMap [ rr:column "infiltration_rate" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:isHeated ;
+        rr:objectMap [ rr:column "is_heated" ; rr:datatype xsd:boolean ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:isCooled ;
+        rr:objectMap [ rr:column "is_cooled" ; rr:datatype xsd:boolean ]
+    ] .
+
+<#TM_ThermalZone_BelongsTo>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT p.id, p.building_id
+        FROM citydb.ng2_building_partition p
+        JOIN citydb.objectclass oc ON p.objectclass_id = oc.id
+        WHERE LOWER(oc.classname) LIKE '%thermalzone%'
+          AND p.building_id IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/building/{building_id}"
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate bot:containsZone ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/thermalzone/{id}" ]
+    ] .
+
+# ============================================================
+# 5. USAGE ZONES
+# ============================================================
+
+<#TM_UsageZone>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT p.id, p.building_id, p.type, p.num_of_building_units, p.int_heat_gains
+        FROM citydb.ng2_building_partition p
+        JOIN citydb.objectclass oc ON p.objectclass_id = oc.id
+        WHERE LOWER(oc.classname) LIKE '%usagezone%'
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/usagezone/{id}" ;
+        rr:class bot:Space ;
+        rr:class sosa:FeatureOfInterest
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:usageType ;
+        rr:objectMap [ rr:column "type" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:numBuildingUnits ;
+        rr:objectMap [ rr:column "num_of_building_units" ; rr:datatype xsd:integer ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:internalHeatGains ;
+        rr:objectMap [ rr:column "int_heat_gains" ; rr:datatype xsd:double ]
+    ] .
+
+# ============================================================
+# 6. QUALIFIED ATTRIBUTES (energy KPIs: heated floor area, etc.)
+# ============================================================
+
+<#TM_QualifiedAttribute>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, value, type, value_uom, source, building_id, building_partition_id
+        FROM citydb.ng2_qualified_attribute
+        WHERE value IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/qattr/{id}" ;
+        rr:class sosa:Observation
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasSimpleResult ;
+        rr:objectMap [ rr:column "value" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:attributeType ;
+        rr:objectMap [ rr:column "type" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:valueUOM ;
+        rr:objectMap [ rr:column "value_uom" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:dataSource ;
+        rr:objectMap [ rr:column "source" ; rr:datatype xsd:string ]
+    ] .
+
+<#TM_QAttr_FOI_Building>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, building_id
+        FROM citydb.ng2_qualified_attribute
+        WHERE building_id IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/qattr/{id}"
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasFeatureOfInterest ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/building/{building_id}" ]
+    ] .
+
+# ============================================================
+# 7. ENERGY RESOURCES (consumption/production records)
+# ============================================================
+
+<#TM_EnergyResource>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT r.id, r.enduse, r.energy_carrier, r.operation_type,
+               r.type, r.status, r.amount, r.amount_uom, r.year,
+               r.co2_equivalent, r.co2_equivalent_uom,
+               nc.id AS foi_id
+        FROM citydb.ng2_resource r
+        JOIN citydb.ng2_cityobject nc ON r.cityobject_id = nc.id
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/resource/{id}" ;
+        rr:class sosa:Observation
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasFeatureOfInterest ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/building/{foi_id}" ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:observedProperty ;
+        rr:objectMap [ rr:column "enduse" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:energyCarrier ;
+        rr:objectMap [ rr:column "energy_carrier" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:operationType ;
+        rr:objectMap [ rr:column "operation_type" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasSimpleResult ;
+        rr:objectMap [ rr:column "amount" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:amountUOM ;
+        rr:objectMap [ rr:column "amount_uom" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:referenceYear ;
+        rr:objectMap [ rr:column "year" ; rr:datatype xsd:integer ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:co2Equivalent ;
+        rr:objectMap [ rr:column "co2_equivalent" ; rr:datatype xsd:double ]
+    ] .
+
+# ============================================================
+# 8. TIME SERIES
+# ============================================================
+
+<#TM_TimeSeries>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, acquisition_method, interpolation_type, uom,
+               TO_CHAR(period_begin, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS period_begin,
+               TO_CHAR(period_end,   'YYYY-MM-DD"T"HH24:MI:SSOF') AS period_end,
+               time_interval, time_interval_unit,
+               sensor_id, sensor_name, datastream_id
+        FROM citydb.ng2_time_series
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/timeseries/{id}" ;
+        rr:class sosa:ObservationCollection
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:acquisitionMethod ;
+        rr:objectMap [ rr:column "acquisition_method" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:uom ;
+        rr:objectMap [ rr:column "uom" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:sensorId ;
+        rr:objectMap [ rr:column "sensor_id" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:sensorName ;
+        rr:objectMap [ rr:column "sensor_name" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:datastreamId ;
+        rr:objectMap [ rr:column "datastream_id" ; rr:datatype xsd:string ]
+    ] .
+
+# ============================================================
+# 9. DEVICES (sosa:Sensor)
+# ============================================================
+
+<#TM_Device>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT d.id, oc.classname,
+               d.model, d.num_of_devices, d.year_of_manufacture,
+               d.installed_power, d.installed_power_uom,
+               d.nominal_efficiency, d.efficiency_indicator
+        FROM citydb.ng2_device d
+        JOIN citydb.objectclass oc ON d.objectclass_id = oc.id
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/device/{id}" ;
+        rr:class sosa:Sensor
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:deviceClass ;
+        rr:objectMap [ rr:column "classname" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:deviceModel ;
+        rr:objectMap [ rr:column "model" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:installedPower ;
+        rr:objectMap [ rr:column "installed_power" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:nominalEfficiency ;
+        rr:objectMap [ rr:column "nominal_efficiency" ; rr:datatype xsd:double ]
+    ] .
+
+# ============================================================
+# 10. SOLAR COLLECTORS
+# ============================================================
+
+<#TM_SolarCollector>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, module_area, azimuth, inclination,
+               opt_efficiency, cell_type
+        FROM citydb.ng2_solar_collector
+        WHERE module_area IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/device/{id}" ;
+        rr:class cim:SolarCollector
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:moduleArea ;
+        rr:objectMap [ rr:column "module_area" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:azimuth ;
+        rr:objectMap [ rr:column "azimuth" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:inclination ;
+        rr:objectMap [ rr:column "inclination" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:opticalEfficiency ;
+        rr:objectMap [ rr:column "opt_efficiency" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:solarCellType ;
+        rr:objectMap [ rr:column "cell_type" ; rr:datatype xsd:string ]
+    ] .
+
+# ============================================================
+# 11. WEATHER DATA
+# ============================================================
+
+<#TM_WeatherData>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT w.id, w.type, w.value_type, w.yearly_value, w.yearly_value_uom,
+               nc.id AS foi_id,
+               ST_AsText(w.position) AS wkt
+        FROM citydb.ng2_weather_data w
+        JOIN citydb.ng2_cityobject nc ON w.cityobject_id = nc.id
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/weather/{id}" ;
+        rr:class sosa:Observation
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasFeatureOfInterest ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/building/{foi_id}" ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:observedProperty ;
+        rr:objectMap [ rr:column "type" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasSimpleResult ;
+        rr:objectMap [ rr:column "yearly_value" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:yearlyValueUOM ;
+        rr:objectMap [ rr:column "yearly_value_uom" ; rr:datatype xsd:string ]
+    ] .
+
+# ============================================================
+# 12. ENERGY PERFORMANCE CERTIFICATES
+# ============================================================
+
+<#TM_EPC>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT id, building_id, label, type, cert_method,
+               value, value_uom,
+               CAST(issue_date AS TEXT) AS issue_date
+        FROM citydb.ng2_energy_perf_cert
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/epc/{id}" ;
+        rr:class cim:EnergyPerformanceCertificate
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:certifiesBuilding ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/building/{building_id}" ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:energyLabel ;
+        rr:objectMap [ rr:column "label" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:certType ;
+        rr:objectMap [ rr:column "type" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:primaryEnergyValue ;
+        rr:objectMap [ rr:column "value" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:primaryEnergyUOM ;
+        rr:objectMap [ rr:column "value_uom" ; rr:datatype xsd:string ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:issueDate ;
+        rr:objectMap [ rr:column "issue_date" ; rr:datatype xsd:date ]
+    ] .
+
+# ============================================================
+# 13. SIMULATION RUNS (outputs schema)
+# ============================================================
+
+<#TM_SimRun>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT project_id, CAST(scenario_id AS TEXT) AS scenario_id, step_size_ms
+        FROM outputs.simulation_run
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/simrun/{project_id}/{scenario_id}" ;
+        rr:class cim:SimulationRun
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:stepSizeMs ;
+        rr:objectMap [ rr:column "step_size_ms" ; rr:datatype xsd:integer ]
+    ] .
+
+<#TM_ThermalObs>
+    rr:logicalTable [ rr:sqlQuery """
+        SELECT project_id,
+               CAST(scenario_id AS TEXT) AS scenario_id,
+               CAST(building_id  AS TEXT) AS building_id,
+               time_step, t_building, heating_load_target
+        FROM outputs.building_frassinetto3
+        WHERE t_building IS NOT NULL
+    """ ] ;
+    rr:subjectMap [
+        rr:template "http://data.cimwizard.org/thermalobs/{project_id}/{scenario_id}/{building_id}/{time_step}" ;
+        rr:class sosa:Observation
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate sosa:hasFeatureOfInterest ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/building/{building_id}" ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:belongsToRun ;
+        rr:objectMap [ rr:template "http://data.cimwizard.org/simrun/{project_id}/{scenario_id}" ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:timeStep ;
+        rr:objectMap [ rr:column "time_step" ; rr:datatype xsd:long ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:buildingTemperature ;
+        rr:objectMap [ rr:column "t_building" ; rr:datatype xsd:double ]
+    ] ;
+    rr:predicateObjectMap [
+        rr:predicate cim:heatingLoadTarget ;
+        rr:objectMap [ rr:column "heating_load_target" ; rr:datatype xsd:double ]
+    ] .
