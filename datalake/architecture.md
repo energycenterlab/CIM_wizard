@@ -1,83 +1,69 @@
-i want to create a local (not bigdata cluster) datalake for our company to let everyone share their datasets
+# Local Datalake Architecture (Current)
 
-postgis + fastapi
-Database Reflection -> Automating SQLAlchemy
+Goal: build a local (non-cluster) datalake so company teams can upload, discover, and download shared datasets with spatial and temporal metadata.
 
+## Stack
 
-SQLAlchemy can inspect the database schema at runtime and automatically generate objects to interact with it. there are two main ways to do this:
+- **Database:** Dockerized PostgreSQL + PostGIS
+- **Frontend:** Streamlit + streamlit-folium
+- **Spatial operations:** PostGIS (`ST_Intersects`, `ST_GeomFromGeoJSON`, GiST index)
+- **Storage model:** dataset metadata + footprint in table columns, original JSON payload in `JSONB`
 
-Option A: Using SQLAlchemy Core (Recommended for highly dynamic data)
-Instead of relying on ORM classes, map the table metadata directly. This is generally safer and more performant for dynamic structures.
+## Implemented UI
 
-from sqlalchemy import create_engine, MetaData, Table, select
+The Streamlit app is under `datalake/ui/` and currently provides two pages:
 
-engine = create_engine("postgresql://user:pass@localhost/postgis_db")
+1. **Upload (`pages/1_📤_Upload.py`)**
+   - Upload JSON/GeoJSON file
+   - Enter dataset metadata: name, description, tags
+   - Draw spatial footprint (CRS **EPSG:4326**) on map
+   - Set temporal footprint (`temporal_start`, `temporal_end`)
+   - Insert into PostGIS table
 
-def get_dynamic_table(schema_name: str, table_name: str):
-    # Bind metadata to the specific schema
-    metadata = MetaData(schema=schema_name)
-    
-    # Reflect only the specific table from the database
-    table = Table(table_name, metadata, autoload_with=engine)
-    return table
+2. **Explore/Download (`pages/2_📥_Explore.py`)**
+   - Filter by tags and temporal range
+   - Draw study-area polygon on map
+   - Query datasets where `ST_Intersects(spatial_footprint, study_area)` is true
+   - Visualize matching footprints on the map
+   - Download matching dataset JSON
 
-# Usage in a FastAPI route:
-# dynamic_table = get_dynamic_table("user_schema_1", "custom_points")
-# query = select(dynamic_table).where(dynamic_table.c.id == 1)
+## Data model (PostGIS)
 
-Option B: Using Automap (If you strictly want ORM Classes)
-If you prefer working with ORM objects instead of Core tables, SQLAlchemy provides automap_base.
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+Single table (`datasets`) used by the Streamlit frontend:
 
-engine = create_engine("postgresql://user:pass@localhost/postgis_db")
+- `id UUID PRIMARY KEY`
+- `name TEXT`
+- `description TEXT`
+- `tags TEXT[]`
+- `spatial_footprint GEOMETRY(POLYGON, 4326)`
+- `temporal_start DATE`
+- `temporal_end DATE`
+- `data JSONB` (raw uploaded JSON payload)
+- `filename TEXT`
+- `uploaded_at TIMESTAMPTZ`
 
-def get_dynamic_orm_class(schema_name: str, table_name: str):
-    Base = automap_base()
-    
-    # Reflect the schema
-    Base.prepare(autoload_with=engine, schema=schema_name)
-    
-    # Get the automatically generated Python class
-    # Note: the table MUST have a primary key for automap to work
-    return getattr(Base.classes, table_name)
+Indexes:
 
-FastAPI relies on Pydantic models to validate incoming JSON requests and format outgoing responses.
-The Simple Way: Accept and Return Dictionaries
-Bypass strict Pydantic validation and let FastAPI accept raw JSON.
-from fastapi import APIRouter, Body
-from typing import Dict, Any
+- GiST index on `spatial_footprint`
+- GIN index on `tags`
+- B-tree index on `(temporal_start, temporal_end)`
 
-@app.post("/api/{schema_name}/{table_name}")
-async def insert_data(
-    schema_name: str, 
-    table_name: str, 
-    payload: Dict[str, Any] = Body(...)
-):
-    # payload is a normal dictionary. 
-    # Pass this directly to your SQLAlchemy Core insert statement.
-    pass
+## Flow
 
-The Advanced Way: Dynamic Pydantic Models
-You can use Pydantic's create_model function to generate validation schemas on the fly by reading the SQLAlchemy column types, but this is complex and adds overhead to your API requests. For most dynamic table use-cases, accepting Dict[str, Any] is the standard approach.
+1. User uploads dataset and draws footprint in Upload page.
+2. App stores metadata + geometry + JSON payload in PostGIS.
+3. User defines filters + study area in Explore page.
+4. App returns and maps all intersecting datasets.
+5. User downloads selected JSON data directly from UI.
 
+## Architecture decision table (updated)
 
-
-The Single Collection Architecture (The MongoDB Way)
-put all spatial data into one giant collection and use a dataset_id to separate them.
-// One giant collection called "spatial_features"
-{
-  "_id": "...",
-  "dataset_id": "user_123_custom_points", 
-  "geometry": { "type": "Point", "coordinates": [ -73.97, 40.77 ] },
-  "properties": { "custom_field": "anything", "color": "blue" }
-}
-
-Feature / Requirement,PostGIS (Relational Spatial),MongoDB (NoSQL Document),MinIO + pgSTAC (Data Lake)
-Where does the data live?,Geometries and attributes are stored as rows in database tables.,GeoJSON and attributes are stored as JSON documents in collections.,"Raw files (GeoTIFF, CSV, Shapefile) sit in MinIO; STAC JSON metadata sits in pgSTAC."
-Handling Dynamic Schemas (User uploads random forms),Difficult. Requires dynamically creating tables or stuffing everything into a single JSONB column.,Excellent. Schemaless by design. Users can insert whatever JSON structure they want instantly.,Excellent. MinIO accepts any file type. You map the core info to a standard STAC JSON format for the database.
-"Spatial Joins (e.g., intersecting User A's points with User B's polygons)",Excellent. Native support via ST_Intersects and JOIN. Handles massive datasets efficiently.,Poor. Cannot perform spatial operators across different collections in a single $lookup query.,"Varies. pgSTAC can easily intersect metadata bounding boxes, but intersecting actual features inside the files requires a background processing worker."
-"Handling Massive Files (Rasters, Point Clouds, Heavy Vectors)",Poor. Storing large binary files or massive multipolygons in a relational DB causes bloat and slows down backups.,Poor. Hard limit of 16MB per document. GridFS is clunky for geospatial data.,Excellent. Cloud-native object storage is explicitly designed for massive files. It is infinitely scalable and cheap.
-Standardized Ecosystem,"Very high. Standard SQL and widely supported by all GIS tools (QGIS, GeoServer).",Low. Most GIS tools require custom connectors or middleware to read MongoDB spatial data natively.,"Very high. STAC is the modern industry standard. Massive open-source ecosystem (pystac, stac-fastapi, QGIS plugins)."
-Best Used For...,"Heavy vector-math, routing (pgRouting), complex spatial relationships, and highly structured transactional data.","Highly dynamic user forms, simple point-based apps, and apps where JSON flexibility is prioritized over complex spatial math.","Managing massive libraries of imagery, user-uploaded files, drone surveys, and creating a scalable search engine for diverse datasets."
+| Feature / Requirement | Current Choice: PostGIS + Streamlit/Folium | MongoDB Single-Collection Pattern | MinIO + pgSTAC |
+|---|---|---|---|
+| Primary use case | Internal collaborative geospatial datalake with map-first querying | Flexible JSON app with low relational constraints | Cataloging large geospatial assets/files at scale |
+| Storage model | Structured columns + `JSONB` for raw payload + PostGIS geometry | Entire payload and geometry in document collections | Binary files in object storage + STAC metadata in database |
+| Spatial filtering in UI | Native `ST_Intersects` against user-drawn study polygon | Requires geospatial indexes but weaker relational joins across collections | Great for item-level extents; file-internal geometry needs extra processing |
+| Temporal + tag filtering | Straightforward SQL + array/date indexes | Feasible, but complex multi-criteria analytics can become less transparent | Strong metadata filtering, best when data already STAC-compliant |
+| Footprint visualization | Direct from `GEOMETRY(POLYGON,4326)` to map layers | Possible, but model consistency must be enforced in app logic | Usually metadata-centric; footprint resolution depends on catalog detail |
+| Operational complexity (local setup) | Low to medium; one DB container + Streamlit app | Low; easy local bootstrap | Medium to high; storage service + catalog services |
+| Best fit for this project now | **Yes**: aligns with current 2-page workflow (upload/explore/download) | Useful alternative if schema freedom becomes top priority | Better as a future evolution for very large multi-format archives |
