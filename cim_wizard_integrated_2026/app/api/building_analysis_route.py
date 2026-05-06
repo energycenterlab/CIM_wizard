@@ -531,14 +531,16 @@ async def get_pv_with_building_info(
     db: Session = Depends(get_db),
 ):
     """
-    Return all PV polygons that belong to buildings in the given
-    project/scenario, enriched with building height and z_value.
+    Return all PV polygons for buildings in the given project/scenario,
+    enriched with building height (from building_properties) and z_value.
+
+    Joins via cim_wizard_building.pv_ids array — works even if
+    pv.building_id is NULL (e.g. freshly loaded PVs before assignment).
     """
     result = db.execute(text("""
         SELECT
             pv.pv_id,
-            pv.building_id,
-            pv.fid,
+            b.building_id,
             pv.slope,
             pv.num,
             pv.area_reale,
@@ -548,17 +550,17 @@ async def get_pv_with_building_info(
             pv.id_pod,
             ST_AsGeoJSON(pv.pv_geometry)::text AS pv_geojson,
             b.z_value,
-            bp.height AS building_height
-        FROM cim_vector.pv pv
-        JOIN cim_vector.cim_wizard_building b
-          ON pv.building_id = CAST(b.building_id AS uuid)
-         AND b.lod = :lod
+            bp.height                          AS building_height
+        FROM cim_vector.cim_wizard_building b
         JOIN cim_vector.cim_wizard_building_properties bp
           ON bp.building_id = b.building_id
-         AND bp.project_id = :pid
+         AND bp.project_id  = :pid
          AND bp.scenario_id = :sid
-         AND bp.lod = b.lod
-        ORDER BY pv.building_id, pv.pv_id
+         AND bp.lod         = b.lod
+        JOIN cim_vector.pv pv
+          ON pv.pv_id = ANY(b.pv_ids)
+        WHERE b.lod = :lod
+        ORDER BY b.building_id, pv.pv_id
     """), {"pid": project_id, "sid": scenario_id, "lod": lod}).mappings().all()
 
     features = []
@@ -571,27 +573,26 @@ async def get_pv_with_building_info(
             "type": "Feature",
             "geometry": geom,
             "properties": {
-                "pv_id": str(r["pv_id"]),
-                "building_id": str(r["building_id"]),
-                "fid": r["fid"],
-                "slope": r["slope"],
-                "num": r["num"],
-                "area_reale": r["area_reale"],
-                "number": r["number"],
-                "s": r["s"],
-                "index_righ": r["index_righ"],
-                "id_pod": r["id_pod"],
-                "building_height": r["building_height"],
-                "z_value": r["z_value"],
+                "pv_id":            str(r["pv_id"]),
+                "building_id":      str(r["building_id"]),
+                "slope":            r["slope"],
+                "num":              r["num"],
+                "area_reale":       r["area_reale"],
+                "number":           r["number"],
+                "s":                r["s"],
+                "index_righ":       r["index_righ"],
+                "id_pod":           r["id_pod"],
+                "building_height":  r["building_height"],
+                "z_value":          r["z_value"],
             },
         })
 
     return {
         "type": "FeatureCollection",
-        "project_id": project_id,
+        "project_id":  project_id,
         "scenario_id": scenario_id,
-        "total_pv": len(features),
-        "features": features,
+        "total_pv":    len(features),
+        "features":    features,
     }
 
 
