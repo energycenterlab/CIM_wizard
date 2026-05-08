@@ -29,7 +29,7 @@ with col_upload:
     st.markdown(
         """
         <div style="border:1px solid #ddd;border-radius:8px;padding:20px;height:160px;">
-        <h4>📤 Upload</h4>
+        <h4>Upload</h4>
         Upload any JSON / GeoJSON dataset along with its metadata:<br>
         &nbsp;• Name, description, tags<br>
         &nbsp;• Spatial footprint (drawn on map, EPSG:4326)<br>
@@ -43,7 +43,7 @@ with col_explore:
     st.markdown(
         """
         <div style="border:1px solid #ddd;border-radius:8px;padding:20px;height:160px;">
-        <h4>📥 Explore & Download</h4>
+        <h4>Explore & Download</h4>
         Discover datasets interactively:<br>
         &nbsp;• Filter by tags and temporal range<br>
         &nbsp;• Draw a study-area polygon on the map<br>
@@ -61,13 +61,13 @@ from db import init_db  # noqa: E402
 
 try:
     init_db()
-    st.success("✅ Connected to PostGIS — schema is ready.")
+    st.success("Connected to PostGIS — meta_table schema is ready.")
 except ValueError as exc:
-    st.warning(f"⚠️ {exc}")
+    st.warning(str(exc))
     st.markdown("**Set the connection string in `.streamlit/secrets.toml`:**")
     st.code(
-        '[secrets]\nDATABASE_URL = "postgresql://user:password@host:5432/dbname"',
+        'DATABASE_URL = "postgresql://datalake:datalake@localhost:35432/datalake"',
         language="toml",
     )
 except Exception as exc:
-    st.error(f"❌ Database error: {exc}")
+    st.error(f"Database error: {exc}")

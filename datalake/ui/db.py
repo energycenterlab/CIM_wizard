@@ -1,8 +1,9 @@
 """
 PostGIS database helpers for the CIM Datalake UI.
 
-DATABASE_URL must be set in .streamlit/secrets.toml  →  [secrets] DATABASE_URL = "..."
-or as an environment variable.
+DATABASE_URL must be set in .streamlit/secrets.toml or as an environment variable.
+Example:
+    DATABASE_URL = "postgresql://datalake:datalake@localhost:35432/datalake"
 """
 from __future__ import annotations
 
@@ -18,7 +19,6 @@ import psycopg2.extras
 def _db_uri() -> str:
     try:
         import streamlit as st
-
         return st.secrets.get("DATABASE_URL", os.getenv("DATABASE_URL", ""))
     except Exception:
         return os.getenv("DATABASE_URL", "")
@@ -43,30 +43,40 @@ def get_conn():
         conn.close()
 
 
+# DDL kept in sync with postgres/init/01_init.sql.
+# Uses IF NOT EXISTS so it is safe to call on every app start.
 _INIT_SQL = """
 CREATE EXTENSION IF NOT EXISTS postgis;
 
-CREATE TABLE IF NOT EXISTS datasets (
-    id                UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    name              TEXT         NOT NULL,
-    description       TEXT         NOT NULL DEFAULT '',
-    tags              TEXT[]       NOT NULL DEFAULT '{}',
+CREATE TABLE IF NOT EXISTS public.meta_table (
+    id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    name              TEXT          NOT NULL,
+    description       TEXT          NOT NULL DEFAULT '',
+    tags              TEXT[]        NOT NULL DEFAULT '{}',
+    source_type       TEXT          NOT NULL DEFAULT 'file',
+    ogc_url           TEXT,
+    ogc_type          TEXT,
+    is_spatial        BOOLEAN       NOT NULL DEFAULT FALSE,
+    spatial_type      TEXT,
+    crs               TEXT          NOT NULL DEFAULT 'EPSG:4326',
     spatial_footprint GEOMETRY(POLYGON, 4326),
     temporal_start    DATE,
     temporal_end      DATE,
-    data              JSONB,
-    filename          TEXT         NOT NULL DEFAULT '',
-    uploaded_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    location          TEXT,
+    filename          TEXT          NOT NULL DEFAULT '',
+    file_size_bytes   BIGINT,
+    file_path         TEXT,
+    uploaded_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_datasets_spatial
-    ON datasets USING GIST (spatial_footprint);
+CREATE INDEX IF NOT EXISTS idx_meta_spatial
+    ON public.meta_table USING GIST (spatial_footprint);
 
-CREATE INDEX IF NOT EXISTS idx_datasets_tags
-    ON datasets USING GIN (tags);
+CREATE INDEX IF NOT EXISTS idx_meta_tags
+    ON public.meta_table USING GIN (tags);
 
-CREATE INDEX IF NOT EXISTS idx_datasets_temporal
-    ON datasets (temporal_start, temporal_end);
+CREATE INDEX IF NOT EXISTS idx_meta_temporal
+    ON public.meta_table (temporal_start, temporal_end);
 """
 
 
@@ -76,54 +86,80 @@ def init_db() -> None:
             cur.execute(_INIT_SQL)
 
 
-def insert_dataset(
+def insert_record(
     name: str,
     description: str,
     tags: list[str],
-    footprint_geojson: dict,
+    source_type: str,
+    ogc_url: str | None,
+    ogc_type: str | None,
+    is_spatial: bool,
+    spatial_type: str | None,
+    crs: str,
+    footprint_geojson: dict | None,
     temporal_start: Any,
     temporal_end: Any,
-    data: Any,
-    filename: str = "",
+    location: str | None,
+    filename: str,
+    file_size_bytes: int | None,
+    file_path: str | None,
 ) -> str:
+    """Insert one row into meta_table and return the generated UUID."""
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO datasets
-                    (name, description, tags, spatial_footprint,
-                     temporal_start, temporal_end, data, filename)
-                VALUES
-                    (%s, %s, %s,
-                     ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326),
-                     %s, %s, %s, %s)
+                INSERT INTO public.meta_table (
+                    name, description, tags,
+                    source_type, ogc_url, ogc_type,
+                    is_spatial, spatial_type, crs,
+                    spatial_footprint,
+                    temporal_start, temporal_end,
+                    location,
+                    filename, file_size_bytes, file_path
+                )
+                VALUES (
+                    %s, %s, %s,
+                    %s, %s, %s,
+                    %s, %s, %s,
+                    CASE WHEN %s IS NOT NULL
+                         THEN ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)
+                         ELSE NULL END,
+                    %s, %s,
+                    %s,
+                    %s, %s, %s
+                )
                 RETURNING id
                 """,
                 (
-                    name,
-                    description,
-                    tags,
-                    json.dumps(footprint_geojson),
-                    temporal_start,
-                    temporal_end,
-                    json.dumps(data),
-                    filename,
+                    name, description, tags,
+                    source_type, ogc_url, ogc_type,
+                    is_spatial, spatial_type, crs,
+                    json.dumps(footprint_geojson) if footprint_geojson else None,
+                    json.dumps(footprint_geojson) if footprint_geojson else None,
+                    temporal_start, temporal_end,
+                    location,
+                    filename, file_size_bytes, file_path,
                 ),
             )
             return str(cur.fetchone()[0])
 
 
-def query_datasets(
+def query_records(
     study_area_geojson: dict | None = None,
     tags: list[str] | None = None,
+    source_type: str | None = None,
+    is_spatial: bool | None = None,
     temporal_start: Any = None,
     temporal_end: Any = None,
 ) -> list[dict]:
+    """Query meta_table with optional spatial, tag, type and date filters."""
     conditions: list[str] = []
     params: list[Any] = []
 
     if study_area_geojson:
         conditions.append(
+            "spatial_footprint IS NOT NULL AND "
             "ST_Intersects(spatial_footprint, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))"
         )
         params.append(json.dumps(study_area_geojson))
@@ -131,6 +167,14 @@ def query_datasets(
     if tags:
         conditions.append("tags && %s")
         params.append(tags)
+
+    if source_type:
+        conditions.append("source_type = %s")
+        params.append(source_type)
+
+    if is_spatial is not None:
+        conditions.append("is_spatial = %s")
+        params.append(is_spatial)
 
     if temporal_start:
         conditions.append("(temporal_end IS NULL OR temporal_end >= %s)")
@@ -151,13 +195,21 @@ def query_datasets(
                     name,
                     description,
                     tags,
+                    source_type,
+                    ogc_url,
+                    ogc_type,
+                    is_spatial,
+                    spatial_type,
+                    crs,
                     ST_AsGeoJSON(spatial_footprint) AS spatial_footprint,
                     temporal_start,
                     temporal_end,
+                    location,
                     filename,
-                    uploaded_at,
-                    data
-                FROM datasets
+                    file_size_bytes,
+                    file_path,
+                    uploaded_at
+                FROM public.meta_table
                 {where}
                 ORDER BY uploaded_at DESC
                 """,
@@ -170,6 +222,6 @@ def get_all_tags() -> list[str]:
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT DISTINCT unnest(tags) AS tag FROM datasets ORDER BY tag"
+                "SELECT DISTINCT unnest(tags) AS tag FROM public.meta_table ORDER BY tag"
             )
             return [row[0] for row in cur.fetchall()]
