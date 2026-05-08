@@ -2,85 +2,139 @@
 Upload page — register a new dataset in the datalake.
 
 Two source modes:
-  - File   : upload a file via FTP; metadata stored in meta_table.
-  - OGC    : register a WFS / WMS / WCS / WMTS service URL.
+  - File : upload a file via FTP; metadata stored in meta_table.
+  - OGC  : register a WFS / WMS / WCS / WMTS service URL.
 
-Both modes share the same metadata fields and the optional spatial footprint map.
+Bounding box is entered manually or calculated from an uploaded GeoJSON file.
 """
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import sys
+from typing import Iterator
 
-import folium
 import streamlit as st
-from folium.plugins import Draw
-from streamlit_folium import st_folium
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import insert_record  # noqa: E402
 from ftp import is_configured, upload  # noqa: E402
 
-st.set_page_config(page_title="Upload Dataset", layout="wide")
+st.set_page_config(page_title="Upload — CIM Datalake", layout="wide")
 
 ACCEPTED_EXTENSIONS = [
     "geojson", "json", "csv", "gpkg", "shp", "zip",
     "tif", "tiff", "nc", "hdf5", "h5", "ifc",
 ]
-
 GEOM_TYPES = [
     "Point", "MultiPoint", "LineString", "MultiLineString",
     "Polygon", "MultiPolygon", "GeometryCollection", "Raster", "Unknown",
 ]
-
 OGC_TYPES = ["WFS", "WMS", "WCS", "WMTS", "OGC API - Features", "OGC API - Maps"]
 
-if "upload_footprint" not in st.session_state:
-    st.session_state.upload_footprint = None
 
+# ── Bbox helpers ─────────────────────────────────────────────────────────────
+
+def _iter_coords(obj) -> Iterator[tuple[float, float]]:
+    """Recursively yield (lon, lat) pairs from any GeoJSON coordinates value."""
+    if isinstance(obj, list):
+        if obj and isinstance(obj[0], (int, float)):
+            yield float(obj[0]), float(obj[1])
+        else:
+            for item in obj:
+                yield from _iter_coords(item)
+
+
+def _bbox_from_geojson(data: dict) -> tuple[float, float, float, float] | None:
+    """Return (xmin, ymin, xmax, ymax) from any GeoJSON object, or None."""
+    lons: list[float] = []
+    lats: list[float] = []
+
+    geom_type = data.get("type")
+    if geom_type == "FeatureCollection":
+        features = data.get("features", [])
+    elif geom_type == "Feature":
+        features = [data]
+    else:
+        features = [{"type": "Feature", "geometry": data, "properties": {}}]
+
+    for feat in features:
+        geom = feat.get("geometry") or {}
+        for lon, lat in _iter_coords(geom.get("coordinates", [])):
+            lons.append(lon)
+            lats.append(lat)
+
+    if not lons:
+        return None
+    return min(lons), min(lats), max(lons), max(lats)
+
+
+def _bbox_to_polygon(xmin: float, ymin: float, xmax: float, ymax: float) -> dict:
+    return {
+        "type": "Polygon",
+        "coordinates": [[
+            [xmin, ymin], [xmax, ymin], [xmax, ymax],
+            [xmin, ymax], [xmin, ymin],
+        ]],
+    }
+
+
+# ── Session state ─────────────────────────────────────────────────────────────
+# Keys prefixed with "_val_" are plain storage, not widget keys.
+# This avoids the Streamlit restriction against modifying a session_state key
+# that is bound to a rendered widget.
+for _k, _v in [
+    ("_val_xmin", 0.0), ("_val_ymin", 0.0),
+    ("_val_xmax", 0.0), ("_val_ymax", 0.0),
+    ("bbox_set",  False),
+]:
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
+
+# ── Page header ───────────────────────────────────────────────────────────────
 st.title("Upload Dataset")
 st.caption(
     "Register a dataset in the datalake. "
-    "Choose File to upload a file to the server storage, or OGC to register a service endpoint."
+    "Choose File to upload a file to the server, or OGC to register a service endpoint."
 )
 
+# ── Source type ───────────────────────────────────────────────────────────────
 source_type = st.radio(
     "Source type",
     options=["File", "OGC"],
     horizontal=True,
-    help="File: upload any spatial or non-spatial file. OGC: register a WFS/WMS/WCS/WMTS URL.",
 )
 source_type_key = source_type.lower()
 
 st.divider()
-st.subheader("1 — Source")
 
+# ── Source input ──────────────────────────────────────────────────────────────
 uploaded_file = None
 file_bytes: bytes | None = None
-ogc_url: str = ""
+ogc_url = ""
 ogc_type: str | None = None
 
 if source_type_key == "file":
-    col_file, col_hint = st.columns([3, 2])
+    col_file, col_ftp = st.columns([3, 2])
     with col_file:
         uploaded_file = st.file_uploader(
             "Dataset file *",
             type=ACCEPTED_EXTENSIONS,
             help="Any spatial or non-spatial file. It will be transferred to the FTP server.",
         )
-    with col_hint:
+    with col_ftp:
         if is_configured():
             st.success("FTP server is configured.")
         else:
             st.warning(
-                "FTP is not configured. The file metadata will be saved in the database "
-                "but the file will not be transferred. Add [ftp] to .streamlit/secrets.toml."
+                "FTP not configured — metadata will be saved but file will not be transferred. "
+                "Add [ftp] to .streamlit/secrets.toml."
             )
     if uploaded_file:
         file_bytes = uploaded_file.read()
-        st.caption(f"Selected: {uploaded_file.name} — {len(file_bytes) / 1024:.1f} KB")
+        st.caption(f"{uploaded_file.name} — {len(file_bytes) / 1024:.1f} KB")
 else:
     col_url, col_type = st.columns([3, 1])
     with col_url:
@@ -92,18 +146,18 @@ else:
         ogc_type = st.selectbox("Service type", OGC_TYPES)
 
 st.divider()
-st.subheader("2 — Metadata")
 
+# ── Metadata ──────────────────────────────────────────────────────────────────
 col_name, col_tags = st.columns([3, 2])
 with col_name:
     name = st.text_input("Name *", placeholder="e.g. Turin Building Footprints 2024")
 with col_tags:
-    tags_raw = st.text_input("Tags (comma-separated)", placeholder="e.g. buildings, urban, 2024")
+    tags_raw = st.text_input("Tags (comma-separated)", placeholder="buildings, urban, 2024")
 
 description = st.text_area(
     "Description",
     placeholder="Source, content, methodology, known limitations",
-    height=100,
+    height=90,
 )
 
 col_loc, col_crs = st.columns([3, 1])
@@ -119,70 +173,78 @@ with col_t2:
     temporal_end = st.date_input("Temporal end", value=None)
 
 st.divider()
-st.subheader("3 — Spatial properties")
 
+# ── Spatial properties ────────────────────────────────────────────────────────
 col_sp, col_gt = st.columns([1, 2])
 with col_sp:
     is_spatial = st.checkbox("Spatial dataset", value=True)
 with col_gt:
     spatial_type = st.selectbox("Geometry type", GEOM_TYPES) if is_spatial else None
 
-st.caption(
-    "Draw the spatial footprint (bounding polygon) of the dataset on the map below. "
-    "Leave it blank for non-spatial datasets."
-)
+# Bounding box — shown only for spatial datasets
+if is_spatial:
+    st.markdown("**Bounding box** (EPSG:4326 — decimal degrees)")
+    st.caption(
+        "The bbox is stored as EPSG:4326 (decimal degrees). "
+        "The 'Calculate from file' button reads raw coordinates from the GeoJSON "
+        "without reprojection. If your file uses a projected CRS (e.g. UTM / EPSG:32632), "
+        "reproject it to EPSG:4326 before uploading, or enter the bbox manually in degrees."
+    )
 
-m_upload = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
-if st.session_state.upload_footprint:
-    folium.GeoJson(
-        {"type": "Feature", "geometry": st.session_state.upload_footprint},
-        name="Footprint",
-        style_function=lambda _: {
-            "fillColor": "#3a86ff",
-            "color": "#023e8a",
-            "fillOpacity": 0.30,
-            "weight": 2,
-        },
-        tooltip="Captured footprint",
-    ).add_to(m_upload)
+    col_xmin, col_ymin, col_xmax, col_ymax, col_calc = st.columns([2, 2, 2, 2, 2])
 
-Draw(
-    position="topleft",
-    draw_options={
-        "polygon": {"allowIntersection": False, "showArea": True},
-        "rectangle": True,
-        "polyline": False,
-        "circle": False,
-        "circlemarker": False,
-        "marker": False,
-    },
-    edit_options={"edit": True, "remove": True},
-).add_to(m_upload)
+    with col_xmin:
+        xmin = st.number_input("West (xmin)",  value=st.session_state._val_xmin, format="%.6f")
+    with col_ymin:
+        ymin = st.number_input("South (ymin)", value=st.session_state._val_ymin, format="%.6f")
+    with col_xmax:
+        xmax = st.number_input("East (xmax)",  value=st.session_state._val_xmax, format="%.6f")
+    with col_ymax:
+        ymax = st.number_input("North (ymax)", value=st.session_state._val_ymax, format="%.6f")
 
-map_data = st_folium(m_upload, key="upload_map", use_container_width=True, height=420)
-drawings = (map_data or {}).get("all_drawings") or []
-poly_drawings = [
-    f for f in drawings if f.get("geometry", {}).get("type") in ("Polygon", "MultiPolygon")
-]
-if poly_drawings:
-    st.session_state.upload_footprint = poly_drawings[-1]["geometry"]
+    with col_calc:
+        st.write("")
+        st.write("")
+        calc_btn = st.button(
+            "Calculate from file",
+            use_container_width=True,
+            help="Parse the uploaded GeoJSON and fill the bbox automatically.",
+            disabled=(file_bytes is None),
+        )
 
-fp_col, clear_col = st.columns([5, 1])
-with fp_col:
-    if st.session_state.upload_footprint:
-        st.success("Footprint captured.")
-    else:
-        st.info("No footprint drawn.")
-with clear_col:
-    if st.session_state.upload_footprint and st.button("Clear", key="clear_fp", use_container_width=True):
-        st.session_state.upload_footprint = None
-        st.rerun()
+    if calc_btn and file_bytes:
+        try:
+            data = json.loads(file_bytes)
+            result = _bbox_from_geojson(data)
+            if result:
+                st.session_state._val_xmin = result[0]
+                st.session_state._val_ymin = result[1]
+                st.session_state._val_xmax = result[2]
+                st.session_state._val_ymax = result[3]
+                st.session_state.bbox_set  = True
+                st.rerun()
+            else:
+                st.warning("No coordinates found in the uploaded file.")
+        except json.JSONDecodeError:
+            st.warning("Uploaded file is not valid JSON — cannot calculate bbox.")
+
+    if st.session_state.bbox_set:
+        st.caption(
+            f"Bbox calculated from file: "
+            f"({st.session_state._val_xmin:.4f}, {st.session_state._val_ymin:.4f}, "
+            f"{st.session_state._val_xmax:.4f}, {st.session_state._val_ymax:.4f})"
+        )
+else:
+    xmin = ymin = xmax = ymax = 0.0
 
 st.divider()
+
+# ── Submit ────────────────────────────────────────────────────────────────────
 submit = st.button("Register dataset", type="primary", use_container_width=True)
 
 if submit:
     errors: list[str] = []
+
     if not name.strip():
         errors.append("Dataset name is required.")
     if source_type_key == "file" and not uploaded_file:
@@ -200,6 +262,11 @@ if submit:
         ftp_path: str | None = None
         stored_filename = ""
         stored_size: int | None = None
+
+        # Build footprint polygon from bbox when dataset is spatial
+        footprint: dict | None = None
+        if is_spatial and not (xmin == ymin == xmax == ymax == 0.0):
+            footprint = _bbox_to_polygon(xmin, ymin, xmax, ymax)
 
         try:
             if source_type_key == "file" and file_bytes is not None:
@@ -220,7 +287,7 @@ if submit:
                 is_spatial=is_spatial,
                 spatial_type=spatial_type if is_spatial else None,
                 crs=crs.strip() or "EPSG:4326",
-                footprint_geojson=st.session_state.upload_footprint,
+                footprint_geojson=footprint,
                 temporal_start=temporal_start or None,
                 temporal_end=temporal_end or None,
                 location=location.strip() or None,
@@ -228,9 +295,15 @@ if submit:
                 file_size_bytes=stored_size,
                 file_path=ftp_path,
             )
+
             st.success(f"Dataset registered. ID: `{record_id}`")
             if ftp_path:
                 st.caption(f"File stored at: {ftp_path}")
-            st.session_state.upload_footprint = None
+
+            # Reset bbox storage for next upload
+            for _k in ("_val_xmin", "_val_ymin", "_val_xmax", "_val_ymax"):
+                st.session_state[_k] = 0.0
+            st.session_state.bbox_set = False
+
         except Exception as exc:
             st.error(f"Registration failed: {exc}")
