@@ -1,0 +1,27 @@
+# CESAR-P + EnergyPlus building energy simulation
+# Install with: pip install -r requirements.txt
+
+# Core simulation engine
+cesar-p==2.4.0
+
+# Spatial + data
+geopandas>=0.14.0
+shapely>=2.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Weather file utilities (EPW download/manipulation)
+ladybug-core>=1.40.0        # EPW read/write, climate analysis
+pvlib>=0.10.0               # TMY weather data from PVGIS / NSRDB
+
+# Plotting & result analysis
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Database connectivity (to read from CIM Wizard PostGIS)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+geoalchemy2>=0.14.0
+
+# HTTP utilities (EPW download helpers)
+requests>=2.31.0

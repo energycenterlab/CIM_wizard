@@ -1,0 +1,63 @@
+# CESAR-P main configuration file
+# Full reference: https://github.com/hues-platform/cesar-p-core/blob/master/cesar-p-config-overview.yaml
+
+MANAGER:
+  # Use SIA 2024 standard occupancy schedules (built-in, Swiss norm)
+  # Alternatives: cesarp.operation.fixed_schedules.FixedBuildingOperationFactory
+  BUILDING_OPERATION_FACTORY_CLASS: "cesarp.SIA2024.SIA2024Facade.SIA2024Facade"
+
+  # Building footprint vertices: one row per vertex, TARGET_FID links vertices to a building
+  SITE_VERTICES_FILE:
+    PATH: "./data/SiteVertices_example.csv"
+    LABELS:
+      gis_fid:  "TARGET_FID"
+      x:        "SHAPE_X"
+      y:        "SHAPE_Y"
+
+  # Per-building attributes
+  BLDG_INFORMATION_FILE:
+    PATH: "./data/BuildingInformation_example.csv"
+    LABELS:
+      gis_fid:             "EGID"
+      height:              "HEIGHT"
+      floors_above_ground: "FLOORS_ABOVE_GROUND"
+      year_of_construction: "YEAR_OF_CONSTRUCTION"
+      neighbours:          "NEIGHBOURS"
+
+SINGLE_SITE:
+  # EnergyPlus weather file (.epw).
+  # Download for your city from: https://climate.onebuilding.org
+  # or use the weather_downloader.py helper in this folder.
+  WEATHER_FILE: "./data/weather/your_city.epw"
+
+  # Ground temperatures (°C) per month — affects floor slab heat loss
+  GROUND_TEMPERATURES: [10.5, 10.0, 10.0, 10.5, 12.0, 14.0, 16.0, 17.0, 16.5, 14.5, 12.5, 11.0]
+
+SIA2024:
+  # Map the SIA_BLDG_TYPE column to CESAR-P building type enum.
+  # Supported types: SFH, MFH, OFFICE, SCHOOL, SHOP, RESTAURANT,
+  #                  HOSPITAL, INDUSTRY, SPORTS, INDOOR_SWIMMING
+  BLDG_TYPE_PER_BLDG_FILE:
+    PATH: "./data/BuildingInformation_example.csv"
+    LABELS:
+      gis_fid:      "EGID"
+      sia_bldg_type: "SIA_BLDG_TYPE"
+
+OPERATION:
+  # Night set-back thermostat for heating (°C)
+  HEATING_SETBACK_TEMP: 16.0
+  # Night set-back thermostat for cooling (°C) — set high to effectively disable
+  COOLING_SETBACK_TEMP: 26.0
+
+CONSTRUCTION:
+  # Year-of-construction ranges used to look up envelope U-values from the
+  # built-in Swiss construction database (based on SIA 380.1 / BFE 2016).
+  # No action needed unless you want to override with custom constructions.
+  FORCE_WINDOW_CONSTRUCTION: false
+
+OUTPUT:
+  # Simulation result verbosity.
+  # "BASIC"   → annual totals only (fast post-processing)
+  # "STANDARD"→ monthly totals
+  # "DETAILED"→ hourly time series (large files, ~50 MB per building)
+  RESULT_SUMMARY_CLASS: "cesarp.eplus_adapter.idd_result_summary.IDDResultSummary"
