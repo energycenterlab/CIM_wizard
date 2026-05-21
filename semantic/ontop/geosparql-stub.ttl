@@ -1,0 +1,20 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix geo:  <http://www.opengis.net/ont/geosparql#> .
+
+<http://www.opengis.net/ont/geosparql#> a owl:Ontology .
+
+geo:Feature      a owl:Class .
+geo:Geometry     a owl:Class .
+geo:SpatialObject a owl:Class .
+
+geo:hasGeometry  a owl:ObjectProperty ;
+    rdfs:domain geo:Feature ;
+    rdfs:range  geo:Geometry .
+
+geo:asWKT        a owl:DatatypeProperty ;
+    rdfs:domain geo:Geometry ;
+    rdfs:range  geo:wktLiteral .
+
+geo:wktLiteral   a rdfs:Datatype .

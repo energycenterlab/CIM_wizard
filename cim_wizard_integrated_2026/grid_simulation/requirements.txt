@@ -1,0 +1,31 @@
+# pandapower grid simulation
+# Install with: pip install -r requirements.txt
+
+# Core grid simulator
+pandapower[all]>=2.14.0
+
+# Data + spatial
+pandas>=2.0.0
+numpy>=1.24.0
+geopandas>=0.14.0
+shapely>=2.0.0
+
+# Network graph analysis (bundled with pandapower but pin for clarity)
+networkx>=3.1
+
+# Optimisation (required for OPF — Optimal Power Flow)
+pypower>=5.1.15
+
+# Plotting
+matplotlib>=3.7.0
+plotly>=5.15.0           # pandapower interactive plots
+
+# Time-series controller
+pandapipes>=0.9.0        # optional: heat network co-simulation
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Result storage
+openpyxl>=3.1.0          # export to Excel

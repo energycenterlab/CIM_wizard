@@ -17,9 +17,9 @@ import json as _json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
-from geoalchemy2.functions import ST_GeomFromGeoJSON, ST_SetSRID, ST_AsGeoJSON
+from geoalchemy2.functions import ST_GeomFromEWKT, ST_AsEWKT, ST_AsGeoJSON, ST_Force3D
 
 from app.calculators.base_calculator import BaseCalculator
 from app.models.citydb import (
@@ -57,6 +57,51 @@ OC_GROUND_SURFACE = 35
 DT_STRING = 1
 DT_INTEGER = 2
 DT_REAL = 3
+
+
+def _utm_srid_for(lon: float, lat: float) -> int:
+    """Return EPSG code of the UTM zone containing the given lon/lat."""
+    zone = int((lon + 180.0) / 6.0) + 1
+    if zone < 1:
+        zone = 1
+    if zone > 60:
+        zone = 60
+    return 32600 + zone if lat >= 0 else 32700 + zone
+
+
+def _looks_geographic(x: float, y: float) -> bool:
+    """True when x/y look like WGS84 degrees (not projected metres)."""
+    return abs(x) <= 180.0 and abs(y) <= 90.0
+
+
+def _polygon_geojson_to_ewkt(geojson_geom: dict, srid: int = 4326) -> Optional[str]:
+    """Convert a GeoJSON Polygon (2D or 3D) to PostGIS EWKT 'POLYGON Z((...))'.
+
+    Forces 3D output (Z defaults to 0 for missing coordinates). This bypasses
+    ST_GeomFromGeoJSON which can silently drop Z under geographic SRIDs.
+    """
+    if not geojson_geom or geojson_geom.get("type") != "Polygon":
+        return None
+    rings = geojson_geom.get("coordinates", [])
+    if not rings:
+        return None
+
+    ring_parts: List[str] = []
+    for ring in rings:
+        if not ring:
+            continue
+        pts: List[str] = []
+        for c in ring:
+            x = float(c[0])
+            y = float(c[1])
+            z = float(c[2]) if len(c) > 2 else 0.0
+            pts.append(f"{x} {y} {z}")
+        if pts and pts[0] != pts[-1]:
+            pts.append(pts[0])
+        ring_parts.append("(" + ", ".join(pts) + ")")
+    if not ring_parts:
+        return None
+    return f"SRID={srid};POLYGON Z(" + ", ".join(ring_parts) + ")"
 
 
 class CitydbMapperCalculator(BaseCalculator):
@@ -126,7 +171,10 @@ class CitydbMapperCalculator(BaseCalculator):
                         }
                         lod12_generated += 1
 
-                self._map_building(session, building, props, citymodel)
+                self._map_building(
+                    session, building, props, citymodel,
+                    refresh_surfaces=force_lod12,
+                )
                 mapped += 1
             except Exception as e:
                 logger.warning(
@@ -177,7 +225,7 @@ class CitydbMapperCalculator(BaseCalculator):
         if method == "by_footprint_height_floors":
             return lod12_calc.generate_lod12_with_floors(geom, height, n_floors, z_offset=z_offset)
 
-        raw = lod12_calc._generate_lod12_surfaces(geom, height)
+        raw = lod12_calc._generate_lod12_surfaces(geom, height, z_offset=z_offset)
         if raw is None:
             return None
         return {
@@ -186,6 +234,7 @@ class CitydbMapperCalculator(BaseCalculator):
             "thermal_zones": None,
             "metadata": {
                 "building_height": height,
+                "z_offset": z_offset,
                 "generation_method": "footprint_height",
             },
         }
@@ -214,7 +263,14 @@ class CitydbMapperCalculator(BaseCalculator):
 
     # ---- single building ----
 
-    def _map_building(self, session, building, props, citymodel: CityModel):
+    def _map_building(
+        self,
+        session,
+        building,
+        props,
+        citymodel: CityModel,
+        refresh_surfaces: bool = False,
+    ):
         bid = str(building.building_id)
 
         existing = (
@@ -228,6 +284,24 @@ class CitydbMapperCalculator(BaseCalculator):
             .first()
         )
         if existing:
+            # Building already in citydb — skip insert but still refresh surfaces
+            # when force_lod12 regenerated building_surfaces_lod12 in vector tables.
+            lod12 = building.building_surfaces_lod12
+            if refresh_surfaces and lod12:
+                u_vals = TABULA_U_VALUES.get(props.const_tabula or "", {})
+                self._delete_building_surfaces(session, existing.id)
+                self._delete_building_energy_attribs(session, existing.id)
+                self._map_surfaces(
+                    session, existing.id, lod12.get("surfaces") or {}, u_vals,
+                )
+                thermal_zones = lod12.get("thermal_zones")
+                if thermal_zones:
+                    self._store_multi_thermal_zone_attrs(
+                        session, existing.id, thermal_zones, props,
+                    )
+                else:
+                    self._store_thermal_zone_attrs(session, existing.id, props)
+                session.flush()
             return existing
 
         co = CityObject(
@@ -269,11 +343,60 @@ class CitydbMapperCalculator(BaseCalculator):
 
     # ---- LOD 1.2 surfaces ----
 
+    def _delete_building_surfaces(self, session: Session, building_co_id: int):
+        """Remove all thematic surfaces and their PostGIS geometry for a building."""
+        ts_rows = (
+            session.query(ThematicSurface.id)
+            .filter(ThematicSurface.building_id == building_co_id)
+            .all()
+        )
+        ts_ids = [row[0] for row in ts_rows]
+        if not ts_ids:
+            return
+
+        session.query(SurfaceGeometry).filter(
+            SurfaceGeometry.cityobject_id.in_(ts_ids)
+        ).delete(synchronize_session=False)
+
+        session.query(CityObjectGenericAttrib).filter(
+            CityObjectGenericAttrib.cityobject_id.in_(ts_ids)
+        ).delete(synchronize_session=False)
+
+        session.query(ThematicSurface).filter(
+            ThematicSurface.building_id == building_co_id
+        ).delete(synchronize_session=False)
+
+        session.query(CityObject).filter(
+            CityObject.id.in_(ts_ids),
+            CityObject.objectclass_id.in_([
+                OC_CEILING_SURFACE,
+                OC_FLOOR_SURFACE,
+                OC_ROOF_SURFACE,
+                OC_WALL_SURFACE,
+                OC_GROUND_SURFACE,
+            ]),
+        ).delete(synchronize_session=False)
+
+    def _delete_building_energy_attribs(self, session: Session, building_co_id: int):
+        """Clear thermal-zone generic attributes before re-insert."""
+        session.query(CityObjectGenericAttrib).filter(
+            CityObjectGenericAttrib.cityobject_id == building_co_id,
+            or_(
+                CityObjectGenericAttrib.attrname.like("thermalZone%"),
+                CityObjectGenericAttrib.attrname.like("tz:%"),
+                CityObjectGenericAttrib.attrname.like("energySystem_%"),
+            ),
+        ).delete(synchronize_session=False)
+
     def _map_surfaces(
         self, session, building_co_id: int, surfaces: dict, u_vals: dict
     ):
         def _insert_one(geojson_geom, oc_id, u_value, surf_label):
             if not geojson_geom or not geojson_geom.get("coordinates"):
+                return
+
+            ewkt = _polygon_geojson_to_ewkt(geojson_geom, srid=4326)
+            if ewkt is None:
                 return
 
             ts_co = CityObject(
@@ -294,12 +417,11 @@ class CitydbMapperCalculator(BaseCalculator):
             session.flush()
             sg_root.root_id = sg_root.id
 
-            geojson_str = _json.dumps(geojson_geom)
             sg_poly = SurfaceGeometry(
                 gmlid=f"poly-{ts_co.id}",
                 parent_id=sg_root.id,
                 root_id=sg_root.id,
-                geometry=ST_SetSRID(ST_GeomFromGeoJSON(geojson_str), 4326),
+                geometry=ST_Force3D(ST_GeomFromEWKT(ewkt)),
                 cityobject_id=ts_co.id,
             )
             session.add(sg_poly)
@@ -468,7 +590,7 @@ class CitydbMapperCalculator(BaseCalculator):
             .all()
         )
 
-        builder = _CityJSONBuilder()
+        builder = _CityJSONBuilder(use_utm_for_display=True)
 
         for props, building in rows:
             bid = str(building.building_id)
@@ -539,7 +661,35 @@ class CitydbMapperCalculator(BaseCalculator):
             .all()
         )
 
-        builder = _CityJSONBuilder()
+        # UTM zone hint from surface-geometry centroid (building.envelope is
+        # often NULL in citydb).  Actual lon/lat→metre conversion happens in
+        # _CityJSONBuilder via pyproj on the first geographic vertex.
+        target_srid = 4326
+        centroid_row = (
+            session.query(
+                func.ST_X(
+                    func.ST_Centroid(
+                        func.ST_Collect(SurfaceGeometry.geometry)
+                    )
+                ).label("lon"),
+                func.ST_Y(
+                    func.ST_Centroid(
+                        func.ST_Collect(SurfaceGeometry.geometry)
+                    )
+                ).label("lat"),
+            )
+            .join(ThematicSurface, ThematicSurface.id == SurfaceGeometry.cityobject_id)
+            .join(CityObjectMember, CityObjectMember.cityobject_id == ThematicSurface.building_id)
+            .filter(
+                CityObjectMember.citymodel_id == citymodel.id,
+                SurfaceGeometry.geometry.isnot(None),
+            )
+            .first()
+        )
+        if centroid_row and centroid_row.lon is not None and centroid_row.lat is not None:
+            target_srid = _utm_srid_for(float(centroid_row.lon), float(centroid_row.lat))
+
+        builder = _CityJSONBuilder(target_srid=target_srid, use_utm_for_display=True)
 
         for co, cb in building_rows:
             bid = co.gmlid
@@ -566,29 +716,38 @@ class CitydbMapperCalculator(BaseCalculator):
             if multi_zone:
                 reconstructed_zones = _reconstruct_zones_from_ga(ga_map)
             else:
-                tz_attrs: Dict[str, Any] = {"isCooled": False, "isHeated": True}
+                tz_attrs: Dict[str, Any] = {
+                    "energy-isCooled": False,
+                    "energy-isHeated": True,
+                }
                 for ga in gen_attrs:
                     val = _ga_typed_value(ga)
                     if val is None:
                         continue
                     if ga.attrname == "thermalZone_volume_m3":
-                        tz_attrs["volume"] = round(float(val), 2)
+                        tz_attrs["energy-volume"] = [
+                            {"energy-type": "grossVolume", "energy-value": round(float(val), 2)}
+                        ]
                         attrs["volume"] = round(float(val), 2)
                     elif ga.attrname == "thermalZone_floorArea_m2":
-                        tz_attrs["floorArea"] = round(float(val), 2)
+                        tz_attrs["energy-floorArea"] = [
+                            {"energy-type": "grossFloorArea", "energy-value": round(float(val), 2)}
+                        ]
                         attrs["footprintArea"] = round(float(val), 2)
                     elif ga.attrname == "thermalZone_numberOfFloors":
-                        tz_attrs["numberOfFloors"] = int(val)
+                        attrs["storeysAboveGround"] = int(val)
                     elif ga.attrname == "energySystem_envelopeEfficiency":
-                        tz_attrs["envelopeEfficiency"] = val
+                        attrs["envelopeEfficiency"] = val
                     elif ga.attrname == "energySystem_fmuFile":
-                        tz_attrs["energySystemModel"] = val
+                        attrs["energySystemModel"] = val
+
+            geom_expr = func.ST_AsEWKT(ST_Force3D(SurfaceGeometry.geometry))
 
             surface_rows = (
                 session.query(
                     ThematicSurface,
                     CityObject,
-                    func.ST_AsGeoJSON(SurfaceGeometry.geometry).label("geojson"),
+                    geom_expr.label("ewkt"),
                 )
                 .join(CityObject, ThematicSurface.id == CityObject.id)
                 .outerjoin(
@@ -606,11 +765,14 @@ class CitydbMapperCalculator(BaseCalculator):
             sem_surfaces: List[dict] = []
             sem_values: List[Optional[int]] = []
 
-            for ts, ts_co, geojson_str in surface_rows:
-                if not geojson_str:
+            for ts, ts_co, ewkt_str in surface_rows:
+                if not ewkt_str:
                     continue
 
-                geojson = _json.loads(geojson_str)
+                rings = _parse_polygon_ewkt(ewkt_str)
+                if not rings:
+                    continue
+
                 sem_type = _OC_SEM_TYPE.get(ts.objectclass_id, "GenericSurface")
 
                 u_attr = (
@@ -626,7 +788,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 if u_attr and u_attr.realval is not None:
                     sem_entry["u_value"] = u_attr.realval
 
-                for ring in geojson.get("coordinates", []):
+                for ring in rings:
                     indices = builder._ring_to_indices(ring)
                     boundaries.append([indices])
                     sem_surfaces.append(sem_entry)
@@ -664,7 +826,10 @@ class CitydbMapperCalculator(BaseCalculator):
                 }
                 builder._city_objects[f"{bid}-z1"] = {
                     "type": "+Energy-ThermalZone",
-                    "attributes": {k: v for k, v in tz_attrs.items() if v is not None},
+                    "attributes": {
+                        k: v for k, v in tz_attrs.items()
+                        if v is not None and v != []
+                    },
                     "parents": [bid],
                 }
 
@@ -672,6 +837,61 @@ class CitydbMapperCalculator(BaseCalculator):
 
 
 # ── Helper utilities ─────────────────────────────────────────────────
+
+
+def _parse_polygon_ewkt(ewkt: str) -> List[List[List[float]]]:
+    """Parse a PostGIS EWKT polygon string into rings of [x, y, z] points.
+
+    Accepts ``SRID=...;POLYGON Z((...))``, ``POLYGON Z((...))`` or 2D forms.
+    Returns ``[]`` for non-polygon types or malformed input.
+    """
+    if not ewkt:
+        return []
+
+    body = ewkt.split(";", 1)[1] if ";" in ewkt else ewkt
+    body = body.strip()
+    upper = body.upper()
+    if upper.startswith("POLYGON Z"):
+        body = body[len("POLYGON Z"):].strip()
+    elif upper.startswith("POLYGONZ"):
+        body = body[len("POLYGONZ"):].strip()
+    elif upper.startswith("POLYGON"):
+        body = body[len("POLYGON"):].strip()
+    else:
+        return []
+
+    if body.startswith("(") and body.endswith(")"):
+        body = body[1:-1].strip()
+
+    rings: List[List[List[float]]] = []
+    depth = 0
+    start = -1
+    for i, ch in enumerate(body):
+        if ch == "(":
+            if depth == 0:
+                start = i + 1
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0 and start >= 0:
+                ring_str = body[start:i]
+                ring: List[List[float]] = []
+                for pt_str in ring_str.split(","):
+                    parts = pt_str.strip().split()
+                    if len(parts) < 2:
+                        continue
+                    try:
+                        x = float(parts[0])
+                        y = float(parts[1])
+                        z = float(parts[2]) if len(parts) > 2 else 0.0
+                    except ValueError:
+                        continue
+                    ring.append([x, y, z])
+                if ring:
+                    rings.append(ring)
+                start = -1
+    return rings
+
 
 _OC_SEM_TYPE = {
     OC_CEILING_SURFACE: "CeilingSurface",
@@ -749,15 +969,35 @@ class _CityJSONBuilder:
     """Accumulates CityObjects and a shared vertex list, then serialises
     everything into a spec-compliant CityJSON v1.1 dict."""
 
-    def __init__(self):
+    def __init__(self, target_srid: int = 4326, use_utm_for_display: bool = False):
         self._raw_vertices: List[Tuple[float, float, float]] = []
         self._vertex_map: Dict[Tuple[float, float, float], int] = {}
         self._city_objects: Dict[str, dict] = {}
+        self._target_srid = target_srid
+        self._use_utm_for_display = use_utm_for_display
+        self._utm_transformer = None
+
+    def _to_display_coords(self, x: float, y: float, z: float) -> Tuple[float, float, float]:
+        """Convert WGS84 lon/lat + height(m) to UTM east/north + height(m) for ninja."""
+        if not self._use_utm_for_display or not _looks_geographic(x, y):
+            return x, y, z
+        if self._utm_transformer is None:
+            from pyproj import Transformer
+
+            self._target_srid = _utm_srid_for(x, y)
+            self._utm_transformer = Transformer.from_crs(
+                "EPSG:4326",
+                f"EPSG:{self._target_srid}",
+                always_xy=True,
+            )
+        east, north = self._utm_transformer.transform(x, y)
+        return float(east), float(north), z
 
     # ---- vertex handling ----
 
     def _vidx(self, x: float, y: float, z: float) -> int:
-        key = (round(x, 7), round(y, 7), round(z, 3))
+        x, y, z = self._to_display_coords(x, y, z)
+        key = (round(x, 3), round(y, 3), round(z, 3))
         idx = self._vertex_map.get(key)
         if idx is None:
             idx = len(self._raw_vertices)
@@ -846,17 +1086,18 @@ class _CityJSONBuilder:
     def add_thermal_zone(self, building_id: str, props):
         """Legacy single-zone thermal zone from BuildingProperties."""
         tz_id = f"{building_id}-z1"
-        attrs: Dict[str, Any] = {"isCooled": False, "isHeated": True}
+        attrs: Dict[str, Any] = {
+            "energy-isCooled": False,
+            "energy-isHeated": True,
+        }
         if props.volume is not None:
-            attrs["volume"] = round(props.volume, 2)
+            attrs["energy-volume"] = [
+                {"energy-type": "grossVolume", "energy-value": round(props.volume, 2)}
+            ]
         if props.area is not None:
-            attrs["floorArea"] = round(props.area, 2)
-        if props.number_of_floors is not None:
-            attrs["numberOfFloors"] = int(props.number_of_floors)
-        if props.envelope_efficiency:
-            attrs["envelopeEfficiency"] = props.envelope_efficiency
-        if props.fmu_file:
-            attrs["energySystemModel"] = props.fmu_file
+            attrs["energy-floorArea"] = [
+                {"energy-type": "grossFloorArea", "energy-value": round(props.area, 2)}
+            ]
 
         self._city_objects[tz_id] = {
             "type": "+Energy-ThermalZone",
@@ -869,14 +1110,19 @@ class _CityJSONBuilder:
         for tz in thermal_zones:
             tz_id = f"{building_id}-{tz['zone_id']}"
             attrs: Dict[str, Any] = {
-                "usage": tz.get("usage"),
-                "isCooled": tz.get("is_cooled", False),
-                "isHeated": tz.get("is_heated", True),
+                "energy-isCooled": tz.get("is_cooled", False),
+                "energy-isHeated": tz.get("is_heated", True),
             }
+            if tz.get("usage"):
+                attrs["usage"] = tz["usage"]
             if tz.get("volume_m3") is not None:
-                attrs["volume"] = round(tz["volume_m3"], 2)
+                attrs["energy-volume"] = [
+                    {"energy-type": "grossVolume", "energy-value": round(tz["volume_m3"], 2)}
+                ]
             if tz.get("floor_area_m2") is not None:
-                attrs["floorArea"] = round(tz["floor_area_m2"], 2)
+                attrs["energy-floorArea"] = [
+                    {"energy-type": "grossFloorArea", "energy-value": round(tz["floor_area_m2"], 2)}
+                ]
             if tz.get("storey_index") is not None:
                 attrs["storeyIndex"] = tz["storey_index"]
             if tz.get("apartment_index") is not None:
@@ -891,13 +1137,15 @@ class _CityJSONBuilder:
     # ---- serialise ----
 
     def build(self, scenario_id: str) -> dict:
+        ref_system = f"urn:ogc:def:crs:EPSG::{self._target_srid}"
+
         if not self._raw_vertices:
             return {
                 "type": "CityJSON",
                 "version": "1.1",
                 "metadata": {
                     "identifier": scenario_id,
-                    "referenceSystem": "urn:ogc:def:crs:EPSG::4326",
+                    "referenceSystem": ref_system,
                 },
                 "CityObjects": {},
                 "vertices": [],
@@ -908,7 +1156,11 @@ class _CityJSONBuilder:
         zs = [v[2] for v in self._raw_vertices]
 
         translate = [min(xs), min(ys), min(zs)]
-        scale = [0.0000001, 0.0000001, 0.001]
+        # Millimetre precision on all axes when coordinates are in metres (UTM).
+        if self._utm_transformer is not None or self._target_srid != 4326:
+            scale = [0.001, 0.001, 0.001]
+        else:
+            scale = [0.0000001, 0.0000001, 0.001]
 
         int_vertices = []
         for v in self._raw_vertices:
@@ -918,17 +1170,23 @@ class _CityJSONBuilder:
                 round((v[2] - translate[2]) / scale[2]),
             ])
 
+        metadata = {
+            "identifier": scenario_id,
+            "referenceSystem": ref_system,
+            "geographicalExtent": [
+                min(xs), min(ys), min(zs),
+                max(xs), max(ys), max(zs),
+            ],
+        }
+
         return {
             "type": "CityJSON",
             "version": "1.1",
             "transform": {"scale": scale, "translate": translate},
-            "metadata": {
-                "identifier": scenario_id,
-                "referenceSystem": "urn:ogc:def:crs:EPSG::4326",
-            },
+            "metadata": metadata,
             "extensions": {
                 "Energy": {
-                    "url": "https://cityjson.org/extensions/download/energy.ext.json",
+                    "url": "https://raw.githubusercontent.com/ozgetufan/cjenergy/master/schemas/extensions/energy.ext.json",
                     "version": "1.0",
                 }
             },

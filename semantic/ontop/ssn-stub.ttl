@@ -1,0 +1,9 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ssn:  <http://www.w3.org/ns/ssn/> .
+
+<http://www.w3.org/ns/ssn/> a owl:Ontology .
+
+ssn:System        a owl:Class .
+ssn:hasDeployment a owl:ObjectProperty .
+ssn:Deployment    a owl:Class .

@@ -1,0 +1,124 @@
+# =============================================================
+#  Ontop/Protégé SPARQL test queries  –  CIM Wizard CityDB
+#  Run in Protégé → Ontop SPARQL tab (Ontop 4.2.2 reasoner).
+#  Note: sosa:observedProperty is an ObjectProperty; use
+#        cim:endUse / cim:weatherType for literal-typed queries.
+# =============================================================
+
+PREFIX bot:    <https://w3id.org/bot#>
+PREFIX sosa:   <http://www.w3.org/ns/sosa/>
+PREFIX geo:    <http://www.opengis.net/ont/geosparql#>
+PREFIX time:   <http://www.w3.org/2006/time#>
+PREFIX cim:    <http://data.cimwizard.org/energy/>
+PREFIX schema: <https://schema.org/>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+
+
+# ── Q1. All buildings with height and storey count ───────────────────────────
+SELECT ?building ?label ?height ?storeys WHERE {
+  ?building a bot:Building ;
+            rdfs:label  ?label .
+  OPTIONAL { ?building schema:height             ?height  }
+  OPTIONAL { ?building cim:storeysAboveGround    ?storeys }
+}
+ORDER BY ?label
+
+
+# ── Q2. Buildings with their bounding-box WKT ────────────────────────────────
+SELECT ?building ?wkt WHERE {
+  ?building a bot:Building ;
+            geo:hasGeometry ?geom .
+  ?geom     geo:asWKT ?wkt .
+}
+LIMIT 20
+
+
+# ── Q3. Thermal zones per building (heating/cooling flags) ───────────────────
+SELECT ?building ?zone ?isHeated ?isCooled WHERE {
+  ?building a bot:Building ;
+            bot:containsZone ?zone .
+  ?zone     a sosa:FeatureOfInterest .
+  OPTIONAL { ?zone cim:isHeated ?isHeated }
+  OPTIONAL { ?zone cim:isCooled ?isCooled }
+}
+ORDER BY ?building
+
+
+# ── Q4. Energy resources: total electricity consumption per building ──────────
+SELECT ?building (SUM(?amount) AS ?totalKWh) WHERE {
+  ?obs  a sosa:Observation ;
+        sosa:hasFeatureOfInterest ?building ;
+        cim:energyCarrier "electricity" ;
+        sosa:hasSimpleResult ?amount .
+}
+GROUP BY ?building
+ORDER BY DESC(?totalKWh)
+
+
+# ── Q5. CO₂ emissions per building ───────────────────────────────────────────
+SELECT ?building (SUM(?co2) AS ?totalCO2) WHERE {
+  ?obs  a sosa:Observation ;
+        sosa:hasFeatureOfInterest ?building ;
+        cim:co2Equivalent ?co2 .
+}
+GROUP BY ?building
+ORDER BY DESC(?totalCO2)
+
+
+# ── Q6. Energy performance certificates (label + value) ──────────────────────
+SELECT ?building ?label ?certType ?value ?uom WHERE {
+  ?epc  a cim:EnergyPerformanceCertificate ;
+        cim:certifiesBuilding ?building ;
+        cim:energyLabel       ?label .
+  OPTIONAL { ?epc cim:certType          ?certType }
+  OPTIONAL { ?epc cim:primaryEnergyValue ?value   }
+  OPTIONAL { ?epc cim:primaryEnergyUOM   ?uom     }
+}
+ORDER BY ?label
+
+
+# ── Q7. PV / solar collectors with area and efficiency ───────────────────────
+SELECT ?device ?area ?azimuth ?inclination ?efficiency WHERE {
+  ?device a cim:SolarCollector .
+  OPTIONAL { ?device cim:moduleArea         ?area       }
+  OPTIONAL { ?device cim:azimuth            ?azimuth    }
+  OPTIONAL { ?device cim:inclination        ?inclination }
+  OPTIONAL { ?device cim:opticalEfficiency  ?efficiency }
+}
+
+
+# ── Q8. Weather observations (global solar irradiance) ───────────────────────
+SELECT ?obs ?building ?value ?uom WHERE {
+  ?obs  a sosa:Observation ;
+        cim:weatherType           "globalSolarIrradiance" ;
+        sosa:hasFeatureOfInterest ?building ;
+        sosa:hasSimpleResult      ?value ;
+        cim:yearlyValueUOM        ?uom .
+}
+
+
+# ── Q9. Heat pump COP from simulation – latest 10 steps ──────────────────────
+SELECT ?run ?building ?step ?cop ?thermalPower WHERE {
+  ?obs  a sosa:Observation ;
+        cim:belongsToRun  ?run ;
+        sosa:hasFeatureOfInterest ?building ;
+        cim:timeStep      ?step ;
+        cim:heatPumpCOP   ?cop .
+  OPTIONAL { ?obs cim:thermalPower ?thermalPower }
+}
+ORDER BY DESC(?step)
+LIMIT 10
+
+
+# ── Q10. Buildings with qualified attribute: heated floor area ────────────────
+SELECT ?building ?attrType ?value ?uom WHERE {
+  ?obs  a sosa:Observation ;
+        sosa:hasFeatureOfInterest ?building ;
+        cim:attributeType         ?attrType ;
+        sosa:hasSimpleResult      ?value ;
+        cim:valueUOM              ?uom .
+  FILTER(CONTAINS(LCASE(?attrType), "heatedfloorarea") ||
+         CONTAINS(LCASE(?attrType), "floorarea"))
+}
+ORDER BY ?building

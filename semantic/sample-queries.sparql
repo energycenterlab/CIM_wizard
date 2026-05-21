@@ -1,0 +1,95 @@
+# ============================================================
+#  Sample SPARQL queries to test your setup
+#  Endpoint: http://localhost:3030/geo/sparql  (Fuseki)
+#            http://localhost:7200/repositories/citygml  (GraphDB)
+# ============================================================
+
+
+# ── 1. List all loaded named graphs ─────────────────────────
+SELECT DISTINCT ?graph WHERE {
+  GRAPH ?graph { ?s ?p ?o }
+}
+ORDER BY ?graph
+
+
+# ── 2. List all top-level BOT classes ───────────────────────
+PREFIX bot: <https://w3id.org/bot#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT ?class ?label WHERE {
+  GRAPH <https://w3id.org/bot> {
+    ?class a owl:Class .
+    OPTIONAL { ?class rdfs:label ?label }
+  }
+}
+
+
+# ── 3. List CityGML Building properties ─────────────────────
+PREFIX citybld: <http://www.opengis.net/citygml/3.0/building#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?prop ?label ?domain ?range WHERE {
+  GRAPH <http://www.opengis.net/citygml/3.0/building> {
+    ?prop a ?propType .
+    FILTER(?propType IN (
+      <http://www.w3.org/2002/07/owl#ObjectProperty>,
+      <http://www.w3.org/2002/07/owl#DatatypeProperty>
+    ))
+    OPTIONAL { ?prop rdfs:label  ?label  }
+    OPTIONAL { ?prop rdfs:domain ?domain }
+    OPTIONAL { ?prop rdfs:range  ?range  }
+  }
+}
+
+
+# ── 4. GeoSPARQL spatial query (once you insert data) ───────
+PREFIX geo:  <http://www.opengis.net/ont/geosparql#>
+PREFIX geof: <http://www.opengis.net/def/function/geosparql/>
+
+SELECT ?building ?wkt WHERE {
+  ?building a <https://w3id.org/bot#Building> ;
+            geo:hasGeometry ?geom .
+  ?geom geo:asWKT ?wkt .
+
+  # Filter buildings within a bounding box (Turin city center example)
+  FILTER(geof:sfWithin(
+    ?wkt,
+    "POLYGON((7.67 45.06, 7.69 45.06, 7.69 45.07, 7.67 45.07, 7.67 45.06))"^^geo:wktLiteral
+  ))
+}
+
+
+# ── 5. Insert a building with geometry (SPARQL Update) ──────
+PREFIX bot:  <https://w3id.org/bot#>
+PREFIX geo:  <http://www.opengis.net/ont/geosparql#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+INSERT DATA {
+  GRAPH <http://example.org/my-buildings> {
+    <http://example.org/building/001>
+        a bot:Building ;
+        rdfs:label "Smart Office Block A" ;
+        geo:hasGeometry <http://example.org/geom/001> .
+
+    <http://example.org/geom/001>
+        a geo:Geometry ;
+        geo:asWKT "POLYGON((7.6824 45.0660, 7.6834 45.0660, 7.6834 45.0668, 7.6824 45.0668, 7.6824 45.0660))"^^geo:wktLiteral .
+  }
+}
+
+
+# ── 6. SOSA/SSN: list sensors observing a building ──────────
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+PREFIX bot:  <https://w3id.org/bot#>
+
+SELECT ?sensor ?observedProperty ?result WHERE {
+  ?obs  a sosa:Observation ;
+        sosa:madeBySensor         ?sensor ;
+        sosa:observedProperty     ?observedProperty ;
+        sosa:hasSimpleResult      ?result ;
+        sosa:hasFeatureOfInterest ?room .
+  ?room a bot:Space .
+}
+ORDER BY ?sensor

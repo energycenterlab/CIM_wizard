@@ -1,0 +1,613 @@
+schema,table,column,type,pk,fk_to,description
+citydb,address,id,bigint,yes,,Auto-generated primary key (from address_seq)
+citydb,address,objectid,text,,,Optional external object identifier
+citydb,address,identifier,text,,,GML identifier for address
+citydb,address,identifier_codespace,text,,,Codespace of the identifier
+citydb,address,street,text,,,Street name
+citydb,address,house_number,text,,,House number
+citydb,address,po_box,text,,,PO box
+citydb,address,zip_code,text,,,Postal/zip code
+citydb,address,city,text,,,City name
+citydb,address,state,text,,,State or province
+citydb,address,country,text,,,Country name
+citydb,address,free_text,jsonb,,,Unstructured address text as JSON
+citydb,address,multi_point,geometry(MultiPointZ 4326),,,Spatial location of the address (WGS84 3D)
+citydb,address,content,text,,,Raw XML/GML content of the address element
+citydb,address,content_mime_type,text,,,MIME type of content field
+citydb,ade,id,integer,yes,,Auto-generated PK (from ade_seq); max 2147483647
+citydb,ade,name,text,,,Human-readable name of the ADE
+citydb,ade,description,text,,,Description of the ADE
+citydb,ade,version,text,,,Version string of the ADE
+citydb,appear_to_surface_data,id,bigint,yes,,Auto-generated PK
+citydb,appear_to_surface_data,appearance_id,bigint,,citydb.appearance.id,FK to the appearance object
+citydb,appear_to_surface_data,surface_data_id,bigint,,citydb.surface_data.id,FK to the surface data (texture/material)
+citydb,appearance,id,bigint,yes,,Auto-generated PK (from appearance_seq)
+citydb,appearance,objectid,text,,,External object identifier
+citydb,appearance,identifier,text,,,GML identifier
+citydb,appearance,identifier_codespace,text,,,Codespace of identifier
+citydb,appearance,theme,text,,,Appearance theme name (e.g. 'daylight')
+citydb,appearance,is_global,integer,,,1 if this appearance applies globally (not per-feature)
+citydb,appearance,feature_id,bigint,,citydb.feature.id,FK to the feature this appearance belongs to (null if global)
+citydb,appearance,implicit_geometry_id,bigint,,citydb.implicit_geometry.id,FK to implicit geometry if appearance is on a template
+citydb,building,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject (v4 compat table)
+citydb,building,building_parent_id,bigint,,citydb.building.id,FK to parent building (for building parts)
+citydb,building,building_root_id,bigint,,citydb.building.id,FK to root building in the hierarchy
+citydb,building,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (26=Building 25=BuildingPart)
+citydb,building,measured_height,double precision,,,Measured height of the building in metres
+citydb,building,measured_height_unit,varchar(4000),,,Unit of measure for measured_height
+citydb,building,storeys_above_ground,numeric,,,Number of storeys above ground level
+citydb,building,storeys_below_ground,numeric,,,Number of storeys below ground level
+citydb,building,lod0_footprint_id,bigint,,citydb.surface_geometry.id,FK to LoD0 footprint polygon in surface_geometry
+citydb,building,lod0_roofprint_id,bigint,,citydb.surface_geometry.id,FK to LoD0 roofprint polygon
+citydb,building,lod1_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD1 multi-surface geometry
+citydb,building,lod2_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD2 multi-surface geometry
+citydb,building,lod3_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD3 multi-surface geometry
+citydb,building,lod4_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD4 multi-surface geometry
+citydb,building,lod1_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD1 solid geometry root in surface_geometry
+citydb,building,lod2_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD2 solid geometry root
+citydb,building,lod3_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD3 solid geometry root
+citydb,building,lod4_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD4 solid geometry root
+citydb,citymodel,id,bigint,yes,,PK of the city model container
+citydb,citymodel,gmlid,varchar(256),,,GML identifier (gml:id)
+citydb,citymodel,name,varchar(1000),,,Human-readable name
+citydb,citymodel,name_codespace,varchar(4000),,,Codespace for name
+citydb,citymodel,description,varchar(4000),,,Textual description
+citydb,citymodel,envelope,geometry(Geometry 4326),,,Bounding box of the city model (WGS84)
+citydb,citymodel,creation_date,timestamptz,,,Timestamp when the model was created
+citydb,citymodel,last_modification_date,timestamptz,,,Timestamp of last modification
+citydb,citymodel,lineage,varchar(256),,,Data lineage / provenance string
+citydb,cityobject,id,bigint,yes,,Shared PK with v4 feature tables (from cityobject_seq)
+citydb,cityobject,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass — determines the feature type
+citydb,cityobject,gmlid,varchar(256),,,GML id attribute value (unique within a dataset)
+citydb,cityobject,gmlid_codespace,varchar(1000),,,Codespace qualifying gmlid
+citydb,cityobject,name,varchar(1000),,,Feature name
+citydb,cityobject,name_codespace,varchar(4000),,,Codespace for name
+citydb,cityobject,description,varchar(4000),,,Textual description
+citydb,cityobject,envelope,geometry(Geometry 4326),,,Bounding box of the city object
+citydb,cityobject,creation_date,timestamptz,,,Date when the data was created/imported
+citydb,cityobject,termination_date,timestamptz,,,Date when the object was terminated/demolished
+citydb,cityobject,last_modification_date,timestamptz,,,Timestamp of last modification
+citydb,cityobject,lineage,varchar(256),,,Data lineage / provenance
+citydb,cityobject,xml_source,text,,,Original XML/GML source fragment
+citydb,cityobject_genericattrib,id,bigint,yes,,PK (from cityobject_genericattrib_seq)
+citydb,cityobject_genericattrib,parent_genattrib_id,bigint,,citydb.cityobject_genericattrib.id,FK to parent generic attribute (for nested sets)
+citydb,cityobject_genericattrib,root_genattrib_id,bigint,,citydb.cityobject_genericattrib.id,FK to root of the attribute tree
+citydb,cityobject_genericattrib,attrname,varchar(256),,,Attribute name
+citydb,cityobject_genericattrib,datatype,numeric,,,Data type code (1=string 2=int 3=real 4=uri 5=date 6=blob 7=nested)
+citydb,cityobject_genericattrib,strval,varchar(4000),,,String value (used when datatype=1)
+citydb,cityobject_genericattrib,intval,integer,,,Integer value (used when datatype=2)
+citydb,cityobject_genericattrib,realval,double precision,,,Real/float value (used when datatype=3)
+citydb,cityobject_genericattrib,urival,varchar(4000),,,URI value (used when datatype=4)
+citydb,cityobject_genericattrib,dateval,timestamptz,,,Date value (used when datatype=5)
+citydb,cityobject_genericattrib,unit,varchar(4000),,,Unit of measure for numeric values
+citydb,cityobject_genericattrib,cityobject_id,bigint,,citydb.cityobject.id,FK to the city object this attribute belongs to
+citydb,cityobject_member,citymodel_id,bigint,yes,citydb.citymodel.id,FK to the city model (composite PK)
+citydb,cityobject_member,cityobject_id,bigint,yes,citydb.cityobject.id,FK to the city object member (composite PK)
+citydb,codelist,id,bigint,yes,,Auto-generated PK (from codelist_seq)
+citydb,codelist,codelist_type,text,,,Type/category of the code list
+citydb,codelist,url,text,,,URL where the code list is published
+citydb,codelist,mime_type,text,,,MIME type of the code list resource
+citydb,codelist_entry,id,bigint,yes,,Auto-generated PK (from codelist_entry_seq)
+citydb,codelist_entry,codelist_id,bigint,,citydb.codelist.id,FK to the parent code list
+citydb,codelist_entry,code,text,,,Code value
+citydb,codelist_entry,definition,text,,,Human-readable definition of the code
+citydb,database_srs,srid,integer,yes,,EPSG code of the database CRS (e.g. 4326)
+citydb,database_srs,srs_name,text,,,URN of the CRS (e.g. urn:ogc:def:crs:EPSG::4326)
+citydb,datatype,id,integer,yes,,PK of the data type entry
+citydb,datatype,supertype_id,integer,,citydb.datatype.id,FK to parent data type (inheritance)
+citydb,datatype,typename,text,,,Qualified type name
+citydb,datatype,is_abstract,integer,,,1 if this type is abstract (cannot be instantiated)
+citydb,datatype,ade_id,integer,,citydb.ade.id,FK to ADE that defines this type (null for core)
+citydb,datatype,namespace_id,integer,,citydb.namespace.id,FK to the XML namespace
+citydb,datatype,schema,jsonb,,,JSON Schema definition of the type
+citydb,feature,id,bigint,yes,,Auto-generated PK (from feature_seq) — main v5 feature table
+citydb,feature,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (determines feature type e.g. Building)
+citydb,feature,objectid,text,,,External object identifier
+citydb,feature,identifier,text,,,GML gml:id
+citydb,feature,identifier_codespace,text,,,Codespace qualifying identifier
+citydb,feature,envelope,geometry(GeometryZ 4326),,,3D bounding box of the feature
+citydb,feature,last_modification_date,timestamptz,,,Timestamp of last modification
+citydb,feature,updating_person,text,,,Person who last updated the record
+citydb,feature,reason_for_update,text,,,Reason given for the last update
+citydb,feature,lineage,text,,,Data lineage / provenance
+citydb,feature,creation_date,timestamptz,,,When the feature was created/imported
+citydb,feature,termination_date,timestamptz,,,When the feature was terminated (null = still active)
+citydb,feature,valid_from,timestamptz,,,Start of the real-world validity interval
+citydb,feature,valid_to,timestamptz,,,End of the real-world validity interval (null = open-ended)
+citydb,geometry_data,id,bigint,yes,,Auto-generated PK (from geometry_data_seq)
+citydb,geometry_data,geometry,geometry(GeometryZ 4326),,,The actual 3D geometry in the database CRS
+citydb,geometry_data,implicit_geometry,geometry(GeometryZ),,,Template geometry for implicit geometry (no SRID; placed via transform)
+citydb,geometry_data,geometry_properties,jsonb,,,JSON bag of geometry metadata (e.g. lod type semantic)
+citydb,geometry_data,feature_id,bigint,,citydb.feature.id,FK to the feature that owns this geometry
+citydb,implicit_geometry,id,bigint,yes,,Auto-generated PK (from implicit_geometry_seq)
+citydb,implicit_geometry,objectid,text,,,External identifier for the geometry template
+citydb,implicit_geometry,mime_type,text,,,MIME type of external library object
+citydb,implicit_geometry,mime_type_codespace,text,,,Codespace for mime_type
+citydb,implicit_geometry,reference_to_library,text,,,URI pointing to external geometry library file
+citydb,implicit_geometry,library_object,bytea,,,Embedded binary geometry data (e.g. OBJ COLLADA)
+citydb,implicit_geometry,relative_geometry_id,bigint,,citydb.geometry_data.id,FK to the relative (template) geometry in geometry_data
+citydb,namespace,id,integer,yes,,PK of the namespace entry
+citydb,namespace,alias,text,,,Short alias prefix (e.g. 'bldg')
+citydb,namespace,namespace,text,,,Full namespace URI
+citydb,namespace,ade_id,integer,,citydb.ade.id,FK to the ADE that defines this namespace (null for core)
+citydb,objectclass,id,integer,yes,,PK — numeric class ID used in objectclass_id columns everywhere
+citydb,objectclass,superclass_id,integer,,citydb.objectclass.id,FK to parent class (inheritance hierarchy)
+citydb,objectclass,classname,text,,,Qualified class name (e.g. 'core:Building')
+citydb,objectclass,is_abstract,integer,,,1 if abstract (e.g. AbstractFeature)
+citydb,objectclass,is_toplevel,integer,,,1 if this class can appear as a top-level city object
+citydb,objectclass,ade_id,integer,,citydb.ade.id,FK to the ADE that defines this class (null for core CityGML)
+citydb,objectclass,namespace_id,integer,,citydb.namespace.id,FK to the XML namespace
+citydb,objectclass,schema,jsonb,,,JSON Schema fragment describing the class
+citydb,property,id,bigint,yes,,Auto-generated PK (from property_seq) — EAV row for one attribute
+citydb,property,feature_id,bigint,,citydb.feature.id,FK to the feature that owns this property
+citydb,property,parent_id,bigint,,citydb.property.id,FK to parent property (for nested/complex values)
+citydb,property,datatype_id,integer,,citydb.datatype.id,FK to data type that determines which val_* column is used
+citydb,property,namespace_id,integer,,citydb.namespace.id,FK to the namespace of this property name
+citydb,property,name,text,,,Property name (e.g. 'height' 'roofType')
+citydb,property,val_int,bigint,,,Integer value
+citydb,property,val_double,double precision,,,Floating-point value
+citydb,property,val_string,text,,,String value
+citydb,property,val_timestamp,timestamptz,,,Timestamp value
+citydb,property,val_uri,text,,,URI value
+citydb,property,val_codespace,text,,,Codespace for coded values
+citydb,property,val_uom,text,,,Unit of measure string
+citydb,property,val_array,jsonb,,,Array value stored as JSON
+citydb,property,val_lod,text,,,LoD qualifier for geometry properties (e.g. 'lod1' 'lod2')
+citydb,property,val_geometry_id,bigint,,citydb.geometry_data.id,FK to geometry_data when value is a geometry
+citydb,property,val_implicitgeom_id,bigint,,citydb.implicit_geometry.id,FK to implicit geometry template
+citydb,property,val_implicitgeom_refpoint,geometry(PointZ 4326),,,Anchor point for placing implicit geometry
+citydb,property,val_appearance_id,bigint,,citydb.appearance.id,FK to appearance when value is an appearance
+citydb,property,val_address_id,bigint,,citydb.address.id,FK to address when value is an address
+citydb,property,val_feature_id,bigint,,citydb.feature.id,FK to another feature (for associations/relations)
+citydb,property,val_relation_type,integer,,,Relation semantics: 0=reference 1=composition (owned child)
+citydb,property,val_content,text,,,Inline XML/JSON content for non-mapped complex types
+citydb,property,val_content_mime_type,text,,,MIME type of val_content
+citydb,surface_data,id,bigint,yes,,Auto-generated PK (from surface_data_seq)
+citydb,surface_data,objectid,text,,,External identifier
+citydb,surface_data,identifier,text,,,GML identifier
+citydb,surface_data,identifier_codespace,text,,,Codespace for identifier
+citydb,surface_data,is_front,integer,,,1 if this material/texture applies to the front face
+citydb,surface_data,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (X3DMaterial ParameterizedTexture GeoreferencedTexture)
+citydb,surface_data,x3d_shininess,double precision,,,X3D material shininess [0–1]
+citydb,surface_data,x3d_transparency,double precision,,,X3D material transparency [0–1]
+citydb,surface_data,x3d_ambient_intensity,double precision,,,X3D ambient intensity [0–1]
+citydb,surface_data,x3d_specular_color,text,,,X3D specular color (RGB hex or triplet)
+citydb,surface_data,x3d_diffuse_color,text,,,X3D diffuse color
+citydb,surface_data,x3d_emissive_color,text,,,X3D emissive color
+citydb,surface_data,x3d_is_smooth,integer,,,1 if smooth shading (Gouraud); 0 = flat
+citydb,surface_data,tex_image_id,bigint,,citydb.tex_image.id,FK to the texture image
+citydb,surface_data,tex_texture_type,text,,,Texture type (specific unknown)
+citydb,surface_data,tex_wrap_mode,text,,,Texture wrapping mode (wrap mirror clamp border)
+citydb,surface_data,tex_border_color,text,,,Color used outside texture for border wrap mode
+citydb,surface_data,gt_orientation,jsonb,,,Georeferenced texture orientation matrix as JSON array
+citydb,surface_data,gt_reference_point,geometry(Point 4326),,,Georeferenced texture anchor point
+citydb,surface_data_mapping,surface_data_id,bigint,yes,citydb.surface_data.id,FK to surface data (composite PK)
+citydb,surface_data_mapping,geometry_data_id,bigint,yes,citydb.geometry_data.id,FK to geometry data (composite PK)
+citydb,surface_data_mapping,material_mapping,jsonb,,,JSON mapping ring indices to material target
+citydb,surface_data_mapping,texture_mapping,jsonb,,,JSON mapping ring indices to texture coordinates
+citydb,surface_data_mapping,world_to_texture_mapping,jsonb,,,World-to-texture transform matrix as JSON
+citydb,surface_data_mapping,georeferenced_texture_mapping,jsonb,,,Georeferenced texture mapping parameters
+citydb,surface_geometry,id,bigint,yes,,PK (v4-compat geometry tree node)
+citydb,surface_geometry,gmlid,varchar(256),,,GML id of this geometry node
+citydb,surface_geometry,gmlid_codespace,varchar(1000),,,Codespace for gmlid
+citydb,surface_geometry,parent_id,bigint,,citydb.surface_geometry.id,FK to parent node (tree structure — null means root)
+citydb,surface_geometry,root_id,bigint,,citydb.surface_geometry.id,FK to root node of this geometry tree
+citydb,surface_geometry,is_solid,numeric,,,1 if this node represents a solid
+citydb,surface_geometry,is_composite,numeric,,,1 if this node is a composite surface
+citydb,surface_geometry,is_triangulated,numeric,,,1 if this geometry is a triangulated surface
+citydb,surface_geometry,is_xlink,numeric,,,1 if this is an XLink reference to another geometry
+citydb,surface_geometry,is_reverse,numeric,,,1 if the surface normal is reversed
+citydb,surface_geometry,solid_geometry,geometry(GeometryZ 4326),,,Solid geometry stored at root node (3D WGS84)
+citydb,surface_geometry,geometry,geometry(GeometryZ 4326),,,Leaf polygon geometry (3D WGS84)
+citydb,surface_geometry,cityobject_id,bigint,,citydb.cityobject.id,FK to the city object that owns this geometry tree
+citydb,tex_image,id,bigint,yes,,Auto-generated PK (from tex_image_seq)
+citydb,tex_image,image_uri,text,,,URI pointing to the texture image file
+citydb,tex_image,image_data,bytea,,,Embedded binary image data
+citydb,tex_image,mime_type,text,,,MIME type of the image (e.g. image/png)
+citydb,tex_image,mime_type_codespace,text,,,Codespace for mime_type
+citydb,thematic_surface,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject (v4 compat)
+citydb,thematic_surface,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (33=RoofSurface 34=WallSurface 35=GroundSurface etc.)
+citydb,thematic_surface,building_id,bigint,,citydb.building.id,FK to the parent building
+citydb,thematic_surface,room_id,bigint,,citydb.cityobject.id,FK to interior room (if this is an interior boundary surface)
+citydb,thematic_surface,building_installation_id,bigint,,citydb.cityobject.id,FK to building installation
+citydb,thematic_surface,lod2_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD2 multi-surface geometry root
+citydb,thematic_surface,lod3_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD3 multi-surface geometry root
+citydb,thematic_surface,lod4_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD4 multi-surface geometry root
+citydb,ng2_address_to_building_unit,address_id,bigint,yes,citydb.address.id,FK to address (composite PK)
+citydb,ng2_address_to_building_unit,building_unit_id,bigint,yes,citydb.ng2_building_partition.id,FK to building unit (composite PK)
+citydb,ng2_building,id,bigint,yes,citydb.building.id,PK shared with building — extends building with energy properties
+citydb,ng2_building,type,varchar,,,Building type code (e.g. residential industrial)
+citydb,ng2_building,type_codespace,varchar,,,Codespace for type
+citydb,ng2_building,is_protected,numeric,,,1 if the building is listed/heritage-protected
+citydb,ng2_building,constr_weight,varchar,,,Construction weight class (e.g. light medium heavy)
+citydb,ng2_building,constr_weight_codespace,varchar,,,Codespace for constr_weight
+citydb,ng2_building,attic_thm_status,varchar,,,Thermal status of the attic (heated unheated)
+citydb,ng2_building,basement_thm_status,varchar,,,Thermal status of the basement (heated unheated)
+citydb,ng2_building_partition,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — one row per ThermalZone UsageZone or BuildingUnit
+citydb,ng2_building_partition,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (distinguishes ThermalZone / UsageZone / BuildingUnit)
+citydb,ng2_building_partition,heat_capacity,numeric,,,Thermal heat capacity of the zone (J/K)
+citydb,ng2_building_partition,heat_capacity_uom,varchar,,,Unit of measure for heat_capacity
+citydb,ng2_building_partition,infiltration_rate,numeric,,,Air infiltration rate (1/h)
+citydb,ng2_building_partition,infiltration_rate_uom,varchar,,,Unit of measure for infiltration_rate
+citydb,ng2_building_partition,is_cooled,numeric,,,1 if the zone has active cooling
+citydb,ng2_building_partition,is_heated,numeric,,,1 if the zone is actively heated
+citydb,ng2_building_partition,coincides_with_lod2_hull,numeric,,,1 if the zone boundary coincides with the LoD2 building hull
+citydb,ng2_building_partition,coincides_with_lod3_hull,numeric,,,1 if the zone boundary coincides with the LoD3 building hull
+citydb,ng2_building_partition,type,varchar,,,Type of usage zone or building unit
+citydb,ng2_building_partition,type_codespace,varchar,,,Codespace for type
+citydb,ng2_building_partition,is_primary,numeric,,,1 if this is the primary usage zone
+citydb,ng2_building_partition,num_of_building_units,integer,,,Number of building units within this usage zone
+citydb,ng2_building_partition,int_heat_gains,numeric,,,Total internal heat gains (W)
+citydb,ng2_building_partition,int_heat_gains_uom,varchar,,,Unit for int_heat_gains
+citydb,ng2_building_partition,int_heat_gains_conv,numeric,,,Convective fraction of internal heat gains (W)
+citydb,ng2_building_partition,int_heat_gains_conv_uom,varchar,,,Unit for convective heat gains
+citydb,ng2_building_partition,int_heat_gains_lat,numeric,,,Latent fraction of internal heat gains (W)
+citydb,ng2_building_partition,int_heat_gains_lat_uom,varchar,,,Unit for latent heat gains
+citydb,ng2_building_partition,int_heat_gains_rad,numeric,,,Radiant fraction of internal heat gains (W)
+citydb,ng2_building_partition,int_heat_gains_rad_uom,varchar,,,Unit for radiant heat gains
+citydb,ng2_building_partition,num_of_rooms,integer,,,Number of rooms (BuildingUnit only)
+citydb,ng2_building_partition,owner_name,varchar,,,Owner name (BuildingUnit only)
+citydb,ng2_building_partition,ownership_type,varchar,,,Ownership type code (BuildingUnit only)
+citydb,ng2_building_partition,ownership_type_codespace,varchar,,,Codespace for ownership_type
+citydb,ng2_building_partition,cooling_schedule_id,bigint,,citydb.ng2_schedule.id,FK to cooling schedule
+citydb,ng2_building_partition,heating_schedule_id,bigint,,citydb.ng2_schedule.id,FK to heating schedule
+citydb,ng2_building_partition,ventilation_schedule_id,bigint,,citydb.ng2_schedule.id,FK to ventilation schedule
+citydb,ng2_building_partition,usage_zone_id,bigint,,citydb.ng2_building_partition.id,FK to parent UsageZone (for BuildingUnit rows)
+citydb,ng2_building_partition,thermal_zone_id,bigint,,citydb.ng2_building_partition.id,FK to parent ThermalZone (for UsageZone rows)
+citydb,ng2_building_partition,building_id,bigint,,citydb.ng2_building.id,FK to the ng2_building that contains this partition
+citydb,ng2_building_partition,lod1_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD1 solid geometry root
+citydb,ng2_building_partition,lod2_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD2 solid geometry root
+citydb,ng2_building_partition,lod3_solid_id,bigint,,citydb.surface_geometry.id,FK to LoD3 solid geometry root
+citydb,ng2_cityobject,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — extends any city object with energy reference point
+citydb,ng2_cityobject,layered_construction_id,bigint,,citydb.ng2_layered_construction.id,FK to the layered construction assigned to this object
+citydb,ng2_cityobject,ref_point,geometry(PointZ),,,3D reference point for the city object (no fixed SRID)
+citydb,ng2_ctyobj_relation,id,bigint,yes,,Auto-generated PK (from ng2_ctyobj_relation_seq)
+citydb,ng2_ctyobj_relation,ng2_cityobject_id,bigint,,citydb.ng2_cityobject.id,FK to the source energy city object
+citydb,ng2_ctyobj_relation,cityobject_id,bigint,,citydb.cityobject.id,FK to the target city object
+citydb,ng2_ctyobj_relation,relation_type,varchar,,,Semantic type of the relationship
+citydb,ng2_ctyobj_relation,relation_type_codespace,varchar,,,Codespace for relation_type
+citydb,ng2_device,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — covers all device subtypes
+citydb,ng2_device,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (Boiler HeatPump LightingDevice MovableShadingDevice etc.)
+citydb,ng2_device,model,varchar,,,Manufacturer model name
+citydb,ng2_device,num_of_devices,integer,,,Number of physical units
+citydb,ng2_device,year_of_manufacture,integer,,,Year of manufacture
+citydb,ng2_device,installed_power,numeric,,,Installed nominal power (W)
+citydb,ng2_device,installed_power_uom,varchar,,,Unit for installed_power
+citydb,ng2_device,nominal_efficiency,numeric,,,Nominal efficiency [0–1]
+citydb,ng2_device,nominal_efficiency_uom,varchar,,,Unit for nominal_efficiency
+citydb,ng2_device,efficiency_indicator,varchar,,,Efficiency label or class (e.g. A+)
+citydb,ng2_device,heat_diss,numeric,,,Total heat dissipation (W)
+citydb,ng2_device,heat_diss_uom,varchar,,,Unit for heat_diss
+citydb,ng2_device,heat_diss_conv,numeric,,,Convective heat dissipation (W)
+citydb,ng2_device,heat_diss_conv_uom,varchar,,,Unit for convective dissipation
+citydb,ng2_device,heat_diss_lat,numeric,,,Latent heat dissipation (W)
+citydb,ng2_device,heat_diss_lat_uom,varchar,,,Unit for latent dissipation
+citydb,ng2_device,heat_diss_rad,numeric,,,Radiant heat dissipation (W)
+citydb,ng2_device,heat_diss_rad_uom,varchar,,,Unit for radiant dissipation
+citydb,ng2_device,heat_source,varchar,,,Heat source type for HeatPump (air water ground)
+citydb,ng2_device,cop_source_temp,numeric,,,Source temperature at which COP is defined (°C)
+citydb,ng2_device,cop_source_temp_uom,varchar,,,Unit for cop_source_temp
+citydb,ng2_device,cop_operation_temp,numeric,,,Operating temperature at which COP is defined (°C)
+citydb,ng2_device,cop_operation_temp_uom,varchar,,,Unit for cop_operation_temp
+citydb,ng2_device,has_condensation,numeric,,,1 if Boiler is condensing
+citydb,ng2_device,type,varchar,,,Type for MovableShadingDevice (rollershutter blind etc.)
+citydb,ng2_device,type_codespace,varchar,,,Codespace for type
+citydb,ng2_device,installation_side,varchar,,,Which side shading device is installed (interior exterior)
+citydb,ng2_device,max_cover_ratio,numeric,,,Maximum cover ratio of shading device [0–1]
+citydb,ng2_device,max_cover_ratio_uom,varchar,,,Unit for max_cover_ratio
+citydb,ng2_device,transmittance_id,bigint,,citydb.ng2_optical_property.id,FK to optical transmittance property (shading device)
+citydb,ng2_device,cityobject_id,bigint,,citydb.ng2_cityobject.id,FK to the ng2_cityobject that contains this device
+citydb,ng2_device_operation,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_device_operation,type,varchar,,,Operation type code
+citydb,ng2_device_operation,type_codespace,varchar,,,Codespace for type
+citydb,ng2_device_operation,yearly_global_efficiency,numeric,,,Annual average global efficiency [0–1]
+citydb,ng2_device_operation,schedule_id,bigint,,citydb.ng2_schedule.id,FK to operation schedule
+citydb,ng2_device_operation,device_id,bigint,,citydb.ng2_device.id,FK to the device this operation describes
+citydb,ng2_energy_perf_cert,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_energy_perf_cert,type,varchar,,,Certificate type (e.g. EPC DGNB LEED)
+citydb,ng2_energy_perf_cert,type_codespace,varchar,,,Codespace for type
+citydb,ng2_energy_perf_cert,label,varchar,,,Energy label (e.g. A B C)
+citydb,ng2_energy_perf_cert,value,numeric,,,Primary energy demand or rating value
+citydb,ng2_energy_perf_cert,value_uom,varchar,,,Unit for value (e.g. kWh/m²a)
+citydb,ng2_energy_perf_cert,issue_date,date,,,Date the certificate was issued
+citydb,ng2_energy_perf_cert,expiration_date,date,,,Expiry date of the certificate
+citydb,ng2_energy_perf_cert,cert_method,varchar,,,Certification method (calculated measured)
+citydb,ng2_energy_perf_cert,cert_uri,varchar,,,URI to the full certificate document
+citydb,ng2_energy_perf_cert,building_id,bigint,,citydb.ng2_building.id,FK to the building the certificate applies to
+citydb,ng2_energy_perf_cert,building_partition_id,bigint,,citydb.ng2_building_partition.id,FK to the specific zone/unit the certificate applies to
+citydb,ng2_layer,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — one construction layer
+citydb,ng2_layer,thickness,numeric,,,Layer thickness (m)
+citydb,ng2_layer,thickness_uom,varchar,,,Unit for thickness
+citydb,ng2_layer,material_id,bigint,,citydb.ng2_material.id,FK to the material of this layer
+citydb,ng2_layer,layered_construction_id,bigint,,citydb.ng2_layered_construction.id,FK to the construction assembly this layer belongs to
+citydb,ng2_layered_construction,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_layered_construction,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (LayeredConstruction or WindowType)
+citydb,ng2_layered_construction,u_value,numeric,,,Thermal transmittance (W/m²K)
+citydb,ng2_layered_construction,u_value_uom,varchar,,,Unit for u_value
+citydb,ng2_layered_construction,g_value,numeric,,,Solar heat gain coefficient (glazing) [0–1]
+citydb,ng2_layered_construction,g_value_uom,varchar,,,Unit for g_value
+citydb,ng2_layered_construction,glazing_ratio,numeric,,,Fraction of the surface that is glazed [0–1]
+citydb,ng2_layered_construction,glazing_ratio_uom,varchar,,,Unit for glazing_ratio
+citydb,ng2_layered_construction,library_code,varchar,,,Code referencing this construction in a library
+citydb,ng2_layered_construction,library_code_codespace,varchar,,,Codespace for library_code
+citydb,ng2_layered_construction,layered_construction_id,bigint,,citydb.ng2_layered_construction.id,Self-FK to parent (e.g. window type references wall construction)
+citydb,ng2_layered_construction,library_id,bigint,,citydb.ng2_library.id,FK to the material/construction library
+citydb,ng2_library,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_library,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (MaterialLibrary ConstructionLibrary)
+citydb,ng2_library,type,varchar,,,Library type
+citydb,ng2_library,type_codespace,varchar,,,Codespace for type
+citydb,ng2_library,author,varchar,,,Author or maintainer of the library
+citydb,ng2_library,source,varchar,,,URI or reference to the library source
+citydb,ng2_material,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_material,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (SolidMaterial Gas)
+citydb,ng2_material,library_code,varchar,,,Library reference code
+citydb,ng2_material,library_code_codespace,varchar,,,Codespace for library_code
+citydb,ng2_material,thm_conductivity,numeric,,,Thermal conductivity λ (W/mK)
+citydb,ng2_material,thm_conductivity_uom,varchar,,,Unit for thm_conductivity
+citydb,ng2_material,spec_heat_capacity,numeric,,,Specific heat capacity cp (J/kgK)
+citydb,ng2_material,spec_heat_capacity_uom,varchar,,,Unit for spec_heat_capacity
+citydb,ng2_material,density,numeric,,,Density ρ (kg/m³)
+citydb,ng2_material,density_uom,varchar,,,Unit for density
+citydb,ng2_material,permeance,numeric,,,Water vapour permeance (kg/m²sPa)
+citydb,ng2_material,permeance_uom,varchar,,,Unit for permeance
+citydb,ng2_material,porosity,numeric,,,Porosity [0–1]
+citydb,ng2_material,porosity_uom,varchar,,,Unit for porosity
+citydb,ng2_material,embodied_carbon,numeric,,,Embodied carbon (kg CO₂eq/kg)
+citydb,ng2_material,embodied_carbon_uom,varchar,,,Unit for embodied_carbon
+citydb,ng2_material,embodied_energy,numeric,,,Embodied energy (MJ/kg)
+citydb,ng2_material,embodied_energy_uom,varchar,,,Unit for embodied_energy
+citydb,ng2_material,is_ventilated,numeric,,,1 if this is a ventilated air gap (Gas subtype)
+citydb,ng2_material,r_value,numeric,,,Thermal resistance of air gap (m²K/W) (Gas subtype)
+citydb,ng2_material,r_value_uom,varchar,,,Unit for r_value
+citydb,ng2_material,library_id,bigint,,citydb.ng2_library.id,FK to the material library
+citydb,ng2_occupants,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_occupants,type,varchar,,,Occupant type (residential commercial etc.)
+citydb,ng2_occupants,type_codespace,varchar,,,Codespace for type
+citydb,ng2_occupants,num_of_occupants,integer,,,Number of occupants
+citydb,ng2_occupants,heat_diss,numeric,,,Total metabolic heat dissipation per occupant (W)
+citydb,ng2_occupants,heat_diss_uom,varchar,,,Unit for heat_diss
+citydb,ng2_occupants,heat_diss_conv,numeric,,,Convective metabolic heat dissipation (W)
+citydb,ng2_occupants,heat_diss_conv_uom,varchar,,,Unit
+citydb,ng2_occupants,heat_diss_lat,numeric,,,Latent metabolic heat dissipation (W)
+citydb,ng2_occupants,heat_diss_lat_uom,varchar,,,Unit
+citydb,ng2_occupants,heat_diss_rad,numeric,,,Radiant metabolic heat dissipation (W)
+citydb,ng2_occupants,heat_diss_rad_uom,varchar,,,Unit
+citydb,ng2_occupants,avg_diet_type,varchar,,,Average diet type of occupants
+citydb,ng2_occupants,avg_diet_type_codespace,varchar,,,Codespace for avg_diet_type
+citydb,ng2_occupants,avg_income_level,varchar,,,Average income level
+citydb,ng2_occupants,avg_income_level_codespace,varchar,,,Codespace for avg_income_level
+citydb,ng2_occupants,avg_instr_level,varchar,,,Average instruction/education level
+citydb,ng2_occupants,avg_instr_level_codespace,varchar,,,Codespace for avg_instr_level
+citydb,ng2_occupants,schedule_id,bigint,,citydb.ng2_schedule.id,FK to occupancy schedule
+citydb,ng2_occupants,building_partition_id,bigint,,citydb.ng2_building_partition.id,FK to the usage zone or building unit
+citydb,ng2_opening,id,bigint,yes,,PK — energy extension of a window or door opening (no FK enforced in v5)
+citydb,ng2_opening,area,numeric,,,Opening area (m²)
+citydb,ng2_opening,area_uom,varchar,,,Unit for area
+citydb,ng2_opening,azimuth,numeric,,,Azimuth angle of the opening (°)
+citydb,ng2_opening,azimuth_uom,varchar,,,Unit for azimuth
+citydb,ng2_opening,inclination,numeric,,,Inclination/tilt angle (°)
+citydb,ng2_opening,inclination_uom,varchar,,,Unit for inclination
+citydb,ng2_opening,ground_view_factor,numeric,,,Ground view factor [0–1] — fraction of hemisphere facing ground
+citydb,ng2_opening,ground_view_factor_uom,varchar,,,Unit for ground_view_factor
+citydb,ng2_opening,sky_view_factor,numeric,,,Sky view factor [0–1] — fraction of hemisphere facing sky
+citydb,ng2_opening,sky_view_factor_uom,varchar,,,Unit for sky_view_factor
+citydb,ng2_optical_property,id,bigint,yes,,Auto-generated PK (from ng2_optical_property_seq)
+citydb,ng2_optical_property,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (Reflectance Transmittance Emittance)
+citydb,ng2_optical_property,fraction,numeric,,,Optical fraction value [0–1]
+citydb,ng2_optical_property,fraction_uom,varchar,,,Unit for fraction
+citydb,ng2_optical_property,surface,varchar,,,Which surface this applies to (exterior interior)
+citydb,ng2_optical_property,wavelength_range,varchar,,,Wavelength range (solar thermal visible)
+citydb,ng2_optical_property,layered_construction_id,bigint,,citydb.ng2_layered_construction.id,FK to the construction this optical property belongs to
+citydb,ng2_qualified_attribute,id,bigint,yes,,Auto-generated PK (from ng2_qualified_attribute_seq)
+citydb,ng2_qualified_attribute,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (attribute type)
+citydb,ng2_qualified_attribute,type,varchar,,,Attribute type name (e.g. heatedFloorArea primaryEnergyDemand)
+citydb,ng2_qualified_attribute,type_codespace,varchar,,,Codespace for type
+citydb,ng2_qualified_attribute,value,numeric,,,Numeric value of the attribute
+citydb,ng2_qualified_attribute,value_uom,varchar,,,Unit of measure for value
+citydb,ng2_qualified_attribute,description,varchar,,,Free-text description
+citydb,ng2_qualified_attribute,source,varchar,,,Data source or method
+citydb,ng2_qualified_attribute,building_id,bigint,,citydb.ng2_building.id,FK to the building (if attribute is at building level)
+citydb,ng2_qualified_attribute,building_partition_id,bigint,,citydb.ng2_building_partition.id,FK to the zone/unit (if attribute is at partition level)
+citydb,ng2_refurbishment_measure,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_refurbishment_measure,type,varchar,,,Refurbishment type (wallInsulation roofInsulation windowReplacement etc.)
+citydb,ng2_refurbishment_measure,type_codespace,varchar,,,Codespace for type
+citydb,ng2_refurbishment_measure,start_date,date,,,Date when the refurbishment started
+citydb,ng2_refurbishment_measure,end_date,date,,,Date when the refurbishment was completed
+citydb,ng2_refurbishment_measure,library_code,varchar,,,Code referencing this measure in a library
+citydb,ng2_refurbishment_measure,library_code_codespace,varchar,,,Codespace for library_code
+citydb,ng2_refurbishment_measure,building_id,bigint,,citydb.ng2_building.id,FK to the building
+citydb,ng2_refurbishment_measure,building_partition_id,bigint,,citydb.ng2_building_partition.id,FK to specific zone/unit affected
+citydb,ng2_resource,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — one resource/energy flow record
+citydb,ng2_resource,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (Energy Waste Water etc.)
+citydb,ng2_resource,type,varchar,,,Resource type
+citydb,ng2_resource,type_codespace,varchar,,,Codespace for type
+citydb,ng2_resource,enduse,varchar,,,End-use category (heating cooling lighting DHW etc.)
+citydb,ng2_resource,enduse_codespace,varchar,,,Codespace for enduse
+citydb,ng2_resource,status,varchar,,,Status (measured estimated simulated)
+citydb,ng2_resource,operation_type,varchar,,,Consumption or production
+citydb,ng2_resource,operation_type_codespace,varchar,,,Codespace for operation_type
+citydb,ng2_resource,year,integer,,,Reference year of the data
+citydb,ng2_resource,amount_type,varchar,,,Amount type (primaryEnergy finalEnergy)
+citydb,ng2_resource,amount_type_codespace,varchar,,,Codespace for amount_type
+citydb,ng2_resource,amount,numeric,,,Amount value
+citydb,ng2_resource,amount_uom,varchar,,,Unit for amount (e.g. kWh kWh/m²a MJ)
+citydb,ng2_resource,time_series_id,bigint,,citydb.ng2_time_series.id,FK to time-series data (if amount is time-varying)
+citydb,ng2_resource,is_amount_normalized,numeric,,,1 if amount is area-normalised
+citydb,ng2_resource,normalization_param,varchar,,,Parameter used for normalization (e.g. conditionedFloorArea)
+citydb,ng2_resource,normalization_value,numeric,,,Value of the normalization parameter
+citydb,ng2_resource,normalization_value_uom,varchar,,,Unit for normalization_value
+citydb,ng2_resource,co2_equivalent,numeric,,,CO₂ equivalent of this resource consumption
+citydb,ng2_resource,co2_equivalent_uom,varchar,,,Unit for co2_equivalent (e.g. kg CO₂eq)
+citydb,ng2_resource,costs_money,numeric,,,Cost associated with this resource
+citydb,ng2_resource,costs_money_uom,varchar,,,Currency/unit for costs_money
+citydb,ng2_resource,yields_money,numeric,,,Revenue from this resource (e.g. feed-in tariff)
+citydb,ng2_resource,yields_money_uom,varchar,,,Currency/unit for yields_money
+citydb,ng2_resource,energy_carrier,varchar,,,Energy carrier type (naturalGas electricity districtHeat etc.)
+citydb,ng2_resource,energy_carrier_codespace,varchar,,,Codespace for energy_carrier
+citydb,ng2_resource,maximum_load,numeric,,,Peak load (W)
+citydb,ng2_resource,maximum_load_uom,varchar,,,Unit for maximum_load
+citydb,ng2_resource,source,varchar,,,Source of the resource data
+citydb,ng2_resource,source_codespace,varchar,,,Codespace for source
+citydb,ng2_resource,is_dangerous,numeric,,,1 if waste is classified as hazardous (Waste subtype)
+citydb,ng2_resource,is_recyclable,numeric,,,1 if waste is recyclable (Waste subtype)
+citydb,ng2_resource,cityobject_id,bigint,,citydb.ng2_cityobject.id,FK to the energy city object this resource belongs to
+citydb,ng2_schedule,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_schedule,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (DualValueSchedule ConstantValueSchedule IrregularTimeSeries etc.)
+citydb,ng2_schedule,library_code,varchar,,,Library reference code
+citydb,ng2_schedule,library_code_codespace,varchar,,,Codespace for library_code
+citydb,ng2_schedule,type,varchar,,,Schedule type name
+citydb,ng2_schedule,type_codespace,varchar,,,Codespace for type
+citydb,ng2_schedule,start_time,time,,,Start time of the daily cycle
+citydb,ng2_schedule,start_day,integer,,,Start day of week (1=Mon 7=Sun)
+citydb,ng2_schedule,start_month,integer,,,Start month (1–12)
+citydb,ng2_schedule,start_year,integer,,,Start year
+citydb,ng2_schedule,time_interval,numeric,,,Duration of one time step
+citydb,ng2_schedule,time_interval_unit,varchar,,,Unit for time_interval (e.g. hour day)
+citydb,ng2_schedule,idle_value,numeric,,,Off/idle value for DualValueSchedule
+citydb,ng2_schedule,idle_value_uom,varchar,,,Unit for idle_value
+citydb,ng2_schedule,usage_value,numeric,,,On/usage value for DualValueSchedule
+citydb,ng2_schedule,usage_value_uom,varchar,,,Unit for usage_value
+citydb,ng2_schedule,start_usage_time,time,,,Daily start time of usage period
+citydb,ng2_schedule,end_usage_time,time,,,Daily end time of usage period
+citydb,ng2_schedule,constant_value,numeric,,,Constant value for ConstantValueSchedule
+citydb,ng2_schedule,constant_value_uom,varchar,,,Unit for constant_value
+citydb,ng2_schedule,time_series_id,bigint,,citydb.ng2_time_series.id,FK to time-series data for detailed schedules
+citydb,ng2_schedule,library_id,bigint,,citydb.ng2_library.id,FK to library
+citydb,ng2_schedule_component,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — one periodic component of a composed schedule
+citydb,ng2_schedule_component,type,varchar,,,Component type
+citydb,ng2_schedule_component,type_codespace,varchar,,,Codespace for type
+citydb,ng2_schedule_component,repetitions,integer,,,Number of times this component repeats (default 1)
+citydb,ng2_schedule_component,additional_gap,numeric,,,Gap duration after this component before the next
+citydb,ng2_schedule_component,additional_gap_unit,varchar,,,Unit for additional_gap
+citydb,ng2_schedule_component,parent_schedule_id,bigint,,citydb.ng2_schedule.id,FK to the parent composed schedule
+citydb,ng2_schedule_component,schedule_id,bigint,,citydb.ng2_schedule.id,FK to the sub-schedule this component wraps
+citydb,ng2_solar_collector,id,bigint,yes,citydb.ng2_device.id,PK shared with ng2_device — solar thermal or PV collector
+citydb,ng2_solar_collector,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (SolarThermalSystem PhotovoltaicSystem)
+citydb,ng2_solar_collector,type,varchar,,,Collector type (flatPlate evacuatedTube)
+citydb,ng2_solar_collector,type_codespace,varchar,,,Codespace for type
+citydb,ng2_solar_collector,cell_type,varchar,,,PV cell type (monocrystalline polycrystalline thinFilm)
+citydb,ng2_solar_collector,cell_type_codespace,varchar,,,Codespace for cell_type
+citydb,ng2_solar_collector,module_area,numeric,,,Gross module area (m²)
+citydb,ng2_solar_collector,module_area_uom,varchar,,,Unit for module_area
+citydb,ng2_solar_collector,azimuth,numeric,,,Azimuth angle (° from N)
+citydb,ng2_solar_collector,azimuth_uom,varchar,,,Unit for azimuth
+citydb,ng2_solar_collector,inclination,numeric,,,Tilt angle from horizontal (°)
+citydb,ng2_solar_collector,inclination_uom,varchar,,,Unit for inclination
+citydb,ng2_solar_collector,aperture_area,numeric,,,Effective aperture area (m²)
+citydb,ng2_solar_collector,aperture_area_uom,varchar,,,Unit for aperture_area
+citydb,ng2_solar_collector,opt_efficiency,numeric,,,Optical efficiency η0 [0–1]
+citydb,ng2_solar_collector,opt_efficiency_uom,varchar,,,Unit for opt_efficiency
+citydb,ng2_solar_collector,lin_heat_loss_coeff,numeric,,,Linear heat loss coefficient a1 (W/m²K)
+citydb,ng2_solar_collector,quad_heat_loss_coeff,numeric,,,Quadratic heat loss coefficient a2 (W/m²K²)
+citydb,ng2_solar_collector,lod2_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD2 surface geometry root
+citydb,ng2_solar_collector,lod3_multi_surface_id,bigint,,citydb.surface_geometry.id,FK to LoD3 surface geometry root
+citydb,ng2_storage_device,id,bigint,yes,citydb.ng2_device.id,PK shared with ng2_device
+citydb,ng2_storage_device,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (ThermalStorageSystem ElectricalStorageSystem)
+citydb,ng2_storage_device,medium,varchar,,,Storage medium (water ice phase-change for thermal; lithium-ion for electrical)
+citydb,ng2_storage_device,medium_codespace,varchar,,,Codespace for medium
+citydb,ng2_storage_device,preparation_temp,numeric,,,Preparation/setpoint temperature (°C) — thermal storage only
+citydb,ng2_storage_device,preparation_temp_uom,varchar,,,Unit for preparation_temp
+citydb,ng2_storage_device,thm_losses_factor,numeric,,,Thermal loss coefficient (W/K)
+citydb,ng2_storage_device,thm_losses_factor_uom,varchar,,,Unit for thm_losses_factor
+citydb,ng2_storage_device,volume,numeric,,,Storage volume (m³ for thermal; kWh for electrical)
+citydb,ng2_storage_device,volume_uom,varchar,,,Unit for volume
+citydb,ng2_storage_device,batt_techn,varchar,,,Battery technology type — electrical storage only
+citydb,ng2_storage_device,batt_techn_codespace,varchar,,,Codespace for batt_techn
+citydb,ng2_storage_device,power_capacity,numeric,,,Maximum charge/discharge power (W) — electrical storage
+citydb,ng2_storage_device,power_capacity_uom,varchar,,,Unit for power_capacity
+citydb,ng2_suitability,id,bigint,yes,,Auto-generated PK (from ng2_suitability_seq)
+citydb,ng2_suitability,reason,varchar,,,Reason category for suitability assessment
+citydb,ng2_suitability,reason_codespace,varchar,,,Codespace for reason
+citydb,ng2_suitability,value,numeric,,,Suitability score or fraction [0–1]
+citydb,ng2_suitability,value_uom,varchar,,,Unit for value
+citydb,ng2_suitability,description,varchar,,,Free-text description of the suitability assessment
+citydb,ng2_suitability,schedule_id,bigint,,citydb.ng2_schedule.id,FK to schedule (time-varying suitability)
+citydb,ng2_suitability,cityobject_id,bigint,,citydb.ng2_cityobject.id,FK to the city object being assessed
+citydb,ng2_them_surf_to_thermal_zone,thematic_surface_id,bigint,yes,citydb.thematic_surface.id,FK to the thematic surface (composite PK)
+citydb,ng2_them_surf_to_thermal_zone,thermal_zone_id,bigint,yes,citydb.ng2_building_partition.id,FK to the thermal zone this surface bounds (composite PK)
+citydb,ng2_thematic_surface,id,bigint,yes,citydb.thematic_surface.id,PK shared with thematic_surface — energy extension
+citydb,ng2_thematic_surface,total_surf_area,numeric,,,Total surface area including openings (m²)
+citydb,ng2_thematic_surface,total_surf_area_uom,varchar,,,Unit for total_surf_area
+citydb,ng2_thematic_surface,opaque_surf_area,numeric,,,Opaque (non-glazed) surface area (m²)
+citydb,ng2_thematic_surface,opaque_surf_area_uom,varchar,,,Unit for opaque_surf_area
+citydb,ng2_thematic_surface,open_to_surf_ratio,numeric,,,Ratio of opening area to total area [0–1]
+citydb,ng2_thematic_surface,open_to_surf_ratio_uom,varchar,,,Unit for open_to_surf_ratio
+citydb,ng2_thematic_surface,thickness,numeric,,,Wall/roof/floor thickness (m)
+citydb,ng2_thematic_surface,thickness_uom,varchar,,,Unit for thickness
+citydb,ng2_thematic_surface,azimuth,numeric,,,Azimuth of the surface normal (°)
+citydb,ng2_thematic_surface,azimuth_uom,varchar,,,Unit for azimuth
+citydb,ng2_thematic_surface,inclination,numeric,,,Inclination of the surface from vertical (°)
+citydb,ng2_thematic_surface,inclination_uom,varchar,,,Unit for inclination
+citydb,ng2_thematic_surface,ground_view_factor,numeric,,,Ground view factor [0–1]
+citydb,ng2_thematic_surface,ground_view_factor_uom,varchar,,,Unit for ground_view_factor
+citydb,ng2_thematic_surface,sky_view_factor,numeric,,,Sky view factor [0–1]
+citydb,ng2_thematic_surface,sky_view_factor_uom,varchar,,,Unit for sky_view_factor
+citydb,ng2_thematic_surface,is_adiabatic,numeric,,,1 if this surface has no heat exchange (internal partition)
+citydb,ng2_thematic_surface,heat_capacity,numeric,,,Effective heat capacity of the surface assembly (J/m²K)
+citydb,ng2_thematic_surface,heat_capacity_uom,varchar,,,Unit for heat_capacity
+citydb,ng2_time_series,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_time_series,objectclass_id,integer,,citydb.objectclass.id,FK to objectclass (RegularTimeSeries IrregularTimeSeries RemoteSensing etc.)
+citydb,ng2_time_series,acquisition_method,varchar,,,How data was acquired (measurement simulation estimation)
+citydb,ng2_time_series,acquisition_method_codespace,varchar,,,Codespace for acquisition_method
+citydb,ng2_time_series,interpolation_type,varchar,,,Interpolation (continuous instant average etc.)
+citydb,ng2_time_series,source,varchar,,,Source of the time-series data
+citydb,ng2_time_series,period_begin,timestamptz,,,Start of the covered time period
+citydb,ng2_time_series,period_end,timestamptz,,,End of the covered time period
+citydb,ng2_time_series,start_time,time,,,Start time of day for regular series
+citydb,ng2_time_series,start_day,integer,,,Start day of week/month for regular series
+citydb,ng2_time_series,start_month,integer,,,Start month for regular series
+citydb,ng2_time_series,temporal_extent,numeric,,,Duration of the series
+citydb,ng2_time_series,temporal_extent_unit,varchar,,,Unit for temporal_extent
+citydb,ng2_time_series,time_interval,numeric,,,Duration of one time step
+citydb,ng2_time_series,time_interval_unit,varchar,,,Unit for time_interval (e.g. second hour day)
+citydb,ng2_time_series,values_list,text,,,Inline values as a delimited string
+citydb,ng2_time_series,values_list_uom,varchar,,,Unit of the values in values_list
+citydb,ng2_time_series,uom,varchar,,,Unit of measure for the series values
+citydb,ng2_time_series,file_uri,varchar,,,URI to an external file containing the values
+citydb,ng2_time_series,num_of_header_lines,integer,,,Lines to skip at top of external file
+citydb,ng2_time_series,field_separator,varchar,,,Field delimiter in external file (e.g. comma semicolon)
+citydb,ng2_time_series,record_separator,varchar,,,Record delimiter in external file
+citydb,ng2_time_series,value_column_number,integer,,,Column index (1-based) of value in external file
+citydb,ng2_time_series,decimal_symbol,varchar,,,Decimal separator (. or ,) in external file
+citydb,ng2_time_series,auth_type,varchar,,,Authentication type for remote data source
+citydb,ng2_time_series,auth_type_codespace,varchar,,,Codespace for auth_type
+citydb,ng2_time_series,base_url,varchar,,,Base URL of the remote sensor/data service
+citydb,ng2_time_series,connection_type,varchar,,,Protocol/connection type (OGC-SWE MQTT REST)
+citydb,ng2_time_series,connection_type_codespace,varchar,,,Codespace for connection_type
+citydb,ng2_time_series,datastream_id,varchar,,,SensorThings API Datastream ID
+citydb,ng2_time_series,link_to_observation,varchar,,,URL to an SOS/STA observation
+citydb,ng2_time_series,link_to_sensor_description,varchar,,,URL to sensor metadata
+citydb,ng2_time_series,mqtt_server,varchar,,,MQTT broker address
+citydb,ng2_time_series,mqtt_topic,varchar,,,MQTT topic to subscribe for live data
+citydb,ng2_time_series,observation_id,varchar,,,Observation identifier
+citydb,ng2_time_series,observation_property,varchar,,,Observed property name
+citydb,ng2_time_series,sensor_id,varchar,,,Sensor identifier
+citydb,ng2_time_series,sensor_name,varchar,,,Human-readable sensor name
+citydb,ng2_urban_function_area,id,bigint,yes,,PK — urban function area (no FK enforced in v5; intended for cityobjectgroup)
+citydb,ng2_urban_function_area,type,varchar,,,Urban function type (residential commercial industrial mixed-use etc.)
+citydb,ng2_urban_function_area,type_codespace,varchar,,,Codespace for type
+citydb,ng2_urban_function_area,code,varchar,,,Code representing the urban function classification
+citydb,ng2_urban_function_area,code_codespace,varchar,,,Codespace for code
+citydb,ng2_utl_ntw_connection,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject — utility network connection point
+citydb,ng2_utl_ntw_connection,network_type,varchar,,,Network type (electricity gas water district-heat telecom)
+citydb,ng2_utl_ntw_connection,network_type_codespace,varchar,,,Codespace for network_type
+citydb,ng2_utl_ntw_connection,connection_status,varchar,,,Status (connected disconnected unknown)
+citydb,ng2_utl_ntw_connection,function_in_network,varchar,,,Role in network (consumer prosumer producer)
+citydb,ng2_utl_ntw_connection,function_in_network_codespace,varchar,,,Codespace for function_in_network
+citydb,ng2_utl_ntw_connection,usage_in_network,varchar,,,Usage category
+citydb,ng2_utl_ntw_connection,usage_in_network_codespace,varchar,,,Codespace for usage_in_network
+citydb,ng2_utl_ntw_connection,network_id,varchar,,,External network identifier
+citydb,ng2_utl_ntw_connection,network_node_id,varchar,,,Node ID within the network
+citydb,ng2_utl_ntw_connection,cityobject_id,bigint,,citydb.ng2_cityobject.id,FK to the energy city object this connection belongs to
+citydb,ng2_weather_data,id,bigint,yes,citydb.cityobject.id,PK shared with cityobject
+citydb,ng2_weather_data,type,varchar,,,Weather parameter type (airTemperature relativeHumidity globalSolarIrradiance etc.)
+citydb,ng2_weather_data,type_codespace,varchar,,,Codespace for type
+citydb,ng2_weather_data,value_type,varchar,,,Value type (measured modelled typical)
+citydb,ng2_weather_data,value_type_codespace,varchar,,,Codespace for value_type
+citydb,ng2_weather_data,yearly_value,numeric,,,Annual aggregate (e.g. yearly irradiance kWh/m²)
+citydb,ng2_weather_data,yearly_value_uom,varchar,,,Unit for yearly_value
+citydb,ng2_weather_data,library_code,varchar,,,Library reference code
+citydb,ng2_weather_data,library_code_codespace,varchar,,,Codespace for library_code
+citydb,ng2_weather_data,time_series_id,bigint,,citydb.ng2_time_series.id,FK to time-series data for sub-annual weather data
+citydb,ng2_weather_data,cityobject_id,bigint,,citydb.ng2_cityobject.id,FK to the city object (e.g. building site) this weather data applies to
+citydb,ng2_weather_data,position,geometry(PointZ),,,3D measurement location (no fixed SRID — use DB CRS)

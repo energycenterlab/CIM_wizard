@@ -1,0 +1,298 @@
+[PrefixDeclaration]
+:           http://data.cimwizard.org/
+owl:        http://www.w3.org/2002/07/owl#
+rdf:        http://www.w3.org/1999/02/22-rdf-syntax-ns#
+rdfs:       http://www.w3.org/2000/01/rdf-schema#
+xsd:        http://www.w3.org/2001/XMLSchema#
+bot:        https://w3id.org/bot#
+citygml:    http://www.opengis.net/ont/citygml#
+geo:        http://www.opengis.net/ont/geosparql#
+sosa:       http://www.w3.org/ns/sosa/
+ssn:        http://www.w3.org/ns/ssn/
+time:       http://www.w3.org/2006/time#
+schema:     https://schema.org/
+cim:        http://data.cimwizard.org/energy/
+
+[MappingDeclaration] @collection [[
+
+mappingId   MAP_Building_Class
+target      :building/{id} a bot:Building , citygml:Building .
+source      SELECT b.id FROM citydb.building b WHERE b.objectclass_id = 26
+
+mappingId   MAP_Building_Identifier
+target      :building/{id} rdfs:label {identifier}^^xsd:string .
+source      SELECT b.id, f.identifier FROM citydb.building b JOIN citydb.feature f ON b.id = f.id WHERE b.objectclass_id = 26 AND f.identifier IS NOT NULL
+
+mappingId   MAP_Building_Name
+target      :building/{id} schema:name {name}^^xsd:string .
+source      SELECT b.id, co.name FROM citydb.building b JOIN citydb.cityobject co ON b.id = co.id WHERE b.objectclass_id = 26 AND co.name IS NOT NULL
+
+mappingId   MAP_Building_Height
+target      :building/{id} schema:height {measured_height}^^xsd:double .
+source      SELECT id, measured_height FROM citydb.building WHERE objectclass_id = 26 AND measured_height IS NOT NULL
+
+mappingId   MAP_Building_Storeys
+target      :building/{id} cim:storeysAboveGround {storeys_above_ground}^^xsd:integer ; cim:storeysBelowGround {storeys_below_ground}^^xsd:integer .
+source      SELECT id, CAST(storeys_above_ground AS INTEGER) AS storeys_above_ground, CAST(storeys_below_ground AS INTEGER) AS storeys_below_ground FROM citydb.building WHERE objectclass_id = 26 AND (storeys_above_ground IS NOT NULL OR storeys_below_ground IS NOT NULL)
+
+mappingId   MAP_Building_Dates
+target      :building/{id} schema:dateCreated {creation_date}^^xsd:dateTime .
+source      SELECT b.id, TO_CHAR(co.creation_date, 'YYYY-MM-DD"T"HH24:MI:SS') AS creation_date FROM citydb.building b JOIN citydb.cityobject co ON b.id = co.id WHERE b.objectclass_id = 26 AND co.creation_date IS NOT NULL
+
+mappingId   MAP_Building_PartOf
+target      :building/{building_parent_id} bot:containsBuilding :building/{id} .
+source      SELECT id, building_parent_id FROM citydb.building WHERE building_parent_id IS NOT NULL
+
+mappingId   MAP_Geometry_Class
+target      :geometry/{id} a geo:Geometry .
+source      SELECT id FROM citydb.geometry_data WHERE geometry IS NOT NULL
+
+mappingId   MAP_Geometry_WKT
+target      :geometry/{id} geo:asWKT {wkt}^^geo:wktLiteral .
+source      SELECT id, '<http://www.opengis.net/def/crs/EPSG/0/4326> ' || ST_AsText(geometry) AS wkt FROM citydb.geometry_data WHERE geometry IS NOT NULL
+
+mappingId   MAP_Building_HasGeometry
+target      :building/{feature_id} geo:hasGeometry :geometry/{id} .
+source      SELECT id, feature_id FROM citydb.geometry_data WHERE feature_id IS NOT NULL AND geometry IS NOT NULL
+
+mappingId   MAP_Envelope_Class
+target      :envelope/{id} a geo:Geometry .
+source      SELECT id FROM citydb.feature WHERE envelope IS NOT NULL
+
+mappingId   MAP_Envelope_WKT
+target      :envelope/{id} geo:asWKT {wkt}^^geo:wktLiteral .
+source      SELECT id, '<http://www.opengis.net/def/crs/EPSG/0/4326> ' || ST_AsText(envelope) AS wkt FROM citydb.feature WHERE envelope IS NOT NULL
+
+mappingId   MAP_Building_HasEnvelope
+target      :building/{id} geo:hasGeometry :envelope/{id} .
+source      SELECT b.id FROM citydb.building b JOIN citydb.feature f ON b.id = f.id WHERE b.objectclass_id = 26 AND f.envelope IS NOT NULL
+
+mappingId   MAP_EnergyBuilding_Type
+target      :building/{id} cim:buildingType {type}^^xsd:string .
+source      SELECT id, type FROM citydb.ng2_building WHERE type IS NOT NULL
+
+mappingId   MAP_EnergyBuilding_Flags
+target      :building/{id} cim:isProtected {is_protected}^^xsd:boolean ; cim:constructionWeight {constr_weight}^^xsd:string .
+source      SELECT id, CAST(is_protected AS BOOLEAN) AS is_protected, constr_weight FROM citydb.ng2_building WHERE is_protected IS NOT NULL OR constr_weight IS NOT NULL
+
+mappingId   MAP_EnergyBuilding_ThermalStatus
+target      :building/{id} cim:atticThermalStatus {attic_thm_status}^^xsd:string ; cim:basementThermalStatus {basement_thm_status}^^xsd:string .
+source      SELECT id, attic_thm_status, basement_thm_status FROM citydb.ng2_building WHERE attic_thm_status IS NOT NULL OR basement_thm_status IS NOT NULL
+
+mappingId   MAP_ThermalZone_Class
+target      :thermalzone/{id} a bot:Space , sosa:FeatureOfInterest .
+source      SELECT p.id FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%thermalzone%'
+
+mappingId   MAP_ThermalZone_ContainedBy
+target      :building/{building_id} bot:containsZone :thermalzone/{id} .
+source      SELECT p.id, p.building_id FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%thermalzone%' AND p.building_id IS NOT NULL
+
+mappingId   MAP_ThermalZone_ThermalProps
+target      :thermalzone/{id} cim:heatCapacity {heat_capacity}^^xsd:double ; cim:infiltrationRate {infiltration_rate}^^xsd:double ; cim:isHeated {is_heated}^^xsd:boolean ; cim:isCooled {is_cooled}^^xsd:boolean .
+source      SELECT p.id, p.heat_capacity, p.infiltration_rate, CAST(p.is_heated AS BOOLEAN) AS is_heated, CAST(p.is_cooled AS BOOLEAN) AS is_cooled FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%thermalzone%'
+
+mappingId   MAP_UsageZone_Class
+target      :usagezone/{id} a bot:Space , sosa:FeatureOfInterest .
+source      SELECT p.id FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%usagezone%'
+
+mappingId   MAP_UsageZone_ContainedBy
+target      :building/{building_id} bot:containsZone :usagezone/{id} .
+source      SELECT p.id, p.building_id FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%usagezone%' AND p.building_id IS NOT NULL
+
+mappingId   MAP_UsageZone_Type
+target      :usagezone/{id} cim:usageType {type}^^xsd:string ; cim:numBuildingUnits {num_of_building_units}^^xsd:integer .
+source      SELECT p.id, p.type, p.num_of_building_units FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%usagezone%' AND (p.type IS NOT NULL OR p.num_of_building_units IS NOT NULL)
+
+mappingId   MAP_UsageZone_InternalHeatGains
+target      :usagezone/{id} cim:internalHeatGains {int_heat_gains}^^xsd:double .
+source      SELECT p.id, p.int_heat_gains FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%usagezone%' AND p.int_heat_gains IS NOT NULL
+
+mappingId   MAP_BuildingUnit_Class
+target      :buildingunit/{id} a bot:Space .
+source      SELECT p.id FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%buildingunit%'
+
+mappingId   MAP_BuildingUnit_ContainedIn
+target      :usagezone/{usage_zone_id} bot:containsZone :buildingunit/{id} .
+source      SELECT p.id, p.usage_zone_id FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%buildingunit%' AND p.usage_zone_id IS NOT NULL
+
+mappingId   MAP_BuildingUnit_Rooms
+target      :buildingunit/{id} cim:numRooms {num_of_rooms}^^xsd:integer ; cim:ownerName {owner_name}^^xsd:string .
+source      SELECT p.id, p.num_of_rooms, p.owner_name FROM citydb.ng2_building_partition p JOIN citydb.objectclass oc ON p.objectclass_id = oc.id WHERE LOWER(oc.classname) LIKE '%buildingunit%' AND (p.num_of_rooms IS NOT NULL OR p.owner_name IS NOT NULL)
+
+mappingId   MAP_QAttr_Class
+target      :qattr/{id} a sosa:Observation .
+source      SELECT id FROM citydb.ng2_qualified_attribute
+
+mappingId   MAP_QAttr_FOI_Building
+target      :qattr/{id} sosa:hasFeatureOfInterest :building/{building_id} .
+source      SELECT id, building_id FROM citydb.ng2_qualified_attribute WHERE building_id IS NOT NULL
+
+mappingId   MAP_QAttr_FOI_Partition
+target      :qattr/{id} sosa:hasFeatureOfInterest :thermalzone/{building_partition_id} .
+source      SELECT id, building_partition_id FROM citydb.ng2_qualified_attribute WHERE building_partition_id IS NOT NULL
+
+mappingId   MAP_QAttr_Value
+target      :qattr/{id} sosa:hasSimpleResult {value}^^xsd:double ; cim:attributeType {type}^^xsd:string ; cim:valueUOM {value_uom}^^xsd:string .
+source      SELECT id, value, type, value_uom FROM citydb.ng2_qualified_attribute WHERE value IS NOT NULL
+
+mappingId   MAP_EnergyResource_Class
+target      :resource/{id} a sosa:Observation .
+source      SELECT id FROM citydb.ng2_resource
+
+mappingId   MAP_EnergyResource_FOI
+target      :resource/{id} sosa:hasFeatureOfInterest :building/{cityobj_id} .
+source      SELECT r.id, nc.id AS cityobj_id FROM citydb.ng2_resource r JOIN citydb.ng2_cityobject nc ON r.cityobject_id = nc.id
+
+mappingId   MAP_EnergyResource_Property
+target      :resource/{id} cim:endUse {enduse}^^xsd:string ; cim:energyCarrier {energy_carrier}^^xsd:string ; cim:operationType {operation_type}^^xsd:string ; cim:resourceType {type}^^xsd:string .
+source      SELECT id, enduse, energy_carrier, operation_type, type FROM citydb.ng2_resource WHERE enduse IS NOT NULL
+
+mappingId   MAP_EnergyResource_Amount
+target      :resource/{id} sosa:hasSimpleResult {amount}^^xsd:double ; cim:amountUOM {amount_uom}^^xsd:string ; cim:referenceYear {year}^^xsd:integer .
+source      SELECT id, amount, amount_uom, year FROM citydb.ng2_resource WHERE amount IS NOT NULL
+
+mappingId   MAP_EnergyResource_CO2
+target      :resource/{id} cim:co2Equivalent {co2_equivalent}^^xsd:double ; cim:co2EquivalentUOM {co2_equivalent_uom}^^xsd:string .
+source      SELECT id, co2_equivalent, co2_equivalent_uom FROM citydb.ng2_resource WHERE co2_equivalent IS NOT NULL
+
+mappingId   MAP_TimeSeries_Class
+target      :timeseries/{id} a sosa:ObservationCollection .
+source      SELECT id FROM citydb.ng2_time_series
+
+mappingId   MAP_TimeSeries_Metadata
+target      :timeseries/{id} cim:acquisitionMethod {acquisition_method}^^xsd:string ; cim:uom {uom}^^xsd:string .
+source      SELECT id, acquisition_method, uom FROM citydb.ng2_time_series WHERE acquisition_method IS NOT NULL OR uom IS NOT NULL
+
+mappingId   MAP_TimeSeries_HasBeginning
+target      :timeseries/{id} time:hasBeginning :time/{id}/begin .
+source      SELECT id FROM citydb.ng2_time_series WHERE period_begin IS NOT NULL
+
+mappingId   MAP_TimeInstant_Begin
+target      :time/{id}/begin a time:Instant ; time:inXSDDateTimeStamp {period_begin}^^xsd:dateTimeStamp .
+source      SELECT id, TO_CHAR(period_begin, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS period_begin FROM citydb.ng2_time_series WHERE period_begin IS NOT NULL
+
+mappingId   MAP_TimeSeries_HasEnd
+target      :timeseries/{id} time:hasEnd :time/{id}/end .
+source      SELECT id FROM citydb.ng2_time_series WHERE period_end IS NOT NULL
+
+mappingId   MAP_TimeInstant_End
+target      :time/{id}/end a time:Instant ; time:inXSDDateTimeStamp {period_end}^^xsd:dateTimeStamp .
+source      SELECT id, TO_CHAR(period_end, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS period_end FROM citydb.ng2_time_series WHERE period_end IS NOT NULL
+
+mappingId   MAP_TimeSeries_Interval
+target      :timeseries/{id} cim:timeInterval {time_interval}^^xsd:double ; cim:timeIntervalUnit {time_interval_unit}^^xsd:string .
+source      SELECT id, time_interval, time_interval_unit FROM citydb.ng2_time_series WHERE time_interval IS NOT NULL
+
+mappingId   MAP_TimeSeries_Sensor
+target      :timeseries/{id} cim:sensorId {sensor_id}^^xsd:string ; cim:sensorName {sensor_name}^^xsd:string ; cim:datastreamId {datastream_id}^^xsd:string .
+source      SELECT id, sensor_id, sensor_name, datastream_id FROM citydb.ng2_time_series WHERE sensor_id IS NOT NULL OR datastream_id IS NOT NULL
+
+mappingId   MAP_Device_Class
+target      :device/{id} a sosa:Sensor .
+source      SELECT d.id FROM citydb.ng2_device d
+
+mappingId   MAP_Device_ClassName
+target      :device/{id} cim:deviceClass {classname}^^xsd:string .
+source      SELECT d.id, oc.classname FROM citydb.ng2_device d JOIN citydb.objectclass oc ON d.objectclass_id = oc.id
+
+mappingId   MAP_Device_Properties
+target      :device/{id} cim:deviceModel {model}^^xsd:string ; cim:nominalEfficiency {nominal_efficiency}^^xsd:double ; cim:efficiencyIndicator {efficiency_indicator}^^xsd:string .
+source      SELECT id, model, nominal_efficiency, efficiency_indicator FROM citydb.ng2_device WHERE model IS NOT NULL OR nominal_efficiency IS NOT NULL
+
+mappingId   MAP_Device_Power
+target      :device/{id} cim:installedPower {installed_power}^^xsd:double ; cim:installedPowerUOM {installed_power_uom}^^xsd:string .
+source      SELECT id, installed_power, installed_power_uom FROM citydb.ng2_device WHERE installed_power IS NOT NULL
+
+mappingId   MAP_SolarCollector_Class
+target      :device/{id} a cim:SolarCollector .
+source      SELECT id FROM citydb.ng2_solar_collector
+
+mappingId   MAP_SolarCollector_Props
+target      :device/{id} cim:moduleArea {module_area}^^xsd:double ; cim:azimuth {azimuth}^^xsd:double ; cim:inclination {inclination}^^xsd:double ; cim:opticalEfficiency {opt_efficiency}^^xsd:double ; cim:solarCellType {cell_type}^^xsd:string .
+source      SELECT id, module_area, azimuth, inclination, opt_efficiency, cell_type FROM citydb.ng2_solar_collector WHERE module_area IS NOT NULL
+
+mappingId   MAP_WeatherData_Class
+target      :weather/{id} a sosa:Observation .
+source      SELECT id FROM citydb.ng2_weather_data
+
+mappingId   MAP_WeatherData_Property
+target      :weather/{id} cim:weatherType {type}^^xsd:string ; cim:valueType {value_type}^^xsd:string .
+source      SELECT id, type, value_type FROM citydb.ng2_weather_data WHERE type IS NOT NULL
+
+mappingId   MAP_WeatherData_YearlyValue
+target      :weather/{id} sosa:hasSimpleResult {yearly_value}^^xsd:double ; cim:yearlyValueUOM {yearly_value_uom}^^xsd:string .
+source      SELECT id, yearly_value, yearly_value_uom FROM citydb.ng2_weather_data WHERE yearly_value IS NOT NULL
+
+mappingId   MAP_WeatherData_FOI
+target      :weather/{id} sosa:hasFeatureOfInterest :building/{cityobj_id} .
+source      SELECT w.id, nc.id AS cityobj_id FROM citydb.ng2_weather_data w JOIN citydb.ng2_cityobject nc ON w.cityobject_id = nc.id
+
+mappingId   MAP_WeatherPos_Geometry
+target      :weatherpos/{id} a geo:Geometry ; geo:asWKT {wkt}^^geo:wktLiteral .
+source      SELECT id, ST_AsText(position) AS wkt FROM citydb.ng2_weather_data WHERE position IS NOT NULL
+
+mappingId   MAP_WeatherData_HasPosition
+target      :weather/{id} cim:measurementPosition :weatherpos/{id} .
+source      SELECT id FROM citydb.ng2_weather_data WHERE position IS NOT NULL
+
+mappingId   MAP_EPC_Class
+target      :epc/{id} a cim:EnergyPerformanceCertificate .
+source      SELECT id FROM citydb.ng2_energy_perf_cert
+
+mappingId   MAP_EPC_Building
+target      :epc/{id} cim:certifiesBuilding :building/{building_id} .
+source      SELECT id, building_id FROM citydb.ng2_energy_perf_cert WHERE building_id IS NOT NULL
+
+mappingId   MAP_EPC_Labels
+target      :epc/{id} cim:energyLabel {label}^^xsd:string ; cim:certType {type}^^xsd:string ; cim:certMethod {cert_method}^^xsd:string .
+source      SELECT id, label, type, cert_method FROM citydb.ng2_energy_perf_cert WHERE label IS NOT NULL OR type IS NOT NULL
+
+mappingId   MAP_EPC_Value
+target      :epc/{id} cim:primaryEnergyValue {value}^^xsd:double ; cim:primaryEnergyUOM {value_uom}^^xsd:string .
+source      SELECT id, value, value_uom FROM citydb.ng2_energy_perf_cert WHERE value IS NOT NULL
+
+mappingId   MAP_EPC_Dates
+target      :epc/{id} cim:issueDate {issue_date}^^xsd:date .
+source      SELECT id, CAST(issue_date AS TEXT) AS issue_date FROM citydb.ng2_energy_perf_cert WHERE issue_date IS NOT NULL
+
+mappingId   MAP_SimRun_Class
+target      :simrun/{project_id}/{scenario_id} a cim:SimulationRun ; cim:stepSizeMs {step_size_ms}^^xsd:integer .
+source      SELECT project_id, CAST(scenario_id AS TEXT) AS scenario_id, step_size_ms FROM outputs.simulation_run
+
+mappingId   MAP_ThermalObs_Class
+target      :thermalobs/{project_id}/{scenario_id}/{building_id}/{time_step} a sosa:Observation ; cim:belongsToRun :simrun/{project_id}/{scenario_id} ; sosa:hasFeatureOfInterest :building/{building_id} ; cim:timeStep {time_step}^^xsd:integer ; cim:buildingTemperature {t_building}^^xsd:double ; cim:heatingLoadTarget {heating_load_target}^^xsd:double .
+source      SELECT project_id, CAST(scenario_id AS TEXT) AS scenario_id, CAST(building_id AS TEXT) AS building_id, CAST(time_step AS INTEGER) AS time_step, t_building, heating_load_target FROM outputs.building_frassinetto3 WHERE t_building IS NOT NULL
+
+mappingId   MAP_BatteryObs_Class
+target      :battobs/{project_id}/{scenario_id}/{building_id}/{time_step} a sosa:Observation ; cim:belongsToRun :simrun/{project_id}/{scenario_id} ; sosa:hasFeatureOfInterest :building/{building_id} ; cim:timeStep {time_step}^^xsd:integer ; cim:batterySOC {soc}^^xsd:double ; cim:batteryPower {p_net_batt}^^xsd:double .
+source      SELECT project_id, CAST(scenario_id AS TEXT) AS scenario_id, CAST(building_id AS TEXT) AS building_id, CAST(time_step AS INTEGER) AS time_step, soc, p_net_batt FROM outputs.battery WHERE soc IS NOT NULL
+
+mappingId   MAP_HeatPumpObs_Class
+target      :hpobs/{project_id}/{scenario_id}/{building_id}/{time_step} a sosa:Observation ; cim:belongsToRun :simrun/{project_id}/{scenario_id} ; sosa:hasFeatureOfInterest :building/{building_id} ; cim:timeStep {time_step}^^xsd:integer ; cim:heatPumpCOP {cop}^^xsd:double ; cim:thermalPower {qt_return}^^xsd:double ; cim:electricalPower {en_el}^^xsd:double .
+source      SELECT project_id, CAST(scenario_id AS TEXT) AS scenario_id, CAST(building_id AS TEXT) AS building_id, CAST(time_step AS INTEGER) AS time_step, cop, qt_return, en_el FROM outputs.heating_frassinetto_hp2 WHERE cop IS NOT NULL
+
+mappingId   MAP_CimProject_Class
+target      :project/{project_id} a cim:Project ; cim:projectId {project_id}^^xsd:string ; cim:projectName {project_name}^^xsd:string .
+source      SELECT DISTINCT project_id, project_name FROM cim_vector.cim_wizard_project_scenario
+
+mappingId   MAP_CimVectorBuilding_Class
+target      :vecbuilding/{building_id} a cim:VectorBuilding ; cim:buildingName {building_name}^^xsd:string .
+source      SELECT CAST(building_id AS TEXT) AS building_id, building_name FROM cim_vector.cim_wizard_building WHERE building_name IS NOT NULL
+
+mappingId   MAP_CimBuildingGeometry
+target      :vecbuilding/{building_id} geo:hasGeometry :vecgeom/{building_id} .
+source      SELECT CAST(building_id AS TEXT) AS building_id FROM cim_vector.cim_wizard_building WHERE building_geometry IS NOT NULL
+
+mappingId   MAP_CimBuildingGeometryWKT
+target      :vecgeom/{building_id} a geo:Geometry ; geo:asWKT {wkt}^^geo:wktLiteral .
+source      SELECT CAST(building_id AS TEXT) AS building_id, '<http://www.opengis.net/def/crs/EPSG/0/4326> ' || ST_AsText(building_geometry) AS wkt FROM cim_vector.cim_wizard_building WHERE building_geometry IS NOT NULL
+
+mappingId   MAP_CimProjectHasBuilding
+target      :project/{project_id} cim:hasBuilding :vecbuilding/{building_id} .
+source      SELECT DISTINCT project_id, CAST(building_id AS TEXT) AS building_id FROM cim_vector.cim_wizard_building_properties
+
+mappingId   MAP_CimBuildingProps
+target      :vecbuilding/{building_id} cim:vectorHeight {height}^^xsd:double ; cim:floorArea {area}^^xsd:double ; cim:buildingVolume {volume}^^xsd:double ; cim:numberOfFloors {number_of_floors}^^xsd:double ; cim:buildingType {type}^^xsd:string ; cim:constructionYear {const_year}^^xsd:integer .
+source      SELECT CAST(building_id AS TEXT) AS building_id, height, area, volume, number_of_floors, type, const_year FROM cim_vector.cim_wizard_building_properties WHERE height IS NOT NULL
+
+]]

@@ -1,0 +1,114 @@
+version: "3.9"
+
+# ============================================================
+#  Triple Store Stack for Geospatial / CityGML Ontologies
+#  Profiles:
+#    fuseki   → Apache Jena Fuseki  (default, open-source)
+#    graphdb  → Ontotext GraphDB    (better UI, free tier)
+#
+#  Usage:
+#    docker compose --profile fuseki  up -d
+#    docker compose --profile graphdb up -d
+# ============================================================
+
+networks:
+  semantic-net:
+    driver: bridge
+
+volumes:
+  fuseki-data:
+  graphdb-data:
+
+services:
+
+  # ──────────────────────────────────────────────
+  #  Apache Jena Fuseki  (with GeoSPARQL plugin)
+  #  UI  → http://localhost:3030
+  #  SPARQL endpoint → http://localhost:3030/geo/sparql
+  # ──────────────────────────────────────────────
+  fuseki:
+    profiles: [fuseki]
+    image: secoresearch/fuseki:latest          # bundles the GeoSPARQL plugin
+    container_name: fuseki
+    restart: unless-stopped
+    ports:
+      - "3030:3030"
+    environment:
+      ADMIN_PASSWORD: ${FUSEKI_ADMIN_PASSWORD:-admin123}
+      JVM_ARGS: -Xmx2g
+    volumes:
+      - fuseki-data:/fuseki
+      - ./fuseki/config:/fuseki/configuration   # dataset configs
+      - ./ontologies:/ontologies:ro             # TTL/OWL files to load
+    networks:
+      - semantic-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/$/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Runs once on first start — downloads & loads ontologies into Fuseki
+  fuseki-init:
+    profiles: [fuseki]
+    image: curlimages/curl:latest
+    container_name: fuseki-init
+    depends_on:
+      fuseki:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./ontologies:/ontologies
+    entrypoint: ["/bin/sh", "/scripts/bootstrap-ontologies.sh"]
+    environment:
+      FUSEKI_URL: http://fuseki:3030
+      FUSEKI_ADMIN_PASSWORD: ${FUSEKI_ADMIN_PASSWORD:-admin123}
+      DATASET: geo
+    networks:
+      - semantic-net
+    restart: "no"
+
+  # ──────────────────────────────────────────────
+  #  Ontotext GraphDB Free
+  #  UI  → http://localhost:7200
+  #  SPARQL endpoint → http://localhost:7200/repositories/citygml
+  # ──────────────────────────────────────────────
+  graphdb:
+    profiles: [graphdb]
+    image: ontotext/graphdb:10.7.0
+    container_name: graphdb
+    restart: unless-stopped
+    ports:
+      - "7200:7200"
+    volumes:
+      - graphdb-data:/opt/graphdb/home
+      - ./graphdb/config:/opt/graphdb/home/data/repositories   # repo configs
+      - ./ontologies:/ontologies:ro
+    environment:
+      GDB_HEAP_SIZE: 2g
+      GDB_MIN_HEAP_SIZE: 512m
+    networks:
+      - semantic-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7200/rest/repositories"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+
+  graphdb-init:
+    profiles: [graphdb]
+    image: curlimages/curl:latest
+    container_name: graphdb-init
+    depends_on:
+      graphdb:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./ontologies:/ontologies
+    entrypoint: ["/bin/sh", "/scripts/bootstrap-graphdb.sh"]
+    environment:
+      GRAPHDB_URL: http://graphdb:7200
+      REPO: citygml
+    networks:
+      - semantic-net
+    restart: "no"

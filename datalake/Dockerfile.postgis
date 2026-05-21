@@ -1,0 +1,8 @@
+FROM postgis/postgis:16-3.4
+
+# Init scripts are executed once on first container start (empty data volume).
+# postgis/postgis images already enable the postgis extension in the template db;
+# the SQL file below creates the application schema.
+COPY postgres/init/ /docker-entrypoint-initdb.d/
+
+EXPOSE 5432

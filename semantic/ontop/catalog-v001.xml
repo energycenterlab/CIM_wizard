@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+    <uri name="http://example.org/my-smartcity-alignment"                                    uri="alignment.ttl"/>
+    <uri name="https://w3id.org/bot-0.3.2"                                                   uri="bot-stub.ttl"/>
+    <uri name="http://www.w3.org/ns/sosa/"                                                   uri="sosa-stub.ttl"/>
+    <uri name="http://www.w3.org/ns/ssn/"                                                    uri="ssn-stub.ttl"/>
+    <uri name="http://www.opengis.net/ont/geosparql#1.1"                                     uri="geosparql-stub.ttl"/>
+    <uri name="http://www.opengis.net/ont/geosparql#"                                        uri="geosparql-stub.ttl"/>
+    <uri name="http://www.w3.org/2006/time#2016"                                             uri="time-stub.ttl"/>
+    <uri name="http://www.w3.org/2006/time#"                                                 uri="time-stub.ttl"/>
+    <uri name="http://www.semanticweb.org/taherdoust/ontologies/2026/3/untitled-ontology-3/" uri="citygml-bot-sosa-ssn-geosparql-time.rdf"/>
+    <uri name="http://www.semanticweb.org/taherdoust/ontologies/2026/3/untitled-ontology-3"  uri="citygml-bot-sosa-ssn-geosparql-time.rdf"/>
+</catalog>

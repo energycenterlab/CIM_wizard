@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+
+  # ── PostGIS ──────────────────────────────────────────────────────────────
+  postgis:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgis
+    container_name: datalake_postgis
+    restart: unless-stopped
+    ports:
+      - "35432:5432"          # host port 35432 avoids conflicts with local postgres
+    environment:
+      POSTGRES_DB:       datalake
+      POSTGRES_USER:     datalake
+      POSTGRES_PASSWORD: datalake
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datalake -d datalake"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MongoDB ───────────────────────────────────────────────────────────────
+  mongodb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datalake_mongodb
+    restart: unless-stopped
+    ports:
+      - "27018:27017"         # host port 27018 avoids conflicts with local mongo
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      - MONGODB_INITDB_DATABASE=datalake
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local

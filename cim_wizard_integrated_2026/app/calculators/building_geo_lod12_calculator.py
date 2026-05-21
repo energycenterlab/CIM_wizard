@@ -750,8 +750,13 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             )
             return None
     
-    def _generate_lod12_surfaces(self, footprint_geometry: Dict[str, Any], height: float) -> Dict[str, Any]:
-        """Generate LoD 1.2 semantic surfaces from footprint and height"""
+    def _generate_lod12_surfaces(
+        self,
+        footprint_geometry: Dict[str, Any],
+        height: float,
+        z_offset: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Generate LoD 1.2 semantic surfaces from footprint, height and terrain z_offset."""
         try:
             if footprint_geometry.get('type') != 'Polygon':
                 self.pipeline.log_error(self.calculator_name, f"Unsupported geometry type: {footprint_geometry.get('type')}")
@@ -780,16 +785,16 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 'building_volume': None
             }
             
-            # 1. Generate Wall Surfaces
-            wall_surfaces = self._generate_wall_surfaces(exterior_ring, height)
+            # 1. Generate Wall Surfaces (base at z_offset, top at z_offset + height)
+            wall_surfaces = self._generate_wall_surfaces(exterior_ring, height, z_offset=z_offset)
             surfaces['wall_surfaces'] = wall_surfaces
             
-            # 2. Generate Roof Surface (top surface at height)
-            roof_surface = self._generate_roof_surface(exterior_ring, height)
+            # 2. Generate Roof Surface at z_offset + height
+            roof_surface = self._generate_roof_surface(exterior_ring, z_offset + height)
             surfaces['roof_surface'] = roof_surface
             
-            # 3. Generate Ground Surface (bottom surface at ground level)
-            ground_surface = self._generate_ground_surface(exterior_ring)
+            # 3. Generate Ground Surface at z_offset
+            ground_surface = self._generate_ground_surface(exterior_ring, z_offset=z_offset)
             surfaces['ground_surface'] = ground_surface
             
             # 4. Calculate building volume for validation
@@ -812,9 +817,16 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             self.pipeline.log_error(self.calculator_name, f"Failed to generate LoD 1.2 surfaces: {str(e)}")
             return None
     
-    def _generate_wall_surfaces(self, exterior_ring: List[List[float]], height: float) -> List[Dict[str, Any]]:
-        """Generate wall surfaces for each edge of the building footprint"""
+    def _generate_wall_surfaces(
+        self,
+        exterior_ring: List[List[float]],
+        height: float,
+        z_offset: float = 0.0,
+    ) -> List[Dict[str, Any]]:
+        """Generate wall surfaces for each edge of the building footprint."""
         wall_surfaces = []
+        z_base = z_offset
+        z_top = z_offset + height
         
         try:
             # Process each edge of the polygon
@@ -824,11 +836,11 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 
                 # Create wall surface as a vertical rectangle
                 wall_coordinates = [
-                    [p1[0], p1[1], 0.0],        # bottom-left
-                    [p2[0], p2[1], 0.0],        # bottom-right
-                    [p2[0], p2[1], height],     # top-right
-                    [p1[0], p1[1], height],     # top-left
-                    [p1[0], p1[1], 0.0]         # close polygon
+                    [p1[0], p1[1], z_base],     # bottom-left
+                    [p2[0], p2[1], z_base],     # bottom-right
+                    [p2[0], p2[1], z_top],      # top-right
+                    [p1[0], p1[1], z_top],      # top-left
+                    [p1[0], p1[1], z_base],     # close polygon
                 ]
                 
                 # Calculate wall properties

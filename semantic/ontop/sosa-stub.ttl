@@ -1,0 +1,26 @@
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+
+<http://www.w3.org/ns/sosa/> a owl:Ontology .
+
+sosa:FeatureOfInterest      a owl:Class .
+sosa:Sensor                 a owl:Class .
+sosa:Observation            a owl:Class .
+sosa:ObservationCollection  a owl:Class .
+sosa:Actuation              a owl:Class .
+sosa:Sampling               a owl:Class .
+sosa:ObservableProperty     a owl:Class .
+sosa:Result                 a owl:Class .
+sosa:Platform               a owl:Class .
+sosa:Procedure              a owl:Class .
+
+sosa:hasFeatureOfInterest  a owl:ObjectProperty ; rdfs:domain sosa:Observation ; rdfs:range sosa:FeatureOfInterest .
+sosa:observedProperty      a owl:ObjectProperty ; rdfs:domain sosa:Observation .
+sosa:madeBySensor          a owl:ObjectProperty ; rdfs:domain sosa:Observation ; rdfs:range sosa:Sensor .
+sosa:hasSimpleResult       a owl:DatatypeProperty ; rdfs:domain sosa:Observation .
+sosa:hasResult             a owl:ObjectProperty ; rdfs:domain sosa:Observation ; rdfs:range sosa:Result .
+sosa:phenomenonTime        a owl:ObjectProperty ; rdfs:domain sosa:Observation .
+sosa:resultTime            a owl:DatatypeProperty ; rdfs:domain sosa:Observation .
+sosa:hosts                 a owl:ObjectProperty ; rdfs:domain sosa:Platform ; rdfs:range sosa:Sensor .
+sosa:isHostedBy            a owl:ObjectProperty ; rdfs:domain sosa:Sensor ; rdfs:range sosa:Platform .
