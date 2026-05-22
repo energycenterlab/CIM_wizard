@@ -66,6 +66,56 @@ ENVELOPE_CONSTR_WEIGHT: Dict[str, str] = {
     "high": "light",
 }
 
+# Italian TABULA period bounds (start_year, end_year, label)
+TABULA_PERIODS: Dict[str, Dict[str, Any]] = {
+    "TABULA_1": {"start_year": 1800, "end_year": 1900, "label": "pre-1900"},
+    "TABULA_2": {"start_year": 1901, "end_year": 1920, "label": "1901-1920"},
+    "TABULA_3": {"start_year": 1921, "end_year": 1945, "label": "1921-1945"},
+    "TABULA_4": {"start_year": 1946, "end_year": 1960, "label": "1946-1960"},
+    "TABULA_5": {"start_year": 1961, "end_year": 1975, "label": "1961-1975"},
+    "TABULA_6": {"start_year": 1976, "end_year": 1990, "label": "1976-1990"},
+    "TABULA_7": {"start_year": 1991, "end_year": 2005, "label": "1991-2005"},
+}
+
+# Italian TABULA window U-value defaults (W/m2K) by construction period.
+# Used as an approximation when no per-surface window data is available.
+TABULA_WINDOW_U: Dict[str, float] = {
+    "TABULA_1": 4.90,
+    "TABULA_2": 4.90,
+    "TABULA_3": 4.90,
+    "TABULA_4": 4.90,
+    "TABULA_5": 4.90,
+    "TABULA_6": 3.70,
+    "TABULA_7": 2.80,
+}
+
+# Italian TABULA window g-value (SHGC) defaults by construction period.
+TABULA_WINDOW_G: Dict[str, float] = {
+    "TABULA_1": 0.85,
+    "TABULA_2": 0.85,
+    "TABULA_3": 0.85,
+    "TABULA_4": 0.85,
+    "TABULA_5": 0.85,
+    "TABULA_6": 0.75,
+    "TABULA_7": 0.65,
+}
+
+# Italian TABULA envelope quality class derived from average opaque U-value.
+def _tabula_envelope_class(tabula: str) -> Optional[str]:
+    u = TABULA_U_VALUES.get(tabula or "")
+    if not u:
+        return None
+    avg = (u.get("wall", 0) + u.get("roof", 0) + u.get("ground", 0)) / 3.0
+    if avg >= 1.5:
+        return "very_low"
+    if avg >= 1.2:
+        return "low"
+    if avg >= 0.9:
+        return "medium"
+    if avg >= 0.6:
+        return "good"
+    return "high"
+
 # 3DCityDB v4 objectclass IDs (CityGML 2.0)
 OC_BUILDING = 26
 OC_CEILING_SURFACE = 30
@@ -316,7 +366,10 @@ class CitydbMapperCalculator(BaseCalculator):
             else set()
         )
 
-        layered_gmlids = [f"{gmlid}-constr-wall" for gmlid in building_gmlids]
+        layered_gmlids: List[str] = []
+        for gmlid in building_gmlids:
+            for element in ("wall", "roof", "ground", "window"):
+                layered_gmlids.append(f"{gmlid}-constr-{element}")
         layered_ids: Set[int] = (
             {
                 row[0]
@@ -858,6 +911,46 @@ class CitydbMapperCalculator(BaseCalculator):
         if props.volume is not None:
             _add_generic_attrib(session, co_id, "cim_volume_m3", float(props.volume), unit="m^3")
 
+        self._store_tabula_attribs(session, co_id, props)
+
+    def _store_tabula_attribs(self, session: Session, co_id: int, props):
+        """Phase-1 TABULA-derived attributes on the building cityobject."""
+        tabula = getattr(props, "const_tabula", None) or ""
+        if not tabula:
+            return
+
+        period = TABULA_PERIODS.get(tabula)
+        if period:
+            _add_generic_attrib(session, co_id, "tabula_archetype", tabula)
+            _add_generic_attrib(session, co_id, "tabula_periodLabel", period["label"])
+            _add_generic_attrib(session, co_id, "tabula_periodStart", int(period["start_year"]))
+            _add_generic_attrib(session, co_id, "tabula_periodEnd", int(period["end_year"]))
+
+        u_vals = TABULA_U_VALUES.get(tabula, {})
+        if u_vals.get("wall") is not None:
+            _add_generic_attrib(session, co_id, "tabula_uWall", float(u_vals["wall"]), unit="W/(m^2K)")
+        if u_vals.get("roof") is not None:
+            _add_generic_attrib(session, co_id, "tabula_uRoof", float(u_vals["roof"]), unit="W/(m^2K)")
+        if u_vals.get("ground") is not None:
+            _add_generic_attrib(session, co_id, "tabula_uGround", float(u_vals["ground"]), unit="W/(m^2K)")
+        if tabula in TABULA_WINDOW_U:
+            _add_generic_attrib(
+                session, co_id, "tabula_uWindow",
+                float(TABULA_WINDOW_U[tabula]), unit="W/(m^2K)",
+            )
+        if tabula in TABULA_WINDOW_G:
+            _add_generic_attrib(
+                session, co_id, "tabula_gWindow",
+                float(TABULA_WINDOW_G[tabula]),
+            )
+
+        envelope_class = _tabula_envelope_class(tabula)
+        if envelope_class:
+            _add_generic_attrib(session, co_id, "tabula_envelopeClass", envelope_class)
+        constr_weight = TABULA_CONSTR_WEIGHT.get(tabula)
+        if constr_weight:
+            _add_generic_attrib(session, co_id, "tabula_constrWeight", constr_weight)
+
     def _upsert_ng2_thematic_surface(
         self, session: Session, ts_co_id: int, surf_props: Optional[dict],
     ):
@@ -911,39 +1004,66 @@ class CitydbMapperCalculator(BaseCalculator):
     def _upsert_ng2_layered_construction(
         self, session: Session, building_co_id: int, bid: str, tabula: str, u_vals: dict,
     ):
-        """One TABULA-based opaque construction per building (wall U-value).
+        """TABULA-based opaque constructions per building (wall + roof + ground).
 
-        ng2_layered_construction.id must reference citydb.cityobject (Energy ADE FK).
+        Phase 1: writes three ``ng2_layered_construction`` rows (one per opaque
+        envelope element) plus a window construction record when a window
+        U/g-value is defined.  Each row has a backing ``cityobject`` (Energy
+        ADE FK requirement).
         """
-        wall_u = u_vals.get("wall")
-        if wall_u is None:
+        if not u_vals:
             return
         lc_oc = self._energy_objectclass_id(session, "LayeredConstruction")
         if lc_oc is None:
             return
 
-        gmlid = f"{bid}-constr-wall"
-        lc_co = session.query(CityObject).filter(CityObject.gmlid == gmlid).first()
-        if lc_co is None:
-            lc_co = CityObject(
-                objectclass_id=lc_oc,
-                gmlid=gmlid,
-                name=f"TABULA-{tabula or 'wall'}-wall",
-            )
-            session.add(lc_co)
-            session.flush()
+        elements = [
+            ("wall", u_vals.get("wall"), None),
+            ("roof", u_vals.get("roof"), None),
+            ("ground", u_vals.get("ground"), None),
+        ]
+        if tabula in TABULA_WINDOW_U:
+            elements.append((
+                "window",
+                TABULA_WINDOW_U.get(tabula),
+                TABULA_WINDOW_G.get(tabula),
+            ))
 
-        row = session.query(Ng2LayeredConstruction).filter(
-            Ng2LayeredConstruction.id == lc_co.id
-        ).first()
-        if row is None:
-            row = Ng2LayeredConstruction(id=lc_co.id, objectclass_id=lc_oc)
-            session.add(row)
-        elif row.objectclass_id is None:
-            row.objectclass_id = lc_oc
-        row.u_value = float(wall_u)
-        row.u_value_uom = "W/(m^2K)"
-        row.library_code = tabula or None
+        for element, u_value, g_value in elements:
+            if u_value is None and g_value is None:
+                continue
+            gmlid = f"{bid}-constr-{element}"
+            lc_co = (
+                session.query(CityObject)
+                .filter(CityObject.gmlid == gmlid)
+                .first()
+            )
+            if lc_co is None:
+                lc_co = CityObject(
+                    objectclass_id=lc_oc,
+                    gmlid=gmlid,
+                    name=f"TABULA-{tabula or 'archetype'}-{element}",
+                )
+                session.add(lc_co)
+                session.flush()
+
+            row = (
+                session.query(Ng2LayeredConstruction)
+                .filter(Ng2LayeredConstruction.id == lc_co.id)
+                .first()
+            )
+            if row is None:
+                row = Ng2LayeredConstruction(id=lc_co.id, objectclass_id=lc_oc)
+                session.add(row)
+            elif row.objectclass_id is None:
+                row.objectclass_id = lc_oc
+
+            if u_value is not None:
+                row.u_value = float(u_value)
+                row.u_value_uom = "W/(m^2K)"
+            if g_value is not None and hasattr(row, "g_value"):
+                row.g_value = float(g_value)
+            row.library_code = tabula or None
 
     def _map_ng2_thermal_partitions(
         self, session: Session, building_co_id: int, bid: str,

@@ -4,3 +4,6 @@ from .base_calculator import BaseCalculator
 from .building_residential_filter_calculator import BuildingResidentialFilterCalculator
 from .building_volume_calculator import BuildingVolumeCalculator
 from .building_n_floors_calculator import BuildingNFloorsCalculator
+from .schedule_calculator import ScheduleCalculator
+from .occupant_calculator import OccupantCalculator
+from .idf_calculator import IDFCalculator

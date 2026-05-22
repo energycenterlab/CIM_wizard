@@ -447,6 +447,56 @@
           "priority": 2,
           "input_dependencies": ["project_id", "scenario_id"],
           "method_name": "generate_cityjson"
+        },
+        {
+          "priority": 3,
+          "input_dependencies": ["project_id", "scenario_id"],
+          "method_name": "map_post_sim_outputs_to_citydb"
+        }
+      ]
+    },
+    "schedule": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "app.calculators.schedule_calculator",
+      "class_name": "ScheduleCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo"],
+          "method_name": "typical_residential_it"
+        }
+      ]
+    },
+    "occupants": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "app.calculators.occupant_calculator",
+      "class_name": "OccupantCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_geo", "building_population", "building_n_families"],
+          "method_name": "typical_residential_it"
+        }
+      ]
+    },
+    "idf_export": {
+      "constraints": {
+        "datatype": "dict",
+        "required": false
+      },
+      "class_path": "app.calculators.idf_calculator",
+      "class_name": "IDFCalculator",
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["project_id", "scenario_id"],
+          "method_name": "from_citydb"
         }
       ]
     }
@@ -477,6 +527,11 @@
       "description": "Distribute census population and families through buildings",
       "features": ["census_population", "building_population", "building_families"],
       "required_inputs": ["scenario_census_boundary", "building_volume"]
+    },
+    "typical_residential_it_idf": {
+      "description": "End-to-end Italian residential IDF generation pipeline: typical schedules + occupants, then IDF export from the CityDB-mapped scenario",
+      "features": ["schedule", "occupants", "idf_export"],
+      "required_inputs": ["project_id", "scenario_id"]
     }
   },
   "global_settings": {

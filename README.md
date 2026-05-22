@@ -337,7 +337,34 @@ There are **22 calculators** registered in `configuration.json`. Each one target
 | 21 | `grid_generator` | GridGeneratorCalculator | `assign_grid` | `grid_id` on `cim_wizard_project_scenario` |
 | 22 | `pv_generator` | PvGeneratorCalculator | `assign_pv_to_buildings` | `pv_ids` on `cim_wizard_building` |
 
-Additionally, `CitydbMapperCalculator` provides `map_scenario_to_citydb` (writes to `citydb` schema) and `generate_cityjson` (reads from `cim_vector` and returns CityJSON v1.1).
+Additionally, `CitydbMapperCalculator` provides `map_scenario_to_citydb` (writes to `citydb` schema), `generate_cityjson` (reads from `cim_vector` and returns CityJSON v1.1), `map_post_sim_outputs_to_citydb` (writes simulation KPIs back to `citydb` as `postSim_*` generic attributes), and `delete_citymodel_from_citydb` (cascading removal of a mapped CityModel).
+
+#### TEASER-like calculators (Italian residential, end-of-pipeline)
+
+Three additional calculators ship the "Italian TEASER" path on top of the
+TABULA + CityDB stack:
+
+| # | Feature Name | Calculator Class | Method | Purpose |
+|---|-------------|------------------|--------|---------|
+| 23 | `schedule` | `ScheduleCalculator` | `typical_residential_it` | Assigns a typical Italian residential schedule template (heating Oct–Apr, cooling Jun–Sep, weekday/weekend occupancy/ventilation/DHW profiles, heating setpoint 20 °C / setback 16 °C, cooling 26 °C / 28 °C). Output is a pipeline feature consumed by the IDF exporter. |
+| 24 | `occupants` | `OccupantCalculator` | `typical_residential_it` | Assigns per-building occupants and heat-gain defaults from UNI/TS 11300 / ISO 7730 (120 W total per occupant, convective/latent/radiative split, 70 W/m² metabolic rate). Reads `n_people` and `n_family` produced by the demographic pipeline. |
+| 25 | `idf_export` | `IDFCalculator` | `from_citydb` | Reads the CityJSON document generated from `citydb` (after `pre-sim-ctdbmapper`), and emits one EnergyPlus `.idf` per building plus an `index.json`. Geometry comes from `BuildingSurface:Detailed` polygons, materials are `Material:NoMass` derived from TABULA U-values, schedules come from `ScheduleCalculator`, people come from `OccupantCalculator`. Default HVAC is `HVACTemplate:Zone:IdealLoadsAirSystem`. |
+
+These three calculators together form an end-to-end **"Italian TEASER"** path: TABULA archetypes → CityDB / Energy ADE → IDF files ready for EnergyPlus.
+
+A predefined pipeline ties them together:
+
+```python
+from app.core.pipeline_executor import CimWizardPipelineExecutor
+from app.core.data_manager import CimWizardDataManager
+
+dm = CimWizardDataManager(db_session=db)
+dm.set_feature("project_id", project_id)
+dm.set_feature("scenario_id", scenario_id)
+ex = CimWizardPipelineExecutor(dm)
+result = ex.execute_predefined_pipeline("typical_residential_it_idf")
+print(result["features"]["idf_export"]["output_dir"])
+```
 
 ### 3.2 Building Analysis Pipeline (22 steps)
 
@@ -624,6 +651,28 @@ All endpoints below use `citymodel_id` which equals the `scenario_id` used durin
 - CityJSON export is viewer-friendly by projecting geographic coordinates to UTM for display (`referenceSystem` in metadata), avoiding the vertical-line issue in Ninja.
 - Legacy and CIM attributes are preserved as `cityobject_genericattrib` (`cim_*`, `thermalZone_*`, `tz:*`, `energySystem_*`).
 - Post-simulation KPI mapping is available via `post-sim-ctdbmapper` and writes `postSim_*` attributes to mapped building CityObjects.
+
+**Phase 1 TABULA enrichment (current implementation):**
+
+The pre-simulation mapper now also writes the following TABULA-derived data:
+
+- **Layered constructions per envelope element.** `ng2_layered_construction` is now created for wall, roof, ground (and a window record using TABULA-period window U/g defaults). Each record has a backing `cityobject` with `gmlid = "{building_id}-constr-{element}"`. `library_code` carries the TABULA archetype tag (`TABULA_1`...`TABULA_7`).
+- **Per-building TABULA generic attributes** (`cityobject_genericattrib`):
+  - `tabula_archetype`, `tabula_periodLabel`, `tabula_periodStart`, `tabula_periodEnd`
+  - `tabula_uWall`, `tabula_uRoof`, `tabula_uGround` (W/m²K), `tabula_uWindow`, `tabula_gWindow`
+  - `tabula_envelopeClass` (`very_low`, `low`, `medium`, `good`, `high` derived from average opaque U)
+  - `tabula_constrWeight` (heavy / medium / light)
+- **Delete cascade extended.** `DELETE /api/v1/citydb/{citymodel_id}` now also removes the roof / ground / window construction CityObjects, not just the wall record.
+
+The full attribute matrix (current + planned Phase 2/3 extensions: `ng2_occupants`, `ng2_schedule`, `ng2_weather_data`, full HVAC-system mapping, per-surface layered constructions) is tracked in the Cursor canvas `tabula-citydb-energyade-matrix`.
+
+**TABULA window defaults (Phase 1):**
+
+| Period | u_window (W/m²K) | g_window |
+|--------|-------------------|----------|
+| TABULA_1 – TABULA_5 | 4.90 | 0.85 |
+| TABULA_6 | 3.70 | 0.75 |
+| TABULA_7 | 2.80 | 0.65 |
 
 **CityJSON mapping:**
 
@@ -1070,6 +1119,52 @@ Use this when remapping the same scenario from scratch or removing a scenario fr
 - `pre-sim-ctdbmapper`: baseline/static mapping before simulator execution.
 - `post-sim-ctdbmapper`: simulation-results mapping after outputs are available.
 - `map_to_citydb`: backward-compatible alias to `pre-sim-ctdbmapper`.
+
+### Italian TEASER pipeline (typical residential → IDF)
+
+CIM Wizard now ships an end-to-end **Italian TEASER** path that turns the
+CityDB-mapped scenario into EnergyPlus-ready IDF files. The path combines
+three new calculators:
+
+| Calculator | Method | Output |
+|------------|--------|--------|
+| `ScheduleCalculator` | `typical_residential_it` | Italian residential schedule template (heating/cooling/ventilation/DHW + setpoints). Stored as feature `schedule`. |
+| `OccupantCalculator` | `typical_residential_it` | Occupant counts + heat-gain template (120 W per occupant, ISO 7730 split). Stored as feature `occupants`. |
+| `IDFCalculator` | `from_citydb` | One `.idf` per building with `BuildingSurface:Detailed` polygons, TABULA-derived `Material:NoMass`/`Construction`, schedules, `People`, infiltration, `HVACTemplate:Zone:IdealLoadsAirSystem`. Plus an `index.json` summary. |
+
+Run them through the predefined pipeline:
+
+```
+POST /api/v1/pipeline/execute_predefined
+Content-Type: application/json
+
+{
+  "pipeline_name": "typical_residential_it_idf",
+  "project_id": "53985b6a-...",
+  "scenario_id": "53985b6a-..."
+}
+```
+
+The pipeline expects `pre-sim-ctdbmapper` to have already run for that scenario (otherwise there is no CityModel to read geometry from). Generated files land under `exports/idf/{scenario_id}/`:
+
+```
+exports/idf/53985b6a-.../
+├── 000d3106-....idf       # one IDF per building
+├── 000e9af1-....idf
+├── ...
+└── index.json             # building_id → idf_path + counts
+```
+
+Each IDF contains:
+
+- `Building`, `SimulationControl`, `Timestep`, `RunPeriod`, `GlobalGeometryRules`.
+- One `Zone` per CityJSON `+Energy-ThermalZone` (single fallback zone if none).
+- One `BuildingSurface:Detailed` per CityJSON semantic surface, with vertex coordinates resolved through the CityJSON `transform.scale` / `transform.translate`.
+- `Material:NoMass` + `Construction` per (surface_type, U-value) tuple using TABULA U-values.
+- `Schedule:Compact` objects for occupancy, heating setpoint, cooling setpoint, always-on (`OccSched_*`, `HeatSetpoint_*`, `CoolSetpoint_*`, `AlwaysOn_*`).
+- `People` and `ZoneInfiltration:DesignFlowRate` per zone, plus an `HVACTemplate:Zone:IdealLoadsAirSystem` when `hvac_mode="ideal_loads"` (default).
+
+> **Note on completeness.** The IDF emitter is intentionally lightweight (no external eppy/archetypal dependency). For production-grade IDFs with detailed material layers, fenestration parents, advanced HVAC, etc., feed the generated file into a refinement step (eppy/archetypal/OpenStudio) — the geometry, zones, constructions and schedules from CIM Wizard already provide a TEASER-equivalent baseline.
 
 ---
 
