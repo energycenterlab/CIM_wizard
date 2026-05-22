@@ -15,6 +15,7 @@ Mapping:
 
 import json as _json
 import logging
+import uuid
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import and_, func, or_
@@ -396,6 +397,204 @@ class CitydbMapperCalculator(BaseCalculator):
                 "thermal_partitions": len(partition_ids),
                 "layered_constructions": len(layered_ids),
                 "cityobjects": len(all_cityobject_ids),
+            },
+        }
+
+    def map_post_sim_outputs_to_citydb(
+        self,
+        project_id: str,
+        scenario_id: str,
+        lod: int = 0,
+        overwrite: bool = True,
+    ) -> Dict[str, Any]:
+        """Map simulator outputs (outputs schema) to mapped CityDB buildings.
+
+        Stores aggregated KPIs as ``cityobject_genericattrib`` on building
+        CityObjects belonging to the CityModel identified by ``scenario_id``.
+        """
+        session: Session = self.data_manager.db_session
+        from app.models.outputs import BuildingFrassinetto3, Battery, HeatingFrassinettoHp2
+
+        citymodel = (
+            session.query(CityModel)
+            .filter(CityModel.gmlid == scenario_id)
+            .first()
+        )
+        if not citymodel:
+            return {
+                "citymodel_id": scenario_id,
+                "updated": False,
+                "message": "CityModel not found. Run pre-sim mapper first.",
+            }
+
+        try:
+            scenario_uuid = uuid.UUID(str(scenario_id))
+        except ValueError:
+            return {
+                "citymodel_id": scenario_id,
+                "updated": False,
+                "message": "scenario_id is not a valid UUID for outputs schema",
+            }
+
+        building_rows = (
+            session.query(CityObject.id, CityObject.gmlid)
+            .join(CityObjectMember, CityObjectMember.cityobject_id == CityObject.id)
+            .filter(
+                CityObjectMember.citymodel_id == citymodel.id,
+                CityObject.objectclass_id == OC_BUILDING,
+            )
+            .all()
+        )
+
+        bmap: Dict[str, int] = {}
+        building_uuids: List[uuid.UUID] = []
+        for co_id, gmlid in building_rows:
+            if not gmlid:
+                continue
+            try:
+                bu = uuid.UUID(str(gmlid))
+            except ValueError:
+                continue
+            bmap[str(bu)] = co_id
+            building_uuids.append(bu)
+
+        if not building_uuids:
+            return {
+                "citymodel_id": scenario_id,
+                "project_id": project_id,
+                "updated": False,
+                "message": "No UUID-based mapped buildings found in citymodel",
+            }
+
+        bf_rows = (
+            session.query(
+                BuildingFrassinetto3.building_id.label("bid"),
+                func.count(BuildingFrassinetto3.time_step).label("samples"),
+                func.avg(BuildingFrassinetto3.t_building).label("t_building_avg"),
+                func.max(BuildingFrassinetto3.t_building).label("t_building_max"),
+                func.avg(BuildingFrassinetto3.heating_load_target).label("heating_load_avg"),
+                func.max(BuildingFrassinetto3.heating_load_target).label("heating_load_max"),
+            )
+            .filter(
+                BuildingFrassinetto3.project_id == project_id,
+                BuildingFrassinetto3.scenario_id == scenario_uuid,
+                BuildingFrassinetto3.lod == lod,
+                BuildingFrassinetto3.building_id.in_(building_uuids),
+            )
+            .group_by(BuildingFrassinetto3.building_id)
+            .all()
+        )
+        bf_map = {str(r.bid): r for r in bf_rows}
+
+        batt_rows = (
+            session.query(
+                Battery.building_id.label("bid"),
+                func.count(Battery.time_step).label("samples"),
+                func.avg(Battery.soc).label("soc_avg"),
+                func.min(Battery.soc).label("soc_min"),
+                func.max(Battery.soc).label("soc_max"),
+                func.avg(Battery.p_net_batt).label("p_net_batt_avg"),
+                func.max(Battery.p_net_batt).label("p_net_batt_max"),
+            )
+            .filter(
+                Battery.project_id == project_id,
+                Battery.scenario_id == scenario_uuid,
+                Battery.lod == lod,
+                Battery.building_id.in_(building_uuids),
+            )
+            .group_by(Battery.building_id)
+            .all()
+        )
+        batt_map = {str(r.bid): r for r in batt_rows}
+
+        hp_rows = (
+            session.query(
+                HeatingFrassinettoHp2.building_id.label("bid"),
+                func.count(HeatingFrassinettoHp2.time_step).label("samples"),
+                func.avg(HeatingFrassinettoHp2.cop).label("cop_avg"),
+                func.max(HeatingFrassinettoHp2.cop).label("cop_max"),
+                func.avg(HeatingFrassinettoHp2.en_el).label("en_el_avg"),
+                func.avg(HeatingFrassinettoHp2.en_auxel).label("en_auxel_avg"),
+                func.avg(HeatingFrassinettoHp2.qt_return).label("qt_return_avg"),
+            )
+            .filter(
+                HeatingFrassinettoHp2.project_id == project_id,
+                HeatingFrassinettoHp2.scenario_id == scenario_uuid,
+                HeatingFrassinettoHp2.lod == lod,
+                HeatingFrassinettoHp2.building_id.in_(building_uuids),
+            )
+            .group_by(HeatingFrassinettoHp2.building_id)
+            .all()
+        )
+        hp_map = {str(r.bid): r for r in hp_rows}
+
+        if not bf_map and not batt_map and not hp_map:
+            return {
+                "citymodel_id": scenario_id,
+                "project_id": project_id,
+                "lod": lod,
+                "updated": False,
+                "message": "No simulation outputs found for project/scenario/lod",
+                "mapped_buildings": len(building_uuids),
+            }
+
+        updated_buildings = 0
+        for b_uuid in bmap:
+            co_id = bmap[b_uuid]
+            bf = bf_map.get(b_uuid)
+            batt = batt_map.get(b_uuid)
+            hp = hp_map.get(b_uuid)
+            if not bf and not batt and not hp:
+                continue
+
+            if overwrite:
+                session.query(CityObjectGenericAttrib).filter(
+                    CityObjectGenericAttrib.cityobject_id == co_id,
+                    CityObjectGenericAttrib.attrname.like("postSim_%"),
+                ).delete(synchronize_session=False)
+
+            _add_generic_attrib(session, co_id, "postSim_projectId", project_id)
+            _add_generic_attrib(session, co_id, "postSim_scenarioId", scenario_id)
+            _add_generic_attrib(session, co_id, "postSim_lod", int(lod))
+
+            if bf:
+                _add_generic_attrib(session, co_id, "postSim_building_samples", int(bf.samples))
+                _add_generic_attrib(session, co_id, "postSim_tBuilding_avg_C", _safe_float(bf.t_building_avg), unit="C")
+                _add_generic_attrib(session, co_id, "postSim_tBuilding_max_C", _safe_float(bf.t_building_max), unit="C")
+                _add_generic_attrib(session, co_id, "postSim_heatingLoadTarget_avg_W", _safe_float(bf.heating_load_avg), unit="W")
+                _add_generic_attrib(session, co_id, "postSim_heatingLoadTarget_max_W", _safe_float(bf.heating_load_max), unit="W")
+
+            if batt:
+                _add_generic_attrib(session, co_id, "postSim_battery_samples", int(batt.samples))
+                _add_generic_attrib(session, co_id, "postSim_batterySOC_avg", _safe_float(batt.soc_avg))
+                _add_generic_attrib(session, co_id, "postSim_batterySOC_min", _safe_float(batt.soc_min))
+                _add_generic_attrib(session, co_id, "postSim_batterySOC_max", _safe_float(batt.soc_max))
+                _add_generic_attrib(session, co_id, "postSim_batteryPnet_avg_W", _safe_float(batt.p_net_batt_avg), unit="W")
+                _add_generic_attrib(session, co_id, "postSim_batteryPnet_max_W", _safe_float(batt.p_net_batt_max), unit="W")
+
+            if hp:
+                _add_generic_attrib(session, co_id, "postSim_hp_samples", int(hp.samples))
+                _add_generic_attrib(session, co_id, "postSim_hpCOP_avg", _safe_float(hp.cop_avg))
+                _add_generic_attrib(session, co_id, "postSim_hpCOP_max", _safe_float(hp.cop_max))
+                _add_generic_attrib(session, co_id, "postSim_hpEnEl_avg_W", _safe_float(hp.en_el_avg), unit="W")
+                _add_generic_attrib(session, co_id, "postSim_hpEnAuxEl_avg_W", _safe_float(hp.en_auxel_avg), unit="W")
+                _add_generic_attrib(session, co_id, "postSim_hpQtReturn_avg_W", _safe_float(hp.qt_return_avg), unit="W")
+
+            updated_buildings += 1
+
+        session.commit()
+        return {
+            "citymodel_id": scenario_id,
+            "project_id": project_id,
+            "lod": lod,
+            "updated": True,
+            "overwrite": overwrite,
+            "mapped_buildings": len(building_uuids),
+            "updated_buildings": updated_buildings,
+            "outputs_coverage": {
+                "building_frassinetto3": len(bf_map),
+                "battery": len(batt_map),
+                "heating_frassinetto_hp2": len(hp_map),
             },
         }
 

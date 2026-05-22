@@ -594,7 +594,9 @@ There are two sets of CityJSON/CityDB endpoints:
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| POST | `/api/v1/building/map_to_citydb` | Map all buildings in a scenario to 3DCityDB tables (citymodel, cityobject, building, thematic_surface, surface_geometry, generic attributes, ng2 Energy ADE tables). Body: `{ "project_id": "...", "scenario_id": "...", "lod12_method": "by_footprint_height|by_footprint_height_floors|by_mixed_use", "force_lod12": true|false }` |
+| POST | `/api/v1/building/pre-sim-ctdbmapper` | **Pre-simulation mapper**. Map all buildings in a scenario to 3DCityDB tables (citymodel, cityobject, building, thematic_surface, surface_geometry, generic attributes, ng2 Energy ADE tables). Body: `{ "project_id": "...", "scenario_id": "...", "lod12_method": "by_footprint_height|by_footprint_height_floors|by_mixed_use", "force_lod12": true|false }` |
+| POST | `/api/v1/building/post-sim-ctdbmapper` | **Post-simulation mapper**. Read `outputs` hypertables and write aggregated simulation KPIs back to mapped CityDB buildings as generic attributes. Body: `{ "project_id": "...", "scenario_id": "...", "lod": 0, "overwrite": true }` |
+| POST | `/api/v1/building/map_to_citydb` | Deprecated alias of `pre-sim-ctdbmapper` (kept for backward compatibility). |
 | GET | `/api/v1/building/cityjson/{citymodel_id}` | Return CityJSON v1.1 built from CIM Wizard tables. Does NOT require `/map_to_citydb`. |
 
 **B) 3DCityDB source (reads from citydb schema, requires `/map_to_citydb` first)**
@@ -621,6 +623,7 @@ All endpoints below use `citymodel_id` which equals the `scenario_id` used durin
 - Building-level Energy ADE enrichment is stored in `ng2_building` and `ng2_layered_construction` (TABULA wall U-values).
 - CityJSON export is viewer-friendly by projecting geographic coordinates to UTM for display (`referenceSystem` in metadata), avoiding the vertical-line issue in Ninja.
 - Legacy and CIM attributes are preserved as `cityobject_genericattrib` (`cim_*`, `thermalZone_*`, `tz:*`, `energySystem_*`).
+- Post-simulation KPI mapping is available via `post-sim-ctdbmapper` and writes `postSim_*` attributes to mapped building CityObjects.
 
 **CityJSON mapping:**
 
@@ -898,12 +901,12 @@ Response:
 
 ### 3DCityDB / CityJSON Workflow
 
-The CityDB integration currently follows a two-step workflow:
+The CityDB integration follows a two-stage mapper workflow:
 
-**Step 1: Map CIM Wizard data to 3DCityDB**
+**Stage 1 (pre-simulation): Map CIM Wizard data to 3DCityDB**
 
 ```
-POST /api/v1/building/map_to_citydb
+POST /api/v1/building/pre-sim-ctdbmapper
 Content-Type: application/json
 
 {
@@ -927,7 +930,23 @@ Response:
 
 This creates a CityModel in the `citydb` schema with `gmlid = scenario_id`. Each building becomes a CityObject with thematic surfaces, true 3D geometry, generic attributes (TABULA U-values, CIM fields, thermal-zone fields), and mapped Energy ADE rows (`ng2_building`, `ng2_thematic_surface`, `ng2_building_partition`, `ng2_layered_construction`).
 
-**Step 2: Query the CityModel via the hierarchical REST API**
+**Stage 2 (post-simulation): Map simulator outputs to CityDB**
+
+```
+POST /api/v1/building/post-sim-ctdbmapper
+Content-Type: application/json
+
+{
+  "project_id": "53985b6a-...",
+  "scenario_id": "53985b6a-...",
+  "lod": 0,
+  "overwrite": true
+}
+```
+
+This reads `outputs.building_frassinetto3`, `outputs.battery`, and `outputs.heating_frassinetto_hp2` and writes aggregated KPIs on each mapped building as `postSim_*` generic attributes (temperature, heating load, SOC, battery net power, HP COP, etc.).
+
+**Query phase: read the mapped CityModel via REST**
 
 The `citymodel_id` in all GET endpoints below is the `scenario_id`.
 
@@ -1046,22 +1065,11 @@ DELETE /api/v1/citydb/53985b6a-...
 
 Use this when remapping the same scenario from scratch or removing a scenario from the CityDB layer.
 
-### Stage-2 Mapper (post-simulation)
+### Mapper naming
 
-Yes, a second mapper stage is the right architecture: after simulators write time-series to `outputs`, map selected simulation results back to CityModel/Energy ADE objects.
-
-Recommended pattern:
-
-1. Keep `POST /api/v1/building/map_to_citydb` as **static/geometry + baseline energy model mapping**.
-2. Add a new endpoint (for example `POST /api/v1/building/map_outputs_to_citydb`) that reads:
-   - `outputs.simulation_run`
-   - `outputs.building_frassinetto3`
-   - `outputs.battery`
-   - `outputs.heating_frassinetto_hp2`
-3. Persist aggregated KPIs and/or links to time series into Energy ADE entities (`ng2_time_series`, `ng2_schedule`, `ng2_weather_data`, `ng2_occupants`, or generic attributes, depending on semantic level).
-4. Keep both mappers idempotent by scenario and simulation run.
-
-This separation keeps the first mapper deterministic and lets simulation outputs evolve independently.
+- `pre-sim-ctdbmapper`: baseline/static mapping before simulator execution.
+- `post-sim-ctdbmapper`: simulation-results mapping after outputs are available.
+- `map_to_citydb`: backward-compatible alias to `pre-sim-ctdbmapper`.
 
 ---
 

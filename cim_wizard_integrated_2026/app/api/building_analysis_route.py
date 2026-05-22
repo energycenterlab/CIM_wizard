@@ -598,8 +598,39 @@ async def get_pv_with_building_info(
 
 # ── CityDB / CityJSON endpoints ─────────────────────────────────────
 
-@router.post("/map_to_citydb")
-async def map_to_citydb(
+def _run_pre_sim_ctdbmapper(request_data: dict, db: Session):
+    project_id = request_data.get("project_id")
+    scenario_id = request_data.get("scenario_id")
+    lod12_method = request_data.get("lod12_method", "by_footprint_height")
+    force_lod12 = request_data.get("force_lod12", False)
+
+    if not all([project_id, scenario_id]):
+        raise HTTPException(
+            status_code=400,
+            detail="project_id and scenario_id are required",
+        )
+
+    valid_methods = ("by_footprint_height", "by_footprint_height_floors", "by_mixed_use")
+    if lod12_method not in valid_methods:
+        raise HTTPException(
+            status_code=400,
+            detail=f"lod12_method must be one of {valid_methods}",
+        )
+
+    executor, _ = get_pipeline_executor(db)
+    from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
+
+    calc = CitydbMapperCalculator(executor)
+    try:
+        return calc.map_scenario_to_citydb(
+            project_id, scenario_id, lod12_method, force_lod12=force_lod12,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CityDB mapping failed: {e}")
+
+
+@router.post("/pre-sim-ctdbmapper")
+async def pre_sim_ctdbmapper(
     request_data: dict = Body(...),
     db: Session = Depends(get_db),
 ):
@@ -625,10 +656,40 @@ async def map_to_citydb(
     ``force_lod12`` (optional, default ``false``): when ``true``,
     regenerate LOD 1.2 even for buildings that already have it.
     """
+    return _run_pre_sim_ctdbmapper(request_data, db)
+
+
+@router.post("/map_to_citydb")
+async def map_to_citydb(
+    request_data: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Deprecated alias of ``/pre-sim-ctdbmapper`` for backward compatibility.
+    """
+    return _run_pre_sim_ctdbmapper(request_data, db)
+
+
+@router.post("/post-sim-ctdbmapper")
+async def post_sim_ctdbmapper(
+    request_data: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Map post-simulation outputs from ``outputs`` schema to mapped CityDB buildings.
+
+    Body::
+        {
+            "project_id": "...",
+            "scenario_id": "...",
+            "lod": 0,
+            "overwrite": true
+        }
+    """
     project_id = request_data.get("project_id")
     scenario_id = request_data.get("scenario_id")
-    lod12_method = request_data.get("lod12_method", "by_footprint_height")
-    force_lod12 = request_data.get("force_lod12", False)
+    lod = int(request_data.get("lod", 0))
+    overwrite = bool(request_data.get("overwrite", True))
 
     if not all([project_id, scenario_id]):
         raise HTTPException(
@@ -636,23 +697,22 @@ async def map_to_citydb(
             detail="project_id and scenario_id are required",
         )
 
-    valid_methods = ("by_footprint_height", "by_footprint_height_floors", "by_mixed_use")
-    if lod12_method not in valid_methods:
-        raise HTTPException(
-            status_code=400,
-            detail=f"lod12_method must be one of {valid_methods}",
-        )
-
     executor, _ = get_pipeline_executor(db)
     from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
 
     calc = CitydbMapperCalculator(executor)
     try:
-        result = calc.map_scenario_to_citydb(
-            project_id, scenario_id, lod12_method, force_lod12=force_lod12,
+        result = calc.map_post_sim_outputs_to_citydb(
+            project_id=project_id,
+            scenario_id=scenario_id,
+            lod=lod,
+            overwrite=overwrite,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"CityDB mapping failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Post-sim CityDB mapping failed: {e}")
+
+    if not result.get("updated"):
+        raise HTTPException(status_code=404, detail=result.get("message", "Mapping skipped"))
     return result
 
 
@@ -665,10 +725,10 @@ async def get_cityjson(
     Return a CityJSON v1.1 document for a city model.
 
     ``citymodel_id`` equals the ``scenario_id`` used during
-    ``POST /map_to_citydb``.  Reads directly from the 3DCityDB
+    ``POST /pre-sim-ctdbmapper`` (or legacy ``/map_to_citydb``). Reads directly from the 3DCityDB
     ``citydb`` schema including multi-zone thermal zones.
 
-    Requires ``/map_to_citydb`` to have been called first.
+    Requires the pre-simulation mapper endpoint to have been called first.
     """
     executor, _ = get_pipeline_executor(db)
     from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
