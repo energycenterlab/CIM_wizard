@@ -15,7 +15,7 @@ Mapping:
 
 import json as _json
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -255,6 +255,148 @@ class CitydbMapperCalculator(BaseCalculator):
             "lod12_generated": lod12_generated,
             "mapped_buildings": mapped,
             "total_buildings": len(rows),
+        }
+
+    def delete_citymodel_from_citydb(self, citymodel_id: str) -> Dict[str, Any]:
+        """Delete one mapped CityModel (scenario) and all mapper-created rows."""
+        session: Session = self.data_manager.db_session
+
+        citymodel = (
+            session.query(CityModel)
+            .filter(CityModel.gmlid == citymodel_id)
+            .first()
+        )
+        if not citymodel:
+            return {
+                "citymodel_id": citymodel_id,
+                "deleted": False,
+                "message": "CityModel not found",
+            }
+
+        member_ids: Set[int] = {
+            row[0]
+            for row in session.query(CityObjectMember.cityobject_id)
+            .filter(CityObjectMember.citymodel_id == citymodel.id)
+            .all()
+        }
+
+        building_rows = (
+            session.query(CityObject.id, CityObject.gmlid)
+            .filter(
+                CityObject.id.in_(member_ids),
+                CityObject.objectclass_id == OC_BUILDING,
+            )
+            .all()
+            if member_ids
+            else []
+        )
+        building_ids: Set[int] = {row[0] for row in building_rows}
+        building_gmlids: List[str] = [row[1] for row in building_rows]
+
+        surface_ids: Set[int] = (
+            {
+                row[0]
+                for row in session.query(ThematicSurface.id)
+                .filter(ThematicSurface.building_id.in_(building_ids))
+                .all()
+            }
+            if building_ids
+            else set()
+        )
+
+        partition_ids: Set[int] = (
+            {
+                row[0]
+                for row in session.query(Ng2BuildingPartition.id)
+                .filter(Ng2BuildingPartition.building_id.in_(building_ids))
+                .all()
+            }
+            if building_ids
+            else set()
+        )
+
+        layered_gmlids = [f"{gmlid}-constr-wall" for gmlid in building_gmlids]
+        layered_ids: Set[int] = (
+            {
+                row[0]
+                for row in session.query(CityObject.id)
+                .filter(CityObject.gmlid.in_(layered_gmlids))
+                .all()
+            }
+            if layered_gmlids
+            else set()
+        )
+
+        all_cityobject_ids: Set[int] = set()
+        all_cityobject_ids.update(building_ids)
+        all_cityobject_ids.update(surface_ids)
+        all_cityobject_ids.update(partition_ids)
+        all_cityobject_ids.update(layered_ids)
+
+        try:
+            if surface_ids:
+                session.query(SurfaceGeometry).filter(
+                    SurfaceGeometry.cityobject_id.in_(surface_ids)
+                ).delete(synchronize_session=False)
+
+            if all_cityobject_ids:
+                session.query(CityObjectGenericAttrib).filter(
+                    CityObjectGenericAttrib.cityobject_id.in_(all_cityobject_ids)
+                ).delete(synchronize_session=False)
+
+            if surface_ids:
+                session.query(Ng2ThematicSurface).filter(
+                    Ng2ThematicSurface.id.in_(surface_ids)
+                ).delete(synchronize_session=False)
+                session.query(ThematicSurface).filter(
+                    ThematicSurface.id.in_(surface_ids)
+                ).delete(synchronize_session=False)
+
+            if partition_ids:
+                session.query(Ng2BuildingPartition).filter(
+                    Ng2BuildingPartition.id.in_(partition_ids)
+                ).delete(synchronize_session=False)
+
+            if layered_ids:
+                session.query(Ng2LayeredConstruction).filter(
+                    Ng2LayeredConstruction.id.in_(layered_ids)
+                ).delete(synchronize_session=False)
+
+            if building_ids:
+                session.query(Ng2Building).filter(
+                    Ng2Building.id.in_(building_ids)
+                ).delete(synchronize_session=False)
+                session.query(CityBuilding).filter(
+                    CityBuilding.id.in_(building_ids)
+                ).delete(synchronize_session=False)
+
+            session.query(CityObjectMember).filter(
+                CityObjectMember.citymodel_id == citymodel.id
+            ).delete(synchronize_session=False)
+
+            if all_cityobject_ids:
+                session.query(CityObject).filter(
+                    CityObject.id.in_(all_cityobject_ids)
+                ).delete(synchronize_session=False)
+
+            session.query(CityModel).filter(
+                CityModel.id == citymodel.id
+            ).delete(synchronize_session=False)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+
+        return {
+            "citymodel_id": citymodel_id,
+            "deleted": True,
+            "deleted_counts": {
+                "buildings": len(building_ids),
+                "surfaces": len(surface_ids),
+                "thermal_partitions": len(partition_ids),
+                "layered_constructions": len(layered_ids),
+                "cityobjects": len(all_cityobject_ids),
+            },
         }
 
     @staticmethod

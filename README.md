@@ -594,8 +594,8 @@ There are two sets of CityJSON/CityDB endpoints:
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| POST | `/api/v1/building/map_to_citydb` | Map all buildings in a scenario to 3DCityDB tables (citymodel, cityobject, building, thematic_surface, surface_geometry, generic attributes). Idempotent. Body: `{ "project_id": "...", "scenario_id": "..." }` |
-| GET | `/api/v1/building/cityjson/{project_id}/{scenario_id}` | Return CityJSON v1.1 built from CIM Wizard tables. Does NOT require `/map_to_citydb`. |
+| POST | `/api/v1/building/map_to_citydb` | Map all buildings in a scenario to 3DCityDB tables (citymodel, cityobject, building, thematic_surface, surface_geometry, generic attributes, ng2 Energy ADE tables). Body: `{ "project_id": "...", "scenario_id": "...", "lod12_method": "by_footprint_height|by_footprint_height_floors|by_mixed_use", "force_lod12": true|false }` |
+| GET | `/api/v1/building/cityjson/{citymodel_id}` | Return CityJSON v1.1 built from CIM Wizard tables. Does NOT require `/map_to_citydb`. |
 
 **B) 3DCityDB source (reads from citydb schema, requires `/map_to_citydb` first)**
 
@@ -605,11 +605,22 @@ All endpoints below use `citymodel_id` which equals the `scenario_id` used durin
 |--------|-------|---------|
 | GET | `/api/v1/citydb/cityjson/{citymodel_id}` | CityJSON v1.1 built from 3DCityDB tables (citydb schema) |
 | GET | `/api/v1/citydb/{citymodel_id}` | CityModel metadata: envelope, name, member-count breakdown |
+| DELETE | `/api/v1/citydb/{citymodel_id}` | Delete one mapped CityModel completely (citymodel + mapped buildings, surfaces, geometry, generic attributes, ng2 mapper rows) |
 | GET | `/api/v1/citydb/{citymodel_id}/cityobjects/{cityobject_id}` | Any CityObject by numeric ID |
 | GET | `/api/v1/citydb/{citymodel_id}/buildings` | List all buildings in the CityModel with generic attributes |
 | GET | `/api/v1/citydb/{citymodel_id}/buildings/{building_id}` | Building detail: physical properties, energy system, thermal zone, surfaces |
 | GET | `/api/v1/citydb/{citymodel_id}/buildings/{building_id}/surfaces` | List thematic surfaces (wall, roof, ground) with U-values |
 | GET | `/api/v1/citydb/{citymodel_id}/buildings/{building_id}/surfaces/{surface_id}` | Surface detail with GeoJSON geometry and generic attributes |
+
+**CityDB mapper improvements (current implementation):**
+
+- `force_lod12=true` refreshes mapped surfaces/attributes for already-mapped buildings.
+- LOD1.2 geometry is persisted as true 3D PolygonZ (`ST_GeomFromEWKT` + `ST_Force3D`) to avoid flat surfaces.
+- Multi-zone mapping persists thermal zones (`ng2_building_partition`) and also exports CityJSON `+Energy-ThermalZone` children.
+- Surface-level Energy ADE enrichment is stored in `ng2_thematic_surface` (azimuth, inclination, area).
+- Building-level Energy ADE enrichment is stored in `ng2_building` and `ng2_layered_construction` (TABULA wall U-values).
+- CityJSON export is viewer-friendly by projecting geographic coordinates to UTM for display (`referenceSystem` in metadata), avoiding the vertical-line issue in Ninja.
+- Legacy and CIM attributes are preserved as `cityobject_genericattrib` (`cim_*`, `thermalZone_*`, `tz:*`, `energySystem_*`).
 
 **CityJSON mapping:**
 
@@ -887,7 +898,7 @@ Response:
 
 ### 3DCityDB / CityJSON Workflow
 
-The CityDB integration follows a two-step workflow:
+The CityDB integration currently follows a two-step workflow:
 
 **Step 1: Map CIM Wizard data to 3DCityDB**
 
@@ -895,7 +906,12 @@ The CityDB integration follows a two-step workflow:
 POST /api/v1/building/map_to_citydb
 Content-Type: application/json
 
-{ "project_id": "53985b6a-...", "scenario_id": "53985b6a-..." }
+{
+  "project_id": "53985b6a-...",
+  "scenario_id": "53985b6a-...",
+  "lod12_method": "by_footprint_height_floors",
+  "force_lod12": true
+}
 ```
 
 Response:
@@ -909,7 +925,7 @@ Response:
 }
 ```
 
-This creates a CityModel in the `citydb` schema with `gmlid = scenario_id`. Each building becomes a CityObject with thematic surfaces, geometry, and generic attributes (TABULA U-values, thermal zone data).
+This creates a CityModel in the `citydb` schema with `gmlid = scenario_id`. Each building becomes a CityObject with thematic surfaces, true 3D geometry, generic attributes (TABULA U-values, CIM fields, thermal-zone fields), and mapped Energy ADE rows (`ng2_building`, `ng2_thematic_surface`, `ng2_building_partition`, `ng2_layered_construction`).
 
 **Step 2: Query the CityModel via the hierarchical REST API**
 
@@ -1012,15 +1028,40 @@ Get CityJSON v1.1 from the 3DCityDB schema:
 GET /api/v1/citydb/cityjson/53985b6a-...
 ```
 
-This returns a full CityJSON v1.1 document built from the `citydb` tables, including Building CityObjects with LOD 1.2 Solid geometry, semantic surfaces with TABULA U-values, and +Energy-ThermalZone child objects.
+This returns a full CityJSON v1.1 document built from the `citydb` tables, including Building CityObjects with LOD 1.2 Solid geometry, semantic surfaces with TABULA U-values, and `+Energy-ThermalZone` child objects. Export is projected for display (UTM meters) to avoid degree-vs-meter distortion in common viewers.
 
 Alternatively, get CityJSON directly from CIM Wizard tables (no map_to_citydb step needed):
 
 ```
-GET /api/v1/building/cityjson/53985b6a-.../53985b6a-...
+GET /api/v1/building/cityjson/53985b6a-...
 ```
 
 Both endpoints return the same CityJSON v1.1 structure. The `citydb` variant reads from the mapped 3DCityDB tables; the `building` variant reads from CIM Wizard tables directly.
+
+**Optional cleanup (delete a mapped scenario from CityDB):**
+
+```
+DELETE /api/v1/citydb/53985b6a-...
+```
+
+Use this when remapping the same scenario from scratch or removing a scenario from the CityDB layer.
+
+### Stage-2 Mapper (post-simulation)
+
+Yes, a second mapper stage is the right architecture: after simulators write time-series to `outputs`, map selected simulation results back to CityModel/Energy ADE objects.
+
+Recommended pattern:
+
+1. Keep `POST /api/v1/building/map_to_citydb` as **static/geometry + baseline energy model mapping**.
+2. Add a new endpoint (for example `POST /api/v1/building/map_outputs_to_citydb`) that reads:
+   - `outputs.simulation_run`
+   - `outputs.building_frassinetto3`
+   - `outputs.battery`
+   - `outputs.heating_frassinetto_hp2`
+3. Persist aggregated KPIs and/or links to time series into Energy ADE entities (`ng2_time_series`, `ng2_schedule`, `ng2_weather_data`, `ng2_occupants`, or generic attributes, depending on semantic level).
+4. Keep both mappers idempotent by scenario and simulation run.
+
+This separation keeps the first mapper deterministic and lets simulation outputs evolve independently.
 
 ---
 

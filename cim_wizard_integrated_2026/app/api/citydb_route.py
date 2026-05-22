@@ -5,7 +5,7 @@ in the ``citydb`` schema.
 URL hierarchy (all mounted under the router prefix):
 
     /cityjson/{citymodel_id}                                          → CityJSON v1.1
-    /{citymodel_id}                                                   → CityModel metadata
+    /{citymodel_id}                                                   → CityModel metadata / delete
     /{citymodel_id}/cityobjects/{cityobject_id}                       → any CityObject
     /{citymodel_id}/buildings                                         → list buildings
     /{citymodel_id}/buildings/{building_id}                           → building detail
@@ -231,6 +231,32 @@ async def get_citymodel_detail(citymodel_id: str, db: Session = Depends(get_db))
         "lineage": cm.lineage,
         "members": {"total": total, **member_counts},
     }
+
+
+@router.delete("/{citymodel_id}")
+async def delete_citymodel(citymodel_id: str, db: Session = Depends(get_db)):
+    """
+    Delete a mapped CityModel and all mapper-created CityDB rows for it.
+
+    ``citymodel_id`` is the CityModel.gmlid (same as scenario_id used in mapping).
+    """
+    data_manager = CimWizardDataManager(db_session=db)
+    executor = CimWizardPipelineExecutor(data_manager)
+
+    from app.calculators.citydb_mapper_calculator import CitydbMapperCalculator
+
+    calc = CitydbMapperCalculator(executor)
+    try:
+        result = calc.delete_citymodel_from_citydb(citymodel_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete CityModel '{citymodel_id}': {e}",
+        )
+
+    if not result.get("deleted"):
+        raise HTTPException(404, detail=f"CityModel '{citymodel_id}' not found")
+    return result
 
 
 # ── Generic CityObject ──────────────────────────────────────────────
