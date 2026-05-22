@@ -30,6 +30,10 @@ from app.models.citydb import (
     ThematicSurface,
     SurfaceGeometry,
     CityObjectGenericAttrib,
+    Ng2Building,
+    Ng2ThematicSurface,
+    Ng2BuildingPartition,
+    Ng2LayeredConstruction,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,6 +47,22 @@ TABULA_U_VALUES: Dict[str, Dict[str, float]] = {
     "TABULA_5": {"wall": 1.10, "roof": 1.20, "ground": 1.00},
     "TABULA_6": {"wall": 0.80, "roof": 0.80, "ground": 0.80},
     "TABULA_7": {"wall": 0.50, "roof": 0.40, "ground": 0.50},
+}
+
+TABULA_CONSTR_WEIGHT: Dict[str, str] = {
+    "TABULA_1": "heavy",
+    "TABULA_2": "heavy",
+    "TABULA_3": "heavy",
+    "TABULA_4": "medium",
+    "TABULA_5": "medium",
+    "TABULA_6": "light",
+    "TABULA_7": "light",
+}
+
+ENVELOPE_CONSTR_WEIGHT: Dict[str, str] = {
+    "low": "heavy",
+    "medium": "medium",
+    "high": "light",
 }
 
 # 3DCityDB v4 objectclass IDs (CityGML 2.0)
@@ -104,6 +124,51 @@ def _polygon_geojson_to_ewkt(geojson_geom: dict, srid: int = 4326) -> Optional[s
     return f"SRID={srid};POLYGON Z(" + ", ".join(ring_parts) + ")"
 
 
+def _constr_weight_from_props(props) -> Optional[str]:
+    tabula = getattr(props, "const_tabula", None) or ""
+    if tabula in TABULA_CONSTR_WEIGHT:
+        return TABULA_CONSTR_WEIGHT[tabula]
+    env = getattr(props, "envelope_efficiency", None)
+    if env in ENVELOPE_CONSTR_WEIGHT:
+        return ENVELOPE_CONSTR_WEIGHT[env]
+    return None
+
+
+def _add_generic_attrib(
+    session: Session,
+    cityobject_id: int,
+    name: str,
+    value: Any,
+    *,
+    unit: Optional[str] = None,
+):
+    if value is None:
+        return
+    if isinstance(value, bool):
+        value = str(value)
+    if isinstance(value, str):
+        ga = CityObjectGenericAttrib(
+            attrname=name, datatype=DT_STRING, strval=value,
+            cityobject_id=cityobject_id,
+        )
+    elif isinstance(value, int) and not isinstance(value, bool):
+        ga = CityObjectGenericAttrib(
+            attrname=name, datatype=DT_INTEGER, intval=value,
+            cityobject_id=cityobject_id,
+        )
+    elif isinstance(value, float):
+        ga = CityObjectGenericAttrib(
+            attrname=name, datatype=DT_REAL, realval=float(value),
+            cityobject_id=cityobject_id, unit=unit,
+        )
+    else:
+        ga = CityObjectGenericAttrib(
+            attrname=name, datatype=DT_STRING, strval=str(value),
+            cityobject_id=cityobject_id,
+        )
+    session.add(ga)
+
+
 class CitydbMapperCalculator(BaseCalculator):
     """Maps CIM Wizard buildings to 3DCityDB tables and produces CityJSON."""
 
@@ -157,6 +222,7 @@ class CitydbMapperCalculator(BaseCalculator):
         mapped = 0
 
         for props, building in rows:
+            bid = building.building_id
             try:
                 if force_lod12 or not building.building_surfaces_lod12:
                     lod12 = self._run_lod12(
@@ -177,9 +243,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 )
                 mapped += 1
             except Exception as e:
-                logger.warning(
-                    "Failed to map building %s: %s", building.building_id, e,
-                )
+                logger.warning("Failed to map building %s: %s", bid, e)
                 session.rollback()
 
         session.commit()
@@ -301,6 +365,9 @@ class CitydbMapperCalculator(BaseCalculator):
                     )
                 else:
                     self._store_thermal_zone_attrs(session, existing.id, props)
+                self._apply_building_energy_mapping(
+                    session, existing.id, bid, building, props, lod12, u_vals,
+                )
                 session.flush()
             return existing
 
@@ -337,6 +404,10 @@ class CitydbMapperCalculator(BaseCalculator):
             self._store_multi_thermal_zone_attrs(session, co.id, thermal_zones, props)
         else:
             self._store_thermal_zone_attrs(session, co.id, props)
+
+        self._apply_building_energy_mapping(
+            session, co.id, bid, building, props, lod12, u_vals,
+        )
 
         session.flush()
         return co
@@ -378,20 +449,225 @@ class CitydbMapperCalculator(BaseCalculator):
         ).delete(synchronize_session=False)
 
     def _delete_building_energy_attribs(self, session: Session, building_co_id: int):
-        """Clear thermal-zone generic attributes before re-insert."""
+        """Clear CIM / thermal generic attributes before re-insert."""
         session.query(CityObjectGenericAttrib).filter(
             CityObjectGenericAttrib.cityobject_id == building_co_id,
             or_(
                 CityObjectGenericAttrib.attrname.like("thermalZone%"),
                 CityObjectGenericAttrib.attrname.like("tz:%"),
                 CityObjectGenericAttrib.attrname.like("energySystem_%"),
+                CityObjectGenericAttrib.attrname.like("cim_%"),
             ),
         ).delete(synchronize_session=False)
+
+    def _delete_ng2_partitions(self, session: Session, building_co_id: int):
+        part_ids = [
+            row[0]
+            for row in session.query(Ng2BuildingPartition.id)
+            .filter(Ng2BuildingPartition.building_id == building_co_id)
+            .all()
+        ]
+        if not part_ids:
+            return
+        session.query(Ng2BuildingPartition).filter(
+            Ng2BuildingPartition.id.in_(part_ids)
+        ).delete(synchronize_session=False)
+        session.query(CityObjectGenericAttrib).filter(
+            CityObjectGenericAttrib.cityobject_id.in_(part_ids)
+        ).delete(synchronize_session=False)
+        session.query(CityObject).filter(
+            CityObject.id.in_(part_ids)
+        ).delete(synchronize_session=False)
+
+    def _energy_objectclass_id(self, session: Session, classname_part: str) -> Optional[int]:
+        from sqlalchemy import text
+
+        row = session.execute(
+            text(
+                "SELECT id FROM citydb.objectclass "
+                "WHERE classname ILIKE :pat ORDER BY id LIMIT 1"
+            ),
+            {"pat": f"%{classname_part}%"},
+        ).first()
+        return int(row[0]) if row else None
+
+    def _upsert_ng2_building(self, session: Session, building_co_id: int, props, building):
+        row = session.query(Ng2Building).filter(Ng2Building.id == building_co_id).first()
+        if row is None:
+            row = Ng2Building(id=building_co_id)
+            session.add(row)
+
+        row.type = props.type or row.type
+        row.constr_weight = _constr_weight_from_props(props) or row.constr_weight
+        row.is_protected = 0
+
+    def _store_building_cim_attribs(self, session: Session, co_id: int, props, building):
+        """CIM Wizard properties as queryable generic attributes."""
+        _add_generic_attrib(session, co_id, "cim_buildingType", props.type)
+        _add_generic_attrib(session, co_id, "cim_constYear", props.const_year)
+        _add_generic_attrib(session, co_id, "cim_constTabula", props.const_tabula)
+        _add_generic_attrib(session, co_id, "cim_constPeriodCensus", props.const_period_census)
+        _add_generic_attrib(session, co_id, "cim_nPeople", props.n_people)
+        _add_generic_attrib(session, co_id, "cim_nFamilies", props.n_family)
+        _add_generic_attrib(session, co_id, "cim_geometrySource", building.building_geometry_source)
+        if building.z_value is not None:
+            _add_generic_attrib(session, co_id, "cim_terrainHeight", float(building.z_value), unit="m")
+        if props.area is not None:
+            _add_generic_attrib(session, co_id, "cim_footprintArea_m2", float(props.area), unit="m^2")
+        if props.volume is not None:
+            _add_generic_attrib(session, co_id, "cim_volume_m3", float(props.volume), unit="m^3")
+
+    def _upsert_ng2_thematic_surface(
+        self, session: Session, ts_co_id: int, surf_props: Optional[dict],
+    ):
+        if not surf_props:
+            return
+        row = session.query(Ng2ThematicSurface).filter(Ng2ThematicSurface.id == ts_co_id).first()
+        if row is None:
+            row = Ng2ThematicSurface(id=ts_co_id)
+            session.add(row)
+
+        area = surf_props.get("area_m2")
+        if area is not None:
+            row.total_surf_area = float(area)
+            row.total_surf_area_uom = "m^2"
+            row.opaque_surf_area = float(area)
+            row.opaque_surf_area_uom = "m^2"
+        az = surf_props.get("azimuth_degrees")
+        if az is not None:
+            row.azimuth = float(az)
+            row.azimuth_uom = "degrees"
+        incl = surf_props.get("inclination_degrees")
+        if incl is not None:
+            row.inclination = float(incl)
+            row.inclination_uom = "degrees"
+        elif surf_props.get("surface_type") == "RoofSurface":
+            row.inclination = 0.0
+            row.inclination_uom = "degrees"
+
+    def _store_surface_cim_attribs(
+        self, session: Session, ts_co_id: int, surf_props: Optional[dict],
+    ):
+        if not surf_props:
+            return
+        _add_generic_attrib(
+            session, ts_co_id, "cim_orientation",
+            surf_props.get("orientation"),
+        )
+        _add_generic_attrib(
+            session, ts_co_id, "cim_azimuth_deg",
+            surf_props.get("azimuth_degrees"), unit="degrees",
+        )
+        _add_generic_attrib(
+            session, ts_co_id, "cim_wallLength_m",
+            surf_props.get("length_m"), unit="m",
+        )
+        _add_generic_attrib(
+            session, ts_co_id, "cim_surfaceArea_m2",
+            surf_props.get("area_m2"), unit="m^2",
+        )
+
+    def _upsert_ng2_layered_construction(
+        self, session: Session, building_co_id: int, bid: str, tabula: str, u_vals: dict,
+    ):
+        """One TABULA-based opaque construction per building (wall U-value).
+
+        ng2_layered_construction.id must reference citydb.cityobject (Energy ADE FK).
+        """
+        wall_u = u_vals.get("wall")
+        if wall_u is None:
+            return
+        lc_oc = self._energy_objectclass_id(session, "LayeredConstruction")
+        if lc_oc is None:
+            return
+
+        gmlid = f"{bid}-constr-wall"
+        lc_co = session.query(CityObject).filter(CityObject.gmlid == gmlid).first()
+        if lc_co is None:
+            lc_co = CityObject(
+                objectclass_id=lc_oc,
+                gmlid=gmlid,
+                name=f"TABULA-{tabula or 'wall'}-wall",
+            )
+            session.add(lc_co)
+            session.flush()
+
+        row = session.query(Ng2LayeredConstruction).filter(
+            Ng2LayeredConstruction.id == lc_co.id
+        ).first()
+        if row is None:
+            row = Ng2LayeredConstruction(id=lc_co.id, objectclass_id=lc_oc)
+            session.add(row)
+        elif row.objectclass_id is None:
+            row.objectclass_id = lc_oc
+        row.u_value = float(wall_u)
+        row.u_value_uom = "W/(m^2K)"
+        row.library_code = tabula or None
+
+    def _map_ng2_thermal_partitions(
+        self, session: Session, building_co_id: int, bid: str,
+        thermal_zones: List[dict], props,
+    ):
+        """Persist each thermal zone as ng2_building_partition + cityobject."""
+        tz_oc = self._energy_objectclass_id(session, "ThermalZone")
+        if tz_oc is None:
+            return
+
+        self._delete_ng2_partitions(session, building_co_id)
+
+        for tz in thermal_zones:
+            zid = tz.get("zone_id", "tz-unknown")
+            gmlid = f"{bid}-{zid}"
+            existing = session.query(CityObject).filter(CityObject.gmlid == gmlid).first()
+            if existing:
+                tz_co = existing
+            else:
+                tz_co = CityObject(objectclass_id=tz_oc, gmlid=gmlid, name=zid)
+                session.add(tz_co)
+                session.flush()
+
+            part = session.query(Ng2BuildingPartition).filter(
+                Ng2BuildingPartition.id == tz_co.id
+            ).first()
+            if part is None:
+                part = Ng2BuildingPartition(id=tz_co.id, objectclass_id=tz_oc)
+                session.add(part)
+
+            part.building_id = building_co_id
+            part.type = tz.get("usage")
+            part.is_heated = 1 if tz.get("is_heated", True) else 0
+            part.is_cooled = 1 if tz.get("is_cooled", False) else 0
+            if tz.get("volume_m3") is not None:
+                part.heat_capacity = float(tz["volume_m3"])
+            part.infiltration_rate_uom = "1/h"
+
+    def _apply_building_energy_mapping(
+        self,
+        session: Session,
+        building_co_id: int,
+        bid: str,
+        building,
+        props,
+        lod12: Optional[dict],
+        u_vals: dict,
+    ):
+        """Write ng2_* tables and extended generic attributes for one building."""
+        self._upsert_ng2_building(session, building_co_id, props, building)
+        self._store_building_cim_attribs(session, building_co_id, props, building)
+        self._upsert_ng2_layered_construction(
+            session, building_co_id, bid, props.const_tabula or "", u_vals,
+        )
+
+        thermal_zones = (lod12 or {}).get("thermal_zones")
+        if thermal_zones:
+            self._map_ng2_thermal_partitions(
+                session, building_co_id, bid, thermal_zones, props,
+            )
 
     def _map_surfaces(
         self, session, building_co_id: int, surfaces: dict, u_vals: dict
     ):
-        def _insert_one(geojson_geom, oc_id, u_value, surf_label):
+        def _insert_one(geojson_geom, oc_id, u_value, surf_label, surf_props=None):
             if not geojson_geom or not geojson_geom.get("coordinates"):
                 return
 
@@ -433,6 +709,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 lod2_multi_surface_id=sg_root.id,
             )
             session.add(ts)
+            session.flush()
 
             if u_value is not None:
                 session.add(
@@ -444,12 +721,17 @@ class CitydbMapperCalculator(BaseCalculator):
                     )
                 )
 
+            props_dict = surf_props or {}
+            self._upsert_ng2_thematic_surface(session, ts_co.id, props_dict)
+            self._store_surface_cim_attribs(session, ts_co.id, props_dict)
+
         for wall in surfaces.get("wall_surfaces", []):
             _insert_one(
                 wall.get("geometry"),
                 OC_WALL_SURFACE,
                 u_vals.get("wall"),
                 wall.get("surface_id", "wall"),
+                wall.get("properties"),
             )
 
         roof = surfaces.get("roof_surface")
@@ -459,6 +741,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 OC_ROOF_SURFACE,
                 u_vals.get("roof"),
                 roof.get("surface_id", "roof"),
+                roof.get("properties"),
             )
 
         ground = surfaces.get("ground_surface")
@@ -468,6 +751,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 OC_GROUND_SURFACE,
                 u_vals.get("ground"),
                 ground.get("surface_id", "ground"),
+                ground.get("properties"),
             )
 
         for floor_surf in surfaces.get("floor_surfaces", []):
@@ -476,6 +760,7 @@ class CitydbMapperCalculator(BaseCalculator):
                 OC_FLOOR_SURFACE,
                 None,
                 floor_surf.get("surface_id", "floor"),
+                floor_surf.get("properties"),
             )
 
     # ---- generic attributes for thermal zone data (legacy single zone) ----
@@ -604,16 +889,37 @@ class CitydbMapperCalculator(BaseCalculator):
                 building_attrs["measuredHeight"] = round(props.height, 2)
             if props.area is not None:
                 building_attrs["footprintArea"] = round(props.area, 2)
+                building_attrs["+energy-floorArea"] = [
+                    {"energy-type": "grossFloorArea", "energy-value": round(props.area, 2)}
+                ]
             if props.volume is not None:
                 building_attrs["volume"] = round(props.volume, 2)
+                building_attrs["+energy-volume"] = [
+                    {"energy-type": "grossVolume", "energy-value": round(props.volume, 2)}
+                ]
             if props.const_year is not None:
                 building_attrs["yearOfConstruction"] = props.const_year
+            if props.type:
+                building_attrs["+energy-buildingType"] = props.type
+            if props.const_tabula:
+                building_attrs["constTabula"] = props.const_tabula
+                cw = TABULA_CONSTR_WEIGHT.get(props.const_tabula or "")
+                if cw:
+                    building_attrs["+energy-constructionWeight"] = cw
             if props.number_of_floors is not None:
                 building_attrs["storeysAboveGround"] = int(props.number_of_floors)
             if building.building_name:
                 building_attrs["name"] = building.building_name
             if building.z_value is not None:
                 building_attrs["terrainHeight"] = round(building.z_value, 2)
+            if props.envelope_efficiency:
+                building_attrs["envelopeEfficiency"] = props.envelope_efficiency
+            if props.fmu_file:
+                building_attrs["energySystemModel"] = props.fmu_file
+            if props.n_people is not None:
+                building_attrs["nPeople"] = int(props.n_people)
+            if props.n_family is not None:
+                building_attrs["nFamilies"] = int(props.n_family)
 
             builder.add_building(
                 bid, building_attrs, surfaces, u_vals,
@@ -709,6 +1015,9 @@ class CitydbMapperCalculator(BaseCalculator):
                 attrs["storeysAboveGround"] = int(cb.storeys_above_ground)
 
             ga_map = {ga.attrname: _ga_typed_value(ga) for ga in gen_attrs}
+            ng2_b = session.query(Ng2Building).filter(Ng2Building.id == co.id).first()
+            attrs = _enrich_building_attrs_from_db(attrs, ga_map, ng2_b)
+
             tz_count = ga_map.get("thermalZone_count")
             multi_zone = tz_count is not None and int(tz_count) > 1
 
@@ -761,6 +1070,14 @@ class CitydbMapperCalculator(BaseCalculator):
                 .all()
             )
 
+            ng2_surfaces = {
+                row.id: row
+                for row in session.query(Ng2ThematicSurface)
+                .join(ThematicSurface, Ng2ThematicSurface.id == ThematicSurface.id)
+                .filter(ThematicSurface.building_id == co.id)
+                .all()
+            }
+
             boundaries: List[List[List[int]]] = []
             sem_surfaces: List[dict] = []
             sem_values: List[Optional[int]] = []
@@ -775,18 +1092,29 @@ class CitydbMapperCalculator(BaseCalculator):
 
                 sem_type = _OC_SEM_TYPE.get(ts.objectclass_id, "GenericSurface")
 
-                u_attr = (
-                    session.query(CityObjectGenericAttrib)
-                    .filter(
-                        CityObjectGenericAttrib.cityobject_id == ts.id,
-                        CityObjectGenericAttrib.attrname == "u_value_w_m2k",
-                    )
-                    .first()
-                )
+                surf_ga = {
+                    ga.attrname: _ga_typed_value(ga)
+                    for ga in session.query(CityObjectGenericAttrib)
+                    .filter(CityObjectGenericAttrib.cityobject_id == ts.id)
+                    .all()
+                }
+
+                u_attr = surf_ga.get("u_value_w_m2k")
 
                 sem_entry: Dict[str, Any] = {"type": sem_type}
-                if u_attr and u_attr.realval is not None:
-                    sem_entry["u_value"] = u_attr.realval
+                if u_attr is not None:
+                    sem_entry["u_value"] = float(u_attr)
+
+                ng2_ts = ng2_surfaces.get(ts.id)
+                if ng2_ts:
+                    if ng2_ts.azimuth is not None:
+                        sem_entry["azimuth"] = float(ng2_ts.azimuth)
+                    if ng2_ts.inclination is not None:
+                        sem_entry["inclination"] = float(ng2_ts.inclination)
+                    if ng2_ts.total_surf_area is not None:
+                        sem_entry["area"] = float(ng2_ts.total_surf_area)
+                if surf_ga.get("cim_orientation"):
+                    sem_entry["orientation"] = surf_ga["cim_orientation"]
 
                 for ring in rings:
                     indices = builder._ring_to_indices(ring)
@@ -808,11 +1136,13 @@ class CitydbMapperCalculator(BaseCalculator):
                     }
                 geometry.append(geom_entry)
 
+            clean_attrs = {k: v for k, v in attrs.items() if v is not None}
+
             if multi_zone and reconstructed_zones:
                 children = [f"{bid}-{rz['zone_id']}" for rz in reconstructed_zones]
                 builder._city_objects[bid] = {
                     "type": "Building",
-                    "attributes": {k: v for k, v in attrs.items() if v is not None},
+                    "attributes": clean_attrs,
                     "geometry": geometry,
                     "children": children,
                 }
@@ -820,7 +1150,7 @@ class CitydbMapperCalculator(BaseCalculator):
             else:
                 builder._city_objects[bid] = {
                     "type": "Building",
-                    "attributes": {k: v for k, v in attrs.items() if v is not None},
+                    "attributes": clean_attrs,
                     "geometry": geometry,
                     "children": [f"{bid}-z1"],
                 }
@@ -958,6 +1288,49 @@ def _ga_typed_value(ga: CityObjectGenericAttrib):
     if ga.datatype == DT_INTEGER:
         return ga.intval
     return ga.strval or ga.realval or ga.intval
+
+
+def _enrich_building_attrs_from_db(
+    attrs: Dict[str, Any],
+    ga_map: Dict[str, Any],
+    ng2_b: Optional[Ng2Building],
+) -> Dict[str, Any]:
+    """Merge generic-attrib + ng2_building into CityJSON Building attributes."""
+    out = dict(attrs)
+
+    if ng2_b:
+        if ng2_b.type:
+            out["+energy-buildingType"] = ng2_b.type
+        if ng2_b.constr_weight:
+            out["+energy-constructionWeight"] = ng2_b.constr_weight
+
+    vol = ga_map.get("thermalZone_volume_m3") or ga_map.get("cim_volume_m3")
+    if vol is not None:
+        out["volume"] = round(float(vol), 2)
+        out["+energy-volume"] = [
+            {"energy-type": "grossVolume", "energy-value": round(float(vol), 2)}
+        ]
+
+    area = ga_map.get("thermalZone_floorArea_m2") or ga_map.get("cim_footprintArea_m2")
+    if area is not None:
+        out["footprintArea"] = round(float(area), 2)
+        out["+energy-floorArea"] = [
+            {"energy-type": "grossFloorArea", "energy-value": round(float(area), 2)}
+        ]
+
+    for ga_key, out_key in (
+        ("cim_constYear", "yearOfConstruction"),
+        ("cim_constTabula", "constTabula"),
+        ("cim_nPeople", "nPeople"),
+        ("cim_nFamilies", "nFamilies"),
+        ("cim_terrainHeight", "terrainHeight"),
+        ("energySystem_envelopeEfficiency", "envelopeEfficiency"),
+        ("energySystem_fmuFile", "energySystemModel"),
+    ):
+        if ga_map.get(ga_key) is not None:
+            out[out_key] = ga_map[ga_key]
+
+    return {k: v for k, v in out.items() if v is not None}
 
 
 # ======================================================================

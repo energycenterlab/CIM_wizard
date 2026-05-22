@@ -220,3 +220,89 @@ class CityObjectGenericAttrib(Base):
         ForeignKey("citydb.cityobject.id"),
         nullable=True,
     )
+
+
+# ── Energy ADE 2.0 (ng2_*) ───────────────────────────────────────────
+
+
+class Ng2Building(Base):
+    """Energy ADE extension row for ``citydb.building``."""
+
+    __tablename__ = "ng2_building"
+    __table_args__ = {"schema": "citydb"}
+
+    id = Column(
+        BigInteger,
+        ForeignKey("citydb.building.id"),
+        primary_key=True,
+    )
+    type = Column(String)
+    type_codespace = Column(String)
+    is_protected = Column(Numeric, nullable=True)
+    constr_weight = Column(String)
+    constr_weight_codespace = Column(String)
+    attic_thm_status = Column(String)
+    basement_thm_status = Column(String)
+
+
+class Ng2ThematicSurface(Base):
+    """Energy ADE extension row for ``citydb.thematic_surface``."""
+
+    __tablename__ = "ng2_thematic_surface"
+    __table_args__ = {"schema": "citydb"}
+
+    id = Column(
+        BigInteger,
+        ForeignKey("citydb.thematic_surface.id"),
+        primary_key=True,
+    )
+    total_surf_area = Column(Float, nullable=True)
+    total_surf_area_uom = Column(String)
+    opaque_surf_area = Column(Float, nullable=True)
+    opaque_surf_area_uom = Column(String)
+    open_to_surf_ratio = Column(Float, nullable=True)
+    open_to_surf_ratio_uom = Column(String)
+    thickness = Column(Float, nullable=True)
+    thickness_uom = Column(String)
+    azimuth = Column(Float, nullable=True)
+    azimuth_uom = Column(String)
+    inclination = Column(Float, nullable=True)
+    inclination_uom = Column(String)
+
+
+class Ng2BuildingPartition(Base):
+    """Energy ADE ThermalZone / UsageZone / BuildingUnit (shares cityobject.id)."""
+
+    __tablename__ = "ng2_building_partition"
+    __table_args__ = {"schema": "citydb"}
+
+    id = Column(
+        BigInteger,
+        ForeignKey("citydb.cityobject.id"),
+        primary_key=True,
+    )
+    objectclass_id = Column(Integer, nullable=True)
+    heat_capacity = Column(Float, nullable=True)
+    infiltration_rate = Column(Float, nullable=True)
+    infiltration_rate_uom = Column(String)
+    is_cooled = Column(Numeric, nullable=True)
+    is_heated = Column(Numeric, nullable=True)
+    type = Column(String)
+    type_codespace = Column(String)
+    building_id = Column(BigInteger, ForeignKey("citydb.building.id"), nullable=True)
+    thermal_zone_id = Column(BigInteger, nullable=True)
+    usage_zone_id = Column(BigInteger, nullable=True)
+
+
+class Ng2LayeredConstruction(Base):
+    """Energy ADE opaque / transparent construction (U-value, g-value)."""
+
+    __tablename__ = "ng2_layered_construction"
+    __table_args__ = {"schema": "citydb"}
+
+    id = Column(BigInteger, primary_key=True)
+    objectclass_id = Column(Integer, nullable=True)
+    u_value = Column(Float, nullable=True)
+    u_value_uom = Column(String)
+    g_value = Column(Float, nullable=True)
+    library_code = Column(String)
