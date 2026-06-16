@@ -1,0 +1,71 @@
+# CIM Wizard Database Schema
+
+## Core Tables
+
+### cim_vector.cim_wizard_building
+Building footprints and identification
+- building_id VARCHAR(100) - Unique building identifier
+- building_geometry GEOMETRY(GEOMETRY, 4326) - Building footprint polygon
+- census_id BIGINT - Link to census zone (SEZ2011)
+- lod INTEGER - Level of detail (0=footprint, 1=with height, 2=detailed)
+
+### cim_vector.cim_wizard_building_properties  
+Building characteristics and energy properties
+- building_id VARCHAR(100) - Links to cim_wizard_building
+- project_id VARCHAR(100), scenario_id VARCHAR(100) - Project context
+- height FLOAT - Building height in meters
+- area FLOAT - Footprint area in square meters
+- volume FLOAT - Building volume (height × area)
+- number_of_floors FLOAT - Estimated floor count
+- type VARCHAR(50) - Building use (residential, commercial, industrial)
+- const_period_census VARCHAR(10) - Construction period (E8, E12, E16)
+- n_people INTEGER - Estimated occupants
+- gross_floor_area FLOAT - Total floor area
+
+### cim_vector.cim_wizard_project_scenario
+Project and scenario definitions
+- project_id VARCHAR(100), scenario_id VARCHAR(100) - Primary keys
+- project_name VARCHAR(255), scenario_name VARCHAR(255)
+- project_boundary GEOMETRY(POLYGON, 4326)
+
+### cim_census.censusgeo
+Italian census data (ISTAT 2011)
+- sez2011 BIGINT - Census section ID
+- census_geometry GEOMETRY(MULTIPOLYGON, 4326)
+- comune VARCHAR(50) - Municipality name
+- p1 INTEGER - Total population
+- st1 INTEGER - Total housing units
+- e8-e16 INTEGER - Building age distribution (e8=pre-1918, e16=post-2005)
+- pf1 INTEGER - Total families
+
+### cim_network.network_buses
+Electrical grid nodes
+- bus_id INTEGER, network_id VARCHAR(100)
+- project_id VARCHAR(100), scenario_id VARCHAR(100)
+- bus_geometry GEOMETRY(POINT, 4326)
+- voltage_kv FLOAT - Operating voltage
+
+### cim_network.network_lines
+Electrical transmission lines
+- line_id INTEGER, network_id VARCHAR(100)
+- project_id VARCHAR(100), scenario_id VARCHAR(100)
+- line_geometry GEOMETRY(LINESTRING, 4326)
+- from_bus_id INTEGER, to_bus_id INTEGER
+- length_km FLOAT
+
+### cim_raster.dtm / cim_raster.dsm
+Digital terrain and surface models
+- rast RASTER - Elevation data
+
+## Key PostGIS Functions
+- ST_Intersects(geom1, geom2) - Test intersection
+- ST_Area(geom) - Calculate area
+- ST_Distance(geom1, geom2) - Calculate distance
+- ST_Buffer(geom, radius) - Create buffer
+- ST_Within(geom1, geom2) - Test containment
+- ST_Value(rast, geom) - Extract raster value
+
+## Notes
+- All geometries use SRID 4326 (WGS84)
+- Column names are lowercase: building_id, project_id, census_geometry
+- Census columns: p1, e8, st1, pf1 (lowercase, unquoted)

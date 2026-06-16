@@ -1,0 +1,9 @@
+
+# Install the Hugging Face CLI
+pip install -U "huggingface_hub[cli]"
+
+# Login with your Hugging Face credentials
+huggingface-cli login
+
+# Push your dataset files
+huggingface-cli upload taherdoust/txt2ssql_20july2025 . --repo-type=dataset

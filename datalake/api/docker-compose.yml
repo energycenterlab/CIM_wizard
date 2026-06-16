@@ -1,0 +1,47 @@
+# Data warehouse stack: PostGIS + FastAPI
+#
+# Deploy on another server:
+#   cd datalake/api
+#   docker compose up -d --build
+#
+# API:     http://localhost:8008/docs
+# PostGIS: localhost:35432  (user/pass/db: datalake)
+
+services:
+
+  postgis:
+    build:
+      context: ..
+      dockerfile: Dockerfile.postgis
+    container_name: dw_postgis
+    restart: unless-stopped
+    ports:
+      - "${POSTGIS_PORT:-35432}:5432"
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-datalake}
+      POSTGRES_USER:     ${POSTGRES_USER:-datalake}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datalake}
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datalake} -d ${POSTGRES_DB:-datalake}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dw_api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8008}:8008"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-datalake}:${POSTGRES_PASSWORD:-datalake}@postgis:5432/${POSTGRES_DB:-datalake}
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+volumes:
+  postgis_data:

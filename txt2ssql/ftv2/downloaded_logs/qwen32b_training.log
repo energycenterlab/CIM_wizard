@@ -1,0 +1,49 @@
+nohup: ignoring input
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+Traceback (most recent call last):
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/unsloth_zoo/temporary_patches/utils.py", line 107, in <module>
+    from transformers.processing_utils import Unpack
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/transformers/processing_utils.py", line 75, in <module>
+    from .modeling_utils import PreTrainedAudioTokenizerBase
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/transformers/modeling_utils.py", line 73, in <module>
+    from .quantizers import HfQuantizer
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/transformers/quantizers/__init__.py", line 14, in <module>
+    from .auto import AutoHfQuantizer, AutoQuantizationConfig, register_quantization_config, register_quantizer
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/transformers/quantizers/auto.py", line 62, in <module>
+    from .quantizer_torchao import TorchAoHfQuantizer
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/transformers/quantizers/quantizer_torchao.py", line 39, in <module>
+    import torchao
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/__init__.py", line 110, in <module>
+    from torchao.quantization import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/quantization/__init__.py", line 6, in <module>
+    from .autoquant import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/quantization/autoquant.py", line 11, in <module>
+    from torchao.dtypes import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/dtypes/__init__.py", line 1, in <module>
+    from . import affine_quantized_tensor_ops
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/dtypes/affine_quantized_tensor_ops.py", line 11, in <module>
+    from torchao.dtypes.affine_quantized_tensor import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/dtypes/affine_quantized_tensor.py", line 17, in <module>
+    from torchao.quantization.quant_primitives import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torchao/quantization/quant_primitives.py", line 175, in <module>
+    torch.int1: (-(2**0), 2**0 - 1),
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/torch/__init__.py", line 2562, in __getattr__
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+AttributeError: module 'torch' has no attribute 'int1'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/media/space/castangia/Ali_workspace/ftv3/qwen25_32b_unsloth_q2sql.py", line 13, in <module>
+    from unsloth import FastLanguageModel
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/unsloth/__init__.py", line 77, in <module>
+    import unsloth_zoo
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/unsloth_zoo/__init__.py", line 191, in <module>
+    from .temporary_patches import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/unsloth_zoo/temporary_patches/__init__.py", line 19, in <module>
+    from .gemma import *
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/unsloth_zoo/temporary_patches/gemma.py", line 22, in <module>
+    from .utils import (
+  File "/media/space/castangia/miniconda3/envs/luxia/lib/python3.9/site-packages/unsloth_zoo/temporary_patches/utils.py", line 128, in <module>
+    raise Exception(e)
+Exception: module 'torch' has no attribute 'int1'

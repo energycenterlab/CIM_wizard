@@ -1,0 +1,78 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ========================================
+# Large Training Dataset Files (>100 MB)
+# ========================================
+
+# Curated datasets (88K-113K samples, likely 200-400 MB)
+fine-tune/curated_dataset_clean/*.jsonl
+fine-tune/curated_dataset_full/*.jsonl
+fine-tune/curated_dataset_sample/*.jsonl
+
+# Keep small metadata and config files
+!fine-tune/curated_dataset_clean/*_stats.json
+!fine-tune/curated_dataset_full/*_stats.json
+!fine-tune/curated_dataset_sample/*_stats.json
+
+# ========================================
+# Model Files (Very Large)
+# ========================================
+
+# Fine-tuned model weights (can be GBs)
+fine-tune/models/
+fine-tune/checkpoints/
+*.bin
+*.safetensors
+*.ckpt
+*.pt
+
+# FTv2 downloaded models and datasets (upload to HuggingFace instead)
+ftv2/downloaded_models/
+ftv2/downloaded_dataset/
+# Logs are kept in repo (small size ~3-4MB each)
+# ftv2/downloaded_logs/
+
+# Training logs (exclude other locations, but keep downloaded_logs)
+fine-tune/*.log
+ftv2/*.log
+# *.log  # Commented out to allow downloaded_logs
+fine-tune/runs/
+fine-tune/wandb/
+ftv2/wandb/
+
+# Git backup directories (can contain large files)
+.git.backup/
+*.backup/
+
+# Temporary files
+fine-tune/tmp/
+fine-tune/temp/

@@ -1,0 +1,13 @@
+<!DOCTYPE qgis_connections>
+<qgis_connections>
+    <WMS>
+        <connection name="BDTRE Piemonte WMS" url="https://geomap.reteunitaria.piemonte.it/ws/taims/rp-01/taimswms/bdtre_imm?" />
+        <connection name="Open Torino PRG WMS" url="http://geomap.reteunitaria.piemonte.it/ws/siccms/coto-01/wmsg01/wms_sicc23_prg_azzonamento?" />
+    </WMS>
+    <WFS>
+        <connection name="BDTRE Piemonte WFS" url="https://geomap.reteunitaria.piemonte.it/ws/taims/rp-01/taimswfs/bdtre_imm?" />
+    </WFS>
+    <XYZ>
+        <connection name="OSM Standard" url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" zmax="19" zmin="0" />
+    </XYZ>
+</qgis_connections>
