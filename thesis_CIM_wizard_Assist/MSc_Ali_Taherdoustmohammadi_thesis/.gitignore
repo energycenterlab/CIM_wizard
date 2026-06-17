@@ -1,0 +1,129 @@
+# LaTeX Build Artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.pdf
+*.synctex.gz
+*.toc
+*.xmpi
+
+# LaTeX Intermediate Files
+*.dvi
+*.ps
+*.nav
+*.snm
+*.vrb
+
+# BibTeX
+*.bib.bak
+*.bib.sav
+
+# Glossaries
+*.acn
+*.acr
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.ist
+
+# Hyperref
+*.run.xml
+
+# Microtypography
+*.mt
+
+# Nomenclature
+*.nlo
+*.nls
+
+# Index
+*.idx
+*.ilg
+*.ind
+
+# Algorithm listings
+*.loa
+
+# Beamer
+*.nav
+*.snm
+*.vrb
+
+# Changes
+*.soc
+
+# Comment
+*.cut
+
+# Endnotes
+*.ent
+
+# Fixme
+*.lox
+
+# Listings
+*.lol
+
+# Makeindex
+*.maf
+*.mlf
+*.mlt
+
+# Todonotes
+*.tdo
+
+# Backup and temporary files
+*~
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS-specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor-specific
+.vscode/
+.idea/
+*.sublime-*
+*.code-workspace
+
+# Keep main.pdf if you want to version it (uncomment if needed)
+# !main.pdf
+
+# Keep bibliography source files
+!biblio.bib
+!*.bib
+
+# Keep all source files
+!*.tex
+!*.cls
+!*.sty
+!*.bst
+
+# Keep figures and images
+!Figures/
+!Cover/
+!*.png
+!*.jpg
+!*.jpeg
+!*.pdf
+!*.eps
+!*.svg
+

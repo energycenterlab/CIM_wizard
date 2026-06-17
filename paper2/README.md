@@ -8,7 +8,9 @@ High-level structure for the second CIM Wizard paper.
 | [`latex/main.tex`](latex/main.tex) | IEEE conference article (compile on Overleaf or local TeX) |
 | [`latex/references.bib`](latex/references.bib) | Bibliography |
 | [`latex/sections/`](latex/sections/) | Section files (`01-introduction` … `08-conclusion`) |
-| [`latex/tables/`](latex/tables/) | Hypothesis, methodology, and results tables (T1–T7) |
+| [`latex/tables/`](latex/tables/) | Hypothesis, methodology, fine-tuning config, and results tables (T1–T7) |
+| [`latex/figures/overall_schema.png`](latex/figures/overall_schema.png) | Overall O1–O6 dependency diagram (use in architecture section) |
+| [`../thesis_CIM_wizard_Assist/`](../thesis_CIM_wizard_Assist/) | MSc thesis: CIM Assist fine-tuning, dataset, evaluation, references |
 
 **Compile locally:**
 
@@ -35,3 +37,5 @@ Or upload `paper2/latex/` to Overleaf and set `main.tex` as the root document.
 | O6 | Integrate warehouse + VKG into CIM Wizard for provenance & confidence |
 
 **Relationship to Paper 1:** Priority-based method fallback → **all methods** + provenance + confidence scoring.
+
+**Relationship to MSc thesis (CIM Assist):** Thesis fine-tuned SQLCoder-7B for **NL→SQL database chat**; Paper 2 **reuses** that model for **OBDA source-SQL automation** in O5 (see `PAPER2-outline.md` § CIM Assist thesis → Paper 2 pivot).

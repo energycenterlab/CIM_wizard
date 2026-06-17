@@ -1,0 +1,260 @@
+\chapter{State of the Art}
+\label{ch:sota}
+
+This chapter reviews existing research in urban informatics platforms, Text-to-SQL and, spatial database interfaces, positioning our work within the broader research landscape and identifying the gaps this thesis addresses.
+
+\section{Urban Energy Modeling and City Information Models}
+
+\subsection{Urban Energy Modeling Landscape}
+
+The shift toward low-carbon and resilient cities increasingly depends on the ability to model and optimize interactions among buildings, infrastructures, and energy networks. In this context, Urban Energy Modelling (UEM) and its related fields---Urban Building Energy Modelling (UBEM) and Urban Energy System Modelling (UESM)---have become key instruments for planning sustainable interventions, improving energy efficiency, and supporting climate mitigation strategies~\cite{swan2009modeling, abbasabadi2019urban, hijazi2017integration, reinhart2016urban}. UEM plays a strategic role in policy design~\cite{keirstead2012review} while demonstrating relevance for evaluating large-scale retrofit scenarios and urban-scale energy planning.
+
+UEM frameworks are broadly classified into top-down and bottom-up approaches~\cite{abbasabadi2019urban}. Top-down methods use aggregated socio-economic or sectoral data to estimate urban energy demand, typically lacking spatial detail at the building scale~\cite{swan2009modeling}. Conversely, bottom-up approaches model energy use from the ground up, using detailed physical, geometric, and operational data at the individual building level. These methods are increasingly preferred for their ability to produce high-resolution, scenario-specific analyses~\cite{keirstead2012review}. However, their effectiveness is often constrained by inconsistent data quality and fragmented sources~\cite{li2025integrating} as well as the lack of common standards~\cite{hong2020ten}.
+
+When approaching a real-world Urban Energy System (UES), all needed information must be gathered and processed into a structured City Information Model (CIM) as illustrated in Figure~\ref{fig:uem_workflow}. The CIM or whatever data structure is used serves as the starting point for instantiating and performing simulations. While most UEM frameworks cover all steps, this thesis focuses particularly on the data processing, enrichment, and query interaction phases.
+
+\begin{figure}%[htbp]
+\centering
+\includegraphics[width=0.6\textwidth]{intro_workflow.png}
+\caption{Conceptual steps of Urban Energy System Modeling (UESM) showing the flow from raw data through City Information Model generation to simulation and analysis.}
+\label{fig:uem_workflow}
+\end{figure}
+
+\subsection{Existing Urban Energy Modeling Platforms}
+
+Several modeling platforms have significantly advanced the field; however, notable limitations remain. Frameworks such as CityBES~\cite{cityBES}, UBEM.io~\cite{UBEMio}, City Energy Analyst (CEA)~\cite{CEA}, Simstadt~\cite{nouvel2015simstadt}, and UrbanOpt~\cite{UrbanOpt} are designed as all-in-one platforms or tightly integrated toolsets that guide users through the entire process of urban energy scenario analyses. These frameworks differ in their focus and intended applications, making their use highly context-specific. As a result, they often employ custom data models that are closely tied to specific simulation engines. This tight coupling restricts interoperability and hampers the reuse of data across different platforms.
+
+Allegrini et al.~\cite{allegrini2015review} provide a comprehensive review of modeling approaches and tools for district-scale energy systems, highlighting challenges in data availability and model integration. Recent work on data enrichment~\cite{rehmann2025enhancing} demonstrates successful urban energy modeling in Berlin through systematic data acquisition strategies, while research on data-scarce environments~\cite{iseri2025method} proposes methods for zone-level modeling when detailed building data is unavailable.
+
+\subsection{Need for Standardized City Information Models}
+
+To overcome these limitations, it is necessary to decouple the data management and processing from the simulation phase. Complementary, it is necessary to adopt standardized and widely used CIMs or data structures to ensure interoperability and consistency within different simulation contexts with different focuses and spatio-temporal resolutions. Achieving this requires two key conditions: (i) the availability of modular, plug-and-play, and configurable frameworks, often based on co-simulation principles, capable of managing the simulation and analysis tasks~\cite{mosaik, helics, coesi1, mosaikDH}; and (ii) the standardization of CIM outputs to ensure seamless integration with co-simulation platforms as data sources.
+
+A promising candidate for CIM standardization is CityGML~\cite{ogc-citygml}, including its extensions (Application Domain Extensions, ADEs~\cite{cityADE}), its simplified form (CityJSON~\cite{cjspec}), and associated database structures (3DcityDB~\cite{yao20183dcitydb}). While some existing or updated frameworks can use CityGML models as inputs for simulation, few currently support the generation of standardized CityGML outputs covering the complete data processing workflow. Standardized CIMs are also essential for advancing research on urban digital twins~\cite{kutzner2020citygml}. A critical barrier remains the absence of standardized, interoperable database architectures~\cite{wate20153d}.
+
+\subsection{Research Gaps and Requirements}
+
+From a literature review of the state of the art, it is possible to highlight the following main challenges, needs or gaps: 
+
+(1) \textbf{Flexibility and adaptability}: there is a need for flexible and extensible data architectures and processing methods that support heterogeneous inputs and deal with possible data scarcity~\cite{iseri2025method, perez2014framework}; 
+
+(2) \textbf{Standardization}: there is a need for generating standardized outputs to ensure data exchange and reusability in different applications, standardization should be central, not only for outputs generation but also in both data storing and process calculations~\cite{agugiaro2018energy,luo2025data, rehmann2025enhancing}; 
+
+(3) \textbf{Application independence}: There is a need for tools that can facilitate the creation of a configurable city information model independently to the application of the study and the chosen simulation platform or models~\cite{issermann2021interactive,charan2021integration}. These tools should be at least customizable to embed data to adapt to the specific model parameters requirements.
+
+\subsection{CIM Wizard Framework}
+
+Building on previous work~\cite{mazzarino2024automated}, the CIM Wizard framework addresses these identified gaps by presenting a novel service-based, flexible, and configurable UEM framework. CIM Wizard generates GIS-based city information models of a chosen case study area, enabling different workflows and different user interactions. It decouples data management, execution logic, and feature computation, enabling flexible orchestration of modeling steps via HTTP/REST interfaces. It supports runtime method selection based on available inputs and dependency resolution and integrates both public and private data sources---including Open Street Map (OSM), Digital Surface Models (DSMs), cadastral databases, and utility networks. The system offers native export to CityJSON enriched with Energy and Utility Application Domain Extensions (ADEs). By bridging flexibility and standard compliance, CIM Wizard represents a significant step forward in enabling robust, context-aware UEM pipelines ready to be deployed across diverse urban environments and connected digital infrastructures.
+
+\section{Beyond General Models: Internalizing Database Schema via Fine-Tuning for High-Accuracy Text-to-SQL}
+
+Text-to-SQL generation presents fundamentally different challenges compared to general text-to-text tasks, requiring models to bridge the gap between natural language semantics and precise database query syntax. While modern large language models excel at general language understanding and generation, achieving production-ready accuracy in Text-to-SQL demands domain-specific knowledge internalization that cannot be adequately addressed through prompting or retrieval-augmented generation alone.
+
+The fundamental distinction lies in the dual constraints that Text-to-SQL must satisfy simultaneously: linguistic naturalness in understanding user questions and strict syntactic and semantic correctness in generating executable database queries. Unlike general text generation where multiple valid formulations exist and minor errors may be acceptable, SQL queries must satisfy exacting requirements including correct table and column references, valid join conditions, appropriate aggregation functions, and schema-specific constraints. A single incorrect column name or misplaced join condition renders an entire query non-executable, regardless of how well the model understood the user's intent. This binary correctness requirement creates a much narrower margin for error compared to general language tasks where partial understanding can still produce useful outputs.
+
+The difficulty of Text-to-SQL is starkly evident in the persistent performance gap between automated systems and human experts, even with the most advanced frontier models and sophisticated agentic frameworks. As of November 2025, the BIRD benchmark~\cite{bird} leaderboard reveals that human database experts achieve substantially higher execution accuracy than the best automated systems, including multi-agent frameworks leveraging frontier models like Gemini-2.5-Pro and sophisticated fine-tuning approaches~\cite{bird-bench}. This substantial gap persists despite years of research advances, demonstrating that Text-to-SQL remains fundamentally more challenging than general language tasks where state-of-the-art models often match or exceed human performance.
+
+The persistent human advantage stems from several factors that current automated systems struggle to replicate. Human database experts possess deep schema understanding that extends beyond surface-level table and column names to include semantic relationships, data distributions, and domain-specific query patterns. They can reason about query efficiency, recognize edge cases, and apply domain knowledge that may not be explicitly encoded in the database schema. Furthermore, humans excel at handling ambiguous questions by making reasonable assumptions based on context, whereas automated systems often require explicit clarification or generate queries that fail due to missing information.
+
+This performance gap motivates the need for fine-tuning approaches that internalize database schema knowledge directly into model parameters, rather than relying solely on external retrieval or prompting strategies. While agentic frameworks with RAG can dynamically access schema information, they remain limited by the reasoning capabilities of general-purpose models that lack deep understanding of database-specific patterns. Fine-tuning enables models to learn these patterns directly, encoding schema relationships, common query structures, and domain-specific SQL formulations into the model weights themselves. The BIRD benchmark results demonstrate that even the most sophisticated agentic approaches fall short of human performance, suggesting that achieving production-ready accuracy requires moving beyond general models toward specialized, fine-tuned systems that internalize the complex knowledge required for accurate SQL generation.
+
+\section{Natural Language Interfaces to Databases}
+
+The quest to enable non-technical users to interact with databases through natural language has driven research spanning five decades, evolving through distinct technological paradigms that reflect broader advances in artificial intelligence and natural language processing. This historical progression reveals a fundamental tension between system flexibility and domain specificity, with each generation of approaches attempting to balance the competing demands of broad applicability and reliable performance.
+
+\subsection{Historical Approaches}
+
+The earliest natural language database interfaces emerged in the 1970s and 1980s, employing rule-based systems that relied on pattern matching and grammar-based parsing techniques. These pioneering systems, while conceptually elegant, suffered from severe limitations: they operated within constrained vocabularies and could handle only simple query structures, requiring extensive domain-specific customization for each new database application. The brittleness of these rule-based approaches became apparent as they failed to generalize across domains or handle the linguistic variation inherent in natural human communication, ultimately limiting their practical deployment to highly specialized, controlled environments.
+
+The transition to semantic parsing approaches in the 2000s and 2010s represented a significant paradigm shift, moving from handcrafted rules to supervised learning methods that constructed logical forms from natural language inputs. These systems demonstrated improved flexibility by learning mappings from training examples, yet they faced their own fundamental constraints: they required extensive annotated training data for each new domain, and they struggled with compositional generalization—the ability to understand novel combinations of familiar concepts. While semantic parsing systems achieved notable successes in specific domains, their data requirements and limited generalization capabilities prevented widespread adoption.
+
+The neural sequence-to-sequence revolution that emerged around 2015 marked a transformative moment, introducing encoder-decoder architectures based on LSTM and later Transformer models that could learn end-to-end mappings from questions to SQL queries. These neural approaches demonstrated substantially improved generalization capabilities compared to their predecessors, learning statistical patterns from large training corpora rather than relying on explicit rule specification. However, their performance remained fundamentally limited by the quantity and quality of available training data. The breakthrough came with attention mechanisms and large-scale pre-training, which enabled models to capture long-range dependencies and transfer knowledge across domains, setting the stage for the current era of large language model-based interfaces.
+
+\subsection{Modern LLM-Based Approaches (2020-Present)}
+
+The emergence of large language models in 2020 fundamentally transformed the landscape of natural language database interfaces, enabling entirely new paradigms that leverage the massive pre-training and few-shot learning capabilities of models trained on internet-scale text corpora. These modern approaches can be broadly categorized into three complementary strategies, each addressing different deployment constraints and performance requirements.
+
+Zero-shot and few-shot prompting approaches leverage the inherent capabilities of large pre-trained models to generate SQL queries without any task-specific fine-tuning, enabling rapid deployment with minimal development overhead. The primary advantage of this paradigm lies in its immediacy: systems can be deployed quickly without the substantial upfront investment required for dataset creation and model training. However, this convenience comes with significant trade-offs: performance on domain-specific queries remains inconsistent, often failing on complex spatial operations or specialized database schemas that differ from the general patterns seen during pre-training. Furthermore, the reliance on closed-source API services introduces substantial per-query costs that scale linearly with usage, making this approach economically challenging for high-volume production deployments.
+
+Fine-tuned specialized models address the performance limitations of zero-shot approaches by internalizing domain-specific knowledge through supervised learning on curated training datasets. These models achieve consistent, high-quality performance on domain-specific queries by learning the precise patterns, schema structures, and query formulations relevant to their target applications. The inference cost structure fundamentally differs from API-based approaches: while fine-tuning requires an upfront training investment, operational costs remain minimal since inference runs on local infrastructure without per-query API fees. The critical trade-off involves balancing the upfront training investment against long-term operational efficiency, with fine-tuning becoming economically advantageous when query volume exceeds threshold levels or when data privacy requirements preclude external API usage.
+
+Hybrid approaches have emerged as sophisticated synthesis strategies that combine the strengths of multiple paradigms. Retrieval-augmented fine-tuning systems such as ReFSQL and SQL-Fuse integrate external knowledge retrieval with fine-tuned models, enabling dynamic schema awareness while maintaining domain-specific performance. Agent-based systems with tool use extend this concept further, allowing models to interact with databases through introspection tools, query validation, and execution feedback loops. Schema-aware prompting with demonstrations represents another hybrid strategy, where carefully selected example queries provide contextual guidance to general-purpose models, improving performance without full fine-tuning. These hybrid approaches reflect the recognition that no single paradigm dominates across all deployment scenarios, and that effective production systems often require carefully orchestrated combinations of techniques tailored to specific application requirements.
+
+\section{Text-to-SQL Research}
+
+\subsection{Benchmark Datasets and Evaluation}
+
+The Text-to-SQL field has matured through standardized benchmarks enabling systematic comparison:
+
+\paragraph{Spider Benchmark}
+
+The Spider benchmark~\cite{yu2018spider} established the foundation for cross-domain Text-to-SQL evaluation with 10,181 questions spanning 200 databases across 138 diverse domains. The benchmark emphasizes cross-domain generalization through complex SQL constructs including nested queries, multi-table joins, and aggregation operations, with evaluation based on exact match (EM) comparing generated SQL strings and execution accuracy (EX) comparing query results. However, Spider's focus on standard SQL operations means it provides limited coverage of spatial database functions, leaving a gap for PostGIS-specific Text-to-SQL research.
+
+\paragraph{BIRD Benchmark}
+
+The BIRD benchmark~\cite{bird} advances Text-to-SQL evaluation through 12,751 text-to-SQL pairs that emphasize not only correctness but also execution accuracy and query efficiency on realistic database schemas. Complementary benchmarks include OmniSQL~\cite{omnisql}, which provides universal benchmarking across diverse SQL dialects, and comprehensive evaluation studies~\cite{gao2024text} analyzing LLM performance across multiple Text-to-SQL benchmarks. BIRD incorporates external knowledge requirements that mirror real-world database interaction scenarios where users must understand domain concepts beyond schema structure. Performance results demonstrate that GPT-4 achieves strong execution accuracy, while fine-tuned open-source models in the 32B parameter range reach competitive performance levels, establishing BIRD as the current state-of-the-art benchmark for Text-to-SQL system evaluation.
+
+\paragraph{Performance Trends}
+
+Recent comprehensive surveys~\cite{survey_llm_t2sql_liu2025,survey_llm_t2sql_huang2025} document the rapid progress in Text-to-SQL capabilities driven by large language models. Closed-source commercial models including GPT-4 and Claude 3.5 achieve strong execution accuracy on the challenging BIRD benchmark, demonstrating strong generalization to complex database queries. Open-source fine-tuned models ranging from 14B to 32B parameters reach competitive performance levels, narrowing the gap with proprietary systems. Despite this progress, significant challenges remain in handling complex nested queries with multiple levels of subquery nesting and incorporating domain-specific knowledge that extends beyond the database schema itself.
+
+\subsection{Agent-Based and Reasoning Approaches}
+
+A major research direction in Text-to-SQL has emerged that decomposes the complex task of SQL generation into more manageable subtasks through multi-step reasoning and agent-based architectures. Rather than attempting direct question-to-SQL translation in a single pass, these approaches recognize that effective SQL generation benefits from explicit intermediate reasoning steps that mirror how human database experts approach query construction.
+
+The foundation of this paradigm lies in chain-of-thought prompting, where models are guided to decompose natural language questions into explicit reasoning steps before generating SQL. This decomposition process involves identifying relevant schema elements, determining appropriate join paths between tables, and selecting suitable aggregation operations. Empirical results demonstrate that this explicit reasoning approach yields substantial improvements in execution accuracy compared to direct generation methods. The effectiveness stems from forcing the model to explicitly reason about the query structure before committing to SQL syntax, reducing errors from premature SQL generation.
+
+Building upon chain-of-thought foundations, multi-agent collaboration systems have emerged as a sophisticated extension that distributes Text-to-SQL responsibilities across specialized agents, each handling distinct aspects of the query generation pipeline. These systems typically employ separate agents for schema linking, query planning, SQL writing, and validation, enabling each component to focus on its specialized domain. For instance, DAIL-SQL demonstrates this approach through demonstration retrieval and explanation generation, where one agent identifies similar queries while another generates reasoning explanations. Notable contributions in this space include GTChain~\cite{chase2024gtchain}, which introduces graph-based Text-to-SQL with chain-of-thought reasoning, CHESS~\cite{jiao2024chess} for contextual harnessing enabling efficient SQL synthesis, and SQL Agent~\cite{alberta2024sqlagent} which implements autonomous Text-to-SQL with self-correction capabilities. However, this architectural sophistication comes with inherent challenges: complex orchestration overhead increases system latency and complexity, while error propagation across multiple agents can amplify mistakes, requiring careful design of inter-agent communication and error handling mechanisms.
+
+The most recent evolution in agent-based Text-to-SQL systems integrates database introspection tools directly into the reasoning loop, creating tool-augmented reasoning architectures that enable dynamic interaction with the target database. These systems can dynamically retrieve table structures through schema inspection tools, validate SQL syntax before execution through query validation tools, and iteratively refine generated queries based on execution feedback when errors occur. This iterative refinement process, where agents receive error messages from failed query executions and use this feedback to generate corrected SQL, has demonstrated remarkable effectiveness, achieving substantial improvements in eventual accuracy through self-correction. The tool-augmented approach transforms Text-to-SQL from a static generation task into a dynamic, interactive process where agents can explore the database schema, validate their understanding, and learn from execution failures, mirroring the iterative debugging process that human SQL developers employ.
+
+
+\subsection{Schema Linking and Retrieval-Augmented Generation}
+
+Schema linking maps natural language tokens to database schema elements (tables, columns, values):
+
+\paragraph{IRNet (Guo et al., 2019)}
+
+IRNet~\cite{irnet} represents pioneering work formalizing schema linking as an explicit intermediate step in Text-to-SQL generation. The approach introduces an intermediate representation (IR) that decouples natural language understanding from SQL syntax generation, enabling the model to reason about database schemas independently of query formulation. This architectural innovation yields significant improvements in cross-domain generalization, as the learned schema linking patterns transfer more effectively across different database structures.
+
+\paragraph{Modern Retrieval-Augmented Approaches}
+
+Modern retrieval-augmented approaches combine external knowledge retrieval with model reasoning capabilities to enhance Text-to-SQL performance. ReFSQL~\cite{refsql} combines retrieval with fine-tuning by using similar examples as contextual guidance, while SQL-Fuse~\cite{sqlfuse} implements a hybrid architecture fusing retrieval-augmented and fine-tuned models to leverage complementary strengths. GraFix-T5~\cite{grafix_t5} introduces graph-augmented schema representations with attention mechanisms enabling more sophisticated reasoning about database structure. OpenSQL~\cite{opensql} democratizes Text-to-SQL through open-source LLM approaches, reducing dependency on proprietary systems, and SpatialRAG~\cite{spatial_rag} extends retrieval-augmented generation specifically for spatial reasoning with LLMs. Empirical evaluations demonstrate that schema-aware models consistently outperform schema-agnostic baselines by substantial margins, validating the importance of explicit schema information in Text-to-SQL systems.
+
+\paragraph{Spatial Schema Complexity}
+
+Spatial databases introduce additional challenges beyond standard relational schema linking, requiring models to understand geometric data representations and spatial operations. Geometry column identification demands recognizing that columns with names like \texttt{building\_geometry} or \texttt{tract\_geometry} contain spatial data types requiring specialized functions rather than standard SQL operations. Spatial relationship mapping necessitates translating natural language proximity concepts such as ``near'' or ``within distance'' into appropriate PostGIS functions like \texttt{ST\_DWithin} with correct parameter specifications. Coordinate reference system awareness requires understanding that spatial operations may need coordinate transformations when integrating data from different geographic projections. Finally, raster-vector integration requirements add complexity when queries must combine continuous raster datasets (elevation, land cover) with discrete vector geometries through specialized functions like \texttt{ST\_Value} and \texttt{ST\_Clip}.
+
+\subsection{Fine-Tuning Approaches}
+
+Fine-tuning specializes models on domain-specific Text-to-SQL tasks:
+
+\paragraph{Synthetic Data Generation}
+
+Creating high-quality training data for domain-specific Text-to-SQL systems presents significant methodological challenges. \textbf{Template-based} approaches employ rule-driven SQL generation with systematic parameter substitution, providing high correctness guarantees but limited diversity in query patterns. \textbf{LLM-generated} approaches leverage models like GPT-4 to create diverse question-SQL pairs with natural language variation, though at significant cost and with correctness challenges requiring validation. \textbf{Execution-guided filtering} validates synthetic samples through actual database execution, ensuring functional correctness but requiring careful database state management. The fundamental challenge lies in balancing these three competing objectives: maximizing sample diversity to prevent overfitting, ensuring correctness to avoid training on erroneous patterns, and controlling generation costs to enable research-scale dataset creation.
+
+\paragraph{Model Architectures}
+
+The evolution of Text-to-SQL model architectures reflects broader trends in natural language processing. \textbf{Encoder-decoder architectures} including T5 and BART represented earlier approaches using sequence-to-sequence models that explicitly encode input questions and decode output SQL, providing strong performance but requiring paired encoder-decoder training. \textbf{Decoder-only architectures} such as Llama and Qwen represent the current state-of-the-art, using autoregressive large language models that generate SQL through next-token prediction, benefiting from massive pre-training and superior few-shot learning capabilities. \textbf{Specialized models} like SQLCoder incorporate SQL-specific pre-training on curated code corpora, achieving strong performance in smaller parameter counts through domain-focused knowledge distillation.
+
+\paragraph{Parameter-Efficient Methods}
+
+QLoRA~\cite{dettmers2023qlora} has democratized large language model fine-tuning by enabling adaptation of 14B-70B parameter models on consumer-grade GPUs through quantized low-rank adaptation. The practical impact cannot be overstated, as QLoRA transforms model fine-tuning from a resource-intensive enterprise requiring dedicated high-memory hardware into an accessible research activity feasible on single 24GB GPUs. Remarkably, performance analysis reveals minimal degradation compared to full fine-tuning, with typical accuracy differences of only 1-3\%, making parameter-efficient methods the pragmatic choice for domain-specific adaptation in resource-constrained settings.
+
+\subsection{Research Programs Led by Pourreza and Li}
+
+Two long-running research teams---led respectively by Prof.~Mohammadreza Pourreza at the University of Alberta and Prof.~Haoyang Li at Renmin University of China---have produced a cohesive body of work that effectively maps the evolution of advanced Text-to-SQL systems. Reviewing their papers provides a structured understanding of how decomposition, schema modeling, and open-source engineering are converging toward production-ready NL2SQL pipelines.
+
+\paragraph{University of Alberta (Pourreza Lab)}
+
+Pourreza and Rafiei pioneered decomposition-first prompting strategies that close the gap between few-shot prompting and large-scale fine-tuning. DIN-SQL~\cite{pourreza2023dinsql} shows that breaking a question into intermediate reasoning steps and feeding partial solutions back into an LLM boosts execution accuracy on Spider by roughly ten percentage points. DTS-SQL~\cite{pourreza2024dtssql} extends the same paradigm to small open-source checkpoints by introducing a two-stage fine-tuning routine that trains planners and SQL generators separately, narrowing the performance gap with proprietary 70B+ models while preserving data privacy.
+
+\paragraph{Renmin University of China (Li Lab)}
+
+Li and collaborators focus on strengthening schema grounding and open ecosystems. RESDSQL~\cite{li2023resdsql} decouples schema linking from skeleton generation, injecting only the ranked relevant tables and columns into the encoder and forcing the decoder to first draft SQL templates before filling literals, which improves robustness on Spider-DK/Syn/Realistic. CodeS~\cite{li2024codes} complements this structural insight with a family of fully open-source language models (1B-15B) pre-trained on SQL-centric corpora; retrieval-aware prompting and bi-directional augmentation make CodeS a practical alternative for organizations that cannot rely on closed APIs.
+
+\paragraph{Joint Perspective: CHASE-SQL}
+
+The two teams recently joined forces on CHASE-SQL~\cite{pourreza2024chasesql}, an ICLR contribution that pairs divide-and-conquer query planning with preference-optimized candidate selection. Multiple LLM agents explore SQL candidates using execution-plan-aware chain-of-thought reasoning, instance-aware synthetic demonstrations, and dynamic planning, while a binary selector ranks candidates through pairwise comparisons. The resulting system tops the BIRD leaderboard (73\% EX) and demonstrates how decomposition, schema awareness, and multi-agent self-evaluation can be woven into an ``amazing'' end-to-end Text-to-SQL stack.
+
+\subsection{Text-to-Spatial-SQL: An Emerging Domain}
+
+While Text-to-SQL has extensive literature, Text-to-Spatial-SQL remains nascent:
+
+\paragraph{Wang et al. (2025)~\cite{wang_spatial_ijgi}}
+
+Wang et al. provide the most significant recent contribution to Text-to-Spatial-SQL research through a bilingual dataset (English/Chinese) covering four domains: administrative boundaries, education facilities, tourism points of interest, and traffic infrastructure. Their work employs SpatiaLite as the lightweight spatial database platform and evaluates GPT prompting approaches without fine-tuning using basic correctness metrics. However, the work exhibits several limitations including absence of fine-tuning exploration for domain adaptation, limited domain coverage compared to comprehensive Text-to-SQL benchmarks, and lack of systematic benchmark methodology with standardized evaluation protocols, leaving substantial opportunities for advancement in spatial SQL generation research.
+
+\paragraph{Research Gap}
+
+The Text-to-Spatial-SQL domain exhibits several critical gaps compared to general Text-to-SQL research. The field lacks standardized benchmarks comparable to Spider or BIRD that would enable systematic cross-study comparisons and reproducible evaluation. Large-scale datasets suitable for fine-tuning open-source models remain unavailable, limiting research into domain-specific adaptation approaches. Systematic evaluation methodologies for schema-aware pipelines have not been established, preventing comprehensive understanding of architecture trade-offs. Production-ready implementations for real-world spatial database applications are notably absent from the literature. Finally, domain-specific applications in critical areas including urban energy modeling, transportation planning, and healthcare spatial analytics lack the natural language interfaces that would democratize access for non-technical domain experts.
+
+\section{Evaluation Metrics for Text-to-SQL}
+
+The evaluation of Text-to-SQL systems presents unique challenges that distinguish this domain from standard natural language processing tasks. Unlike classification or generation tasks where ground truth outputs are unambiguous, SQL queries exhibit multiple valid formulations that produce identical results, making evaluation fundamentally more complex than simple string matching. This inherent ambiguity has driven the development of diverse evaluation metrics, each capturing different aspects of system performance and serving distinct purposes in the research and development lifecycle.
+
+\subsection{Standard Metrics}
+
+Exact Match (EM) represents the most straightforward evaluation approach, measuring whether the generated SQL string exactly matches the ground truth query character-by-character. This metric offers the significant advantage of computational simplicity: it requires no database access, executes instantaneously, and provides deterministic, reproducible results. However, this simplicity comes at substantial cost, as EM fundamentally penalizes semantically equivalent query variations. Two queries that produce identical results but differ in column ordering, alias naming, or whitespace formatting will be marked as incorrect under EM, despite being functionally equivalent. This limitation becomes particularly problematic in research contexts where models may learn different but equally valid SQL formulations, leading to artificially depressed performance scores. Empirical results across Text-to-SQL benchmarks reveal that competitive models typically achieve EM scores in the 20-50\% range, reflecting both the inherent difficulty of exact string matching and the diversity of valid SQL formulations.
+
+Execution Accuracy (EX) addresses the fundamental limitation of EM by evaluating whether generated SQL queries produce the same results as ground truth queries when executed against the target database. This metric accepts semantically equivalent queries regardless of their syntactic differences, providing a more realistic assessment of system performance in production contexts where functional correctness matters more than exact formulation. The primary advantage of EX lies in its alignment with real-world requirements: users care about obtaining correct results, not about generating queries that match a specific reference formulation. However, EX introduces significant implementation complexity, requiring database execution infrastructure, careful handling of result set comparison (including ordering, null values, and floating-point precision), and robust error handling for queries that fail to execute. The computational overhead of EX scales with benchmark size, as each generated query must be executed and its results compared against ground truth. Despite these challenges, EX has become the de facto standard for Text-to-SQL evaluation, with competitive models achieving 60-85\% execution accuracy on challenging benchmarks like BIRD, reflecting both the difficulty of the task and the substantial progress made in recent years.
+
+\subsection{Novel Metrics}
+
+As Text-to-SQL systems have matured and moved toward production deployment, researchers have recognized that execution correctness alone provides an incomplete picture of system quality. The BIRD benchmark introduced the Valid Efficiency Score (VES), which incorporates query execution efficiency as an additional dimension of evaluation. This metric recognizes that in production environments, a correct query that executes in minutes may be practically unusable compared to an equivalent query that completes in seconds. The VES formula combines execution accuracy with an efficiency penalty:
+
+\begin{equation}
+\text{VES} = \text{EX} \times \left(1 - \min\left(\frac{T_{\text{pred}} - T_{\text{gold}}}{T_{\text{gold}}}, 1\right)\right)
+\end{equation}
+
+This formulation penalizes queries that execute significantly slower than the ground truth, while still rewarding correctness. The efficiency consideration becomes particularly important for systems deployed in interactive applications where query latency directly impacts user experience, and for large-scale analytical workloads where inefficient queries can consume excessive computational resources.
+
+The emergence of agent-based Text-to-SQL systems with iterative refinement capabilities has necessitated the development of agent-specific metrics that capture the unique characteristics of multi-step query generation processes. First-shot accuracy measures the success rate on the initial query attempt, providing insight into the base model's capability before any refinement occurs. This metric serves as a baseline for understanding the fundamental performance of the underlying language model or fine-tuned system. Eventual accuracy, in contrast, measures the final success rate after all iterative refinement attempts, capturing the full capability of the agent system including its self-correction mechanisms. The gap between first-shot and eventual accuracy quantifies the value added by iterative refinement, with larger gaps indicating more effective error recovery capabilities. Self-correction rate provides a complementary perspective, measuring the percentage of queries that initially fail but are successfully corrected through iterative refinement, offering insight into the agent's learning and adaptation capabilities. Finally, average iterations measures the mean number of attempts required until success, providing an efficiency metric that balances accuracy gains against computational overhead. Together, these agent-specific metrics enable comprehensive evaluation of iterative systems, supporting both research into self-correction mechanisms and practical deployment decisions that must balance accuracy, latency, and computational cost.
+
+
+\section{Synthetic Data Generation (data augmentation)}
+
+
+The challenge of creating large-scale, high-quality training datasets for Text-to-SQL systems has driven significant research into synthetic data generation techniques. Unlike many machine learning domains where abundant labeled data exists naturally, Text-to-SQL requires carefully constructed question-query pairs that must satisfy both linguistic naturalness and database correctness constraints. This dual requirement has motivated exploration of LLM-based data augmentation approaches that leverage large language models to generate diverse, semantically valid training examples while maintaining strict execution correctness.
+
+\subsection{LLM-Based Data Augmentation Strategies}
+
+Large Language Models have emerged as powerful tools for synthetic data generation in Text-to-SQL, offering the ability to generate diverse question-query pairs that maintain both linguistic naturalness and database correctness. Unlike traditional generative approaches that struggle with structural constraints, LLMs can be explicitly guided through prompts to produce valid SQL queries while generating natural language variations that capture the linguistic diversity needed for robust model training.
+
+Modern LLM-based augmentation employs multi-strategy approaches that systematically expand training datasets through five complementary transformation strategies. \textbf{Question Paraphrase} rephrases natural language questions while preserving exact SQL intent and all specific values, generating linguistic diversity without altering query semantics. \textbf{SQL-to-Question} generates natural language questions from existing SQL queries, creating reverse mappings that provide alternative question formulations for the same query pattern. \textbf{Question-to-SQL} generates equivalent SQL queries using different approaches (alternative join orders, spatial function variations, subquery vs. CTE conversions) while maintaining identical results, expanding SQL syntactic diversity. \textbf{SQL Rewrite} rewrites queries using different syntax or structure (explicit JOIN vs. implicit WHERE, reordered joins, equivalent spatial functions) while producing identical results, creating syntactic variations without semantic changes. \textbf{Parameter Variation} creates new question-SQL pairs with different but realistic parameter values (heights, areas, distances, IDs) while maintaining the same query structure, expanding dataset coverage through value space exploration.
+
+The effectiveness of multi-strategy LLM augmentation depends critically on task-appropriate model selection to optimize cost-performance trade-offs. Language tasks such as question paraphrasing and parameter variation benefit from cost-effective models like GPT-4o-mini, achieving high-quality results at substantially lower costs. SQL reasoning tasks requiring complex query generation and equivalent formulation benefit from more powerful models like GPT-4.1, ensuring correct SQL generation while exploring alternative query structures. This strategic model assignment enables large-scale dataset augmentation (50,000+ samples) at reasonable costs (approximately 54 EUR) while maintaining high quality standards.
+
+\subsection{Quality Validation and Filtering}
+
+LLM-generated synthetic data requires rigorous quality validation to ensure training readiness, as unvalidated generation can produce semantically incorrect or syntactically invalid queries. The \textbf{validation-first} methodology executes all generated SQL queries against the target database before proceeding to subsequent stages, filtering out non-executable samples early in the pipeline. This approach prevents error propagation and dramatically improves final dataset quality, achieving 97.34\% NoErr (executable query rate) compared to traditional approaches that achieve only 10-30\% success rates.
+
+The validation process employs comprehensive error classification, categorizing execution failures into SCHEMA\_ERROR (invalid table or column references), SYNTAX\_ERROR (malformed SQL grammar), TIMEOUT\_ERROR (excessive execution time), and OTHER\_ERROR (database-specific issues). Samples passing execution validation undergo additional filtering steps including semantic deduplication using sentence embeddings to remove near-duplicate questions, length filtering to ensure appropriate complexity, and terminology validation to maintain domain relevance. This multi-stage validation ensures that only high-quality, executable samples proceed to training, addressing the fundamental limitation of prior synthetic generation approaches that achieve low success rates due to insufficient validation mechanisms.
+
+
+\section{Research Gaps and Thesis Positioning}
+
+\subsection{Identified Gaps}
+
+This literature review reveals several critical gaps:
+
+\paragraph{Gap 1: Extensible Urban Energy Platforms}
+
+Existing urban energy modeling platforms lack calculator-based extensibility allowing researchers to add custom building property computations without core infrastructure modifications. Multi-schema integration enabling seamless access to vector geometries, census demographics, and raster elevation models remains poorly supported across current frameworks. Natural language interfaces that would democratize spatial database access for non-technical domain experts are either completely absent or provide only limited functionality insufficient for exploratory urban analytics.
+
+\paragraph{Gap 2: Cost-Effective Dataset Generation}
+
+Manual annotation of Text-to-SQL training data proves prohibitively expensive at \$0.50-1.00 per sample, creating barriers to large-scale dataset creation for domain-specific applications. Existing synthetic generation approaches employing GANs or template-based methods achieve low success rates (typically 10-30\% executable queries for complex SQL), limiting their practical utility. Validation-first methodologies that validate quality at each generation stage to prevent error propagation have not been demonstrated in prior work, resulting in inefficient pipelines requiring expensive post-generation filtering.
+
+\paragraph{Gap 3: Text-to-Spatial-SQL}
+
+The Text-to-Spatial-SQL domain lacks standardized benchmarks comparable to Spider or BIRD that would enable systematic evaluation and cross-study comparisons. Limited evaluation of fine-tuned open-source models means that existing work focuses primarily on prompting frontier models through APIs, missing opportunities for cost-effective domain adaptation. Insufficient focus on PostGIS-specific spatial operations (ST\_Distance, ST\_Intersects, ST\_Buffer) and multi-schema integration patterns leaves critical functionality underexplored. The absence of production-ready implementations prevents validation of proposed approaches in real-world deployment scenarios.
+
+\paragraph{Gap 4: Systematic Evaluation}
+
+Limited evaluation of two-stage fine-tuning architectures (question$\rightarrow$instruction$\rightarrow$SQL) compared to direct generation approaches leaves architectural trade-offs poorly understood. Agent-based self-correction mechanisms remain under-explored, with insufficient analysis of iterative refinement benefits versus single-shot generation quality. Dataset quality metrics such as NoErr (executable query rate) receive insufficient emphasis in prior work, despite their critical importance for validating synthetic data generation approaches and ensuring training data correctness.
+
+\subsection{Thesis Contributions Addressing Gaps}
+
+This thesis systematically addresses each identified gap through targeted technical contributions:
+
+\begin{enumerate}[leftmargin=1.2em]
+  \item \textbf{CIM Wizard Platform}: Calculator-based architecture with multi-schema PostGIS integration enabling extensible urban energy modeling (addresses Gap 1)
+  
+  \item \textbf{Cost-Effective Dataset Generation}: Two-stage pipeline producing 50,000 augmented samples at \$50 cost with 97.34\% Stage 2 NoErr rate through validation-first methodology (addresses Gap 2)
+  
+  \item \textbf{Text-to-Spatial-SQL Implementation}: Fine-tuned SQLCoder 7B achieving production-ready execution accuracy with comprehensive PostGIS operation coverage and taxonomy-based benchmark evaluation (addresses Gap 3)
+  
+  \item \textbf{Architecture Comparison}: Systematic evaluation of direct Q2SQL versus two-stage fine-tuning with agent-based self-correction analysis using seven complementary metrics (NoErr, EM, Deep EM, EX, SC, EA, OOS/AD/ST) (addresses Gap 4)
+  
+  \item \textbf{Production-Ready Implementation}: End-to-end framework achieving production threshold with substantial improvement over frontier models, validated through open-source release (addresses Gaps 1, 3, 4)
+\end{enumerate}
+
+\section{Summary}
+
+This chapter reviewed the state of the art across Text-to-SQL (benchmarks, agent approaches, schema linking, fine-tuning), urban informatics platforms, natural language database interfaces, synthetic data generation, and evaluation metrics. The analysis reveals that while Text-to-SQL has matured significantly, Text-to-Spatial-SQL remains nascent, lacking standardized benchmarks, large-scale datasets, and production-ready implementations.
+
+Urban energy platforms similarly lack the extensibility and natural language accessibility required for non-technical domain experts. Existing synthetic data generation approaches achieve limited success for SQL (10-30\% executable queries), and validation-first methodologies have not been explored.
+
+This thesis addresses these gaps through the integrated CIM Wizard and CIM Assist framework, detailed in Chapter~\ref{ch:methodology}, with results demonstrating production-ready performance presented in Chapter~\ref{ch:results}.
+

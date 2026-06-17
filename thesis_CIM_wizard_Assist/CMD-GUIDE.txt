@@ -1,0 +1,1168 @@
+================================================================================
+PHASE 4 COMPLETE PIPELINE - WORKSTATION TO IPAZIA
+================================================================================
+
+Pipeline Overview:
+- Stage 1: Rule-based template generation (22.5K samples)
+- Stage 2: CTGAN synthetic data (75K samples)
+- Stage 3: LLM augmentation (120K samples)
+- Negative Samples: Out-of-scope/ambiguous queries (30K samples)
+- Merge: Positive + Negative (150K total)
+- Fine-tuning: SQLCoder 7B & Llama 3.1 8B
+- Evaluation: Multiple benchmarks with taxonomy-based analysis
+
+All operations centralized in: ipazia:/media/space/castangia/Ali_workspace/nov/
+
+
+================================================================================
+MODULE 1: DATA GENERATION - STAGE 1 (RULE-BASED TEMPLATES)
+================================================================================
+
+DESCRIPTION:
+- Generate 22.5K samples using rule-based templates
+- 85% no LIMIT, 7% ORDER BY only, 8% LIMIT+ORDER BY
+- Quality target: 98-100% NoErr rate
+
+────────────────────────────────────────────────────────────────────────────────
+1.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Create directory structure
+ssh castangia@ipazia126.polito.it "mkdir -p ~/Ali_workspace/nov/ai4db/training_datasets"
+
+# Upload Stage 1 script
+scp /mnt/HDD_Data/000products/coesi/ai4db/stage1_cim_v2.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/
+
+# Upload quality evaluator
+scp /mnt/HDD_Data/000products/coesi/ai4db/evaluate_generation_quality.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/
+
+────────────────────────────────────────────────────────────────────────────────
+1.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/ai4db
+
+# Option A: Generate Stage 1 dataset (default size 200-> 10000 samples)
+python stage1_cim_v2.py frequency
+
+# Option B: Generate with custom batch size
+# python stage1_cim_v2.py 300 #WRONG
+frequency complexity balance
+
+# Option C: Generate with specific seed for reproducibility
+# python stage1_cim_v2.py 200 --seed 42 #WRONG
+
+# Expected output files:
+#WRONG # - training_datasets/stage1_cim_dataset.jsonl (~22,500 samples)
+#WRONG# - training_datasets/stage1_cim_dataset_stats.json
+# stage1_v2_dataset_<strategy>.jsonl
+
+# Verify LIMIT distribution
+python << 'CHECK'
+import json
+with open('stage1_v2_dataset_frequency.jsonl', 'r') as f:
+    samples = [json.loads(line) for line in f if line.strip()]
+
+no_limit = sum(1 for s in samples if not s.get('has_limit', False))
+has_order = sum(1 for s in samples if s.get('has_order_by', False) and not s.get('has_limit', False))
+has_both = sum(1 for s in samples if s.get('has_limit', False) and s.get('has_order_by', False))
+
+print(f"Total: {len(samples):,}")
+print(f"No LIMIT: {no_limit:,} ({no_limit/len(samples)*100:.1f}%)")
+print(f"ORDER BY only: {has_order:,} ({has_order/len(samples)*100:.1f}%)")
+print(f"LIMIT+ORDER: {has_both:,} ({has_both/len(samples)*100:.1f}%)")
+CHECK
+
+────────────────────────────────────────────────────────────────────────────────
+1.3 QUALITY EVALUATION
+────────────────────────────────────────────────────────────────────────────────
+#distribution report
+python distribution_reporter.py \
+  --input stage1_v2_dataset_balance.jsonl \
+  --output dataset_distribution_report_stage1_balanced.txt
+
+
+# Evaluate Stage 1 quality (NoErr metric)
+python evaluate_generation_quality.py \
+  --input stage1_v2_dataset_balance.jsonl \
+  --output stage1_v2_balance_quality_report.json \
+  --output_annotated stage1_v2_balance_frequency_annotated.jsonl \
+  --output_filtered stage1_v2_balance_frequency_filtered.jsonl \
+  --stage 1 \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated"
+
+# Expected: 98-100% NoErr rate
+
+────────────────────────────────────────────────────────────────────────────────
+1.4 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download Stage 1 dataset
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage1_cim_dataset.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download Stage 1 statistics
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage1_cim_dataset_stats.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download quality report
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage1_quality_report.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download annotated dataset (with error flags)
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage1_cim_dataset_annotated.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download filtered dataset (error-free only)
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage1_cim_dataset_filtered.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+
+
+================================================================================
+MODULE 3: DATA GENERATION - STAGE 3 (LLM AUGMENTATION)
+================================================================================
+
+DESCRIPTION:
+- Generate ~120K augmented samples using GPT-4o-mini
+- 8x multiplier on Stage 2 filtered dataset
+- Time: ~192 hours (8 days)
+- Cost: ~$30 (GPT-4o-mini API)
+- Uses checkpoints - can resume if interrupted
+
+────────────────────────────────────────────────────────────────────────────────
+3.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload Stage 3 script
+scp /mnt/HDD_Data/000products/coesi/ai4db/stage3_v2.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload .env file (OpenRouter API key)
+scp /mnt/HDD_Data/000products/coesi/assist_cim/.env \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload stage1 OUTCOMES
+scp /mnt/HDD_Data/000products/coesi/ai4db/stage1_v2_frequency_filtered.jsonl \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+scp /mnt/HDD_Data/000products/coesi/ai4db/stage1_v2_balance_filtered.jsonl \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload evaluator NoErr
+scp /mnt/HDD_Data/000products/coesi/ai4db/evaluate_generation_quality.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+────────────────────────────────────────────────────────────────────────────────
+3.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/ai4db
+
+# Generate 50K augmented samples
+python stage3_v2.py \
+    --input stage1_v2_frequency_filtered.jsonl \
+    --output stage3_augmented_dataset.jsonl \
+    --target_size 50000
+
+# Test without LLM (fallback only)
+python stage3_v2.py --no_llm --target_size 1000
+
+# Option A: Generate with 8x multiplier (recommended)
+python stage3_v2.py \
+  --multiplier 8 \
+  --model openai/gpt-4o-mini \
+  --stage2-file training_datasets/stage2_synthetic_dataset_filtered.jsonl \
+  --output-file training_datasets/stage3_augmented_dataset.jsonl
+
+# Option B: Generate with different multiplier
+python stage3_v2.py \
+  --multiplier 5 \
+  --model openai/gpt-4o-mini \
+  --stage2-file training_datasets/stage2_synthetic_dataset_filtered.jsonl \
+  --output-file training_datasets/stage3_augmented_dataset_5x.jsonl
+
+# Option C: Resume from checkpoint (if interrupted)
+python stage3_v2.py \
+  --multiplier 8 \
+  --model openai/gpt-4o-mini \
+  --stage2-file training_datasets/stage2_synthetic_dataset_filtered.jsonl \
+  --output-file training_datasets/stage3_augmented_dataset.jsonl \
+  --resume
+
+# Expected output files:
+# - training_datasets/stage3_augmented_dataset.jsonl (~120,000 samples)
+# - training_datasets/stage3_augmented_dataset_stats.json
+# - training_datasets/stage3_augmented_dataset_verbose.log
+# - training_datasets/stage3_augmented_dataset_checkpoint.jsonl (during execution)
+
+────────────────────────────────────────────────────────────────────────────────
+3.3 QUALITY EVALUATION
+────────────────────────────────────────────────────────────────────────────────
+
+# Evaluate Stage 3 quality
+python evaluate_generation_quality.py \
+  --input stage3_augmented_dataset.jsonl \
+  --output stage3_quality_report.json \
+  --output_annotated stage3_augmented_dataset_annotated.jsonl \
+  --output_filtered stage3_augmented_dataset_filtered.jsonl \
+  --stage 3 \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated"
+
+# Monitor progress during long-running Stage 3
+tail -f training_datasets/stage3_augmented_dataset_verbose.log
+
+────────────────────────────────────────────────────────────────────────────────
+3.4 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download Stage 3 dataset
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/stage3_augmented_dataset.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download Stage 3 statistics
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/stage3_augmented_dataset_stats.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download quality report
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage3_quality_report.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download verbose log
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/stage3_augmented_dataset_verbose.log \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download annotated dataset
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/training_datasets/stage3_augmented_dataset_annotated.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download filtered dataset ofter evaluation
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/stage3_augmented_dataset_filtered.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download negetive dataset 
+# Download filtered dataset ofter evaluation
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/stage3_augmented_dataset_filtered.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+================================================================================
+MODULE 4: NEGATIVE SAMPLES GENERATION
+================================================================================
+
+DESCRIPTION:
+- Generate 30K negative samples (out-of-scope & ambiguous queries)
+- Categories: OUT_OF_SCOPE_DOMAIN, OUT_OF_SCOPE_TASK, AMBIGUOUS, etc.
+- Time: ~5 minutes
+
+────────────────────────────────────────────────────────────────────────────────
+4.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload negative sample generator
+scp /mnt/HDD_Data/000products/coesi/ai4db/generate_negative_samples.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+────────────────────────────────────────────────────────────────────────────────
+4.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/ai4db
+
+# Option A: Generate 5K negative samples (recommended)
+python generate_negative_samples.py \
+  --output negative_samples.jsonl \
+  --count 5000
+
+# Option B: Generate smaller set for testing
+python generate_negative_samples.py \
+  --output negative_samples_test.jsonl \
+  --count 1000
+
+# Expected output files:
+# - negative_samples.jsonl (30,000 samples)
+# - negative_samples_stats.json
+
+# Verify distribution
+python << 'CHECK_NEG'
+import json
+from collections import Counter
+
+with open('negative_samples.jsonl', 'r') as f:
+    samples = [json.loads(line) for line in f if line.strip()]
+
+categories = Counter(s['negative_category'] for s in samples)
+
+print(f"Total: {len(samples):,}")
+for cat, count in categories.most_common():
+    print(f"  {cat}: {count:,} ({count/len(samples)*100:.1f}%)")
+CHECK_NEG
+
+────────────────────────────────────────────────────────────────────────────────
+4.3 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download negative samples
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/negative_samples.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/
+
+# Download statistics
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/negative_samples_stats.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/
+
+
+================================================================================
+MODULE 5: DATASET MERGING & CURATION
+================================================================================
+
+DESCRIPTION:
+- Merge positive (120K) + negative (30K) = 150K total samples
+- Split into train/val/test sets
+- Apply final quality filtering
+
+────────────────────────────────────────────────────────────────────────────────
+5.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload merge script
+scp /mnt/HDD_Data/000products/coesi/ai4db/merge_datasets.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload curation script
+scp /mnt/HDD_Data/000products/coesi/ai4db/curator.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+────────────────────────────────────────────────────────────────────────────────
+5.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/ai4db
+
+# Your command - now uses ALL available samples
+python merge_datasets.py \
+  --stage1 stage1_v2_frequency_filtered.jsonl \
+  --positive stage3_augmented_dataset_filtered.jsonl \
+  --negative negative_samples.jsonl \
+  --output merged_dataset_13N.jsonl \
+  --use_all_samples
+
+python merge_datasets.py \
+  --stage1 stage1_v2_dataset_frequency.jsonl \
+  --positive stage3_augmented_dataset.jsonl \
+  --negative negative_samples.jsonl \
+  --output merged_dataset.jsonl \
+  --negative_ratio 0.20
+
+
+# Option A: Merge with 20% negative ratio (recommended)
+python merge_datasets.py \
+  --positive stage3_augmented_dataset.jsonl \
+  --negative negative_samples.jsonl \
+  --output merged_dataset_v3.jsonl \
+  --negative_ratio 0.10
+  --seed 42
+
+# Option B: Merge with different ratio
+python merge_datasets.py \
+  --positive stage3_augmented_dataset_filtered.jsonl \
+  --negative negative_samples.jsonl \
+  --output merged_dataset_phase4.jsonl \
+  --negative_ratio 0.10 \
+  --seed 42
+
+# Expected output files:
+# - merged_dataset_phase4.jsonl (150K samples)
+# - merged_dataset_phase4_stats.json
+
+# Curate into train/val/test splits
+cd ~/Ali_workspace/nov/
+
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+
+
+python curator.py \
+    merged_dataset_13N.jsonl \
+    --output_dir curated_q2sql \
+    --train_ratio 0.7 --val_ratio 0.15 --test_ratio 0.15 \
+    --min_question_length 2 --min_sql_length 5 \
+    --allowed_dirtiness CLEAN NOISY \
+    --min_group_size 25 --coverage_threshold 0.8 \
+    --random_seed 42
+
+
+python curate_cim_dataset_ftv2.py \
+  --input merged_dataset_phase4.jsonl \
+  --output_dir phase4_curated
+
+# Expected output files:
+# - phase4_curated/q2sql_train.jsonl
+# - phase4_curated/q2sql_val.jsonl
+# - phase4_curated/q2sql_test.jsonl
+
+────────────────────────────────────────────────────────────────────────────────
+5.3 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download merged dataset
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/merged_dataset_phase4.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download curated splits
+scp -r castangia@ipazia126.polito.it:~/Ali_workspace/nov/curated_q2sql \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+
+================================================================================
+MODULE 6: FINE-TUNING - SQLCODER 7B - qwen14b
+================================================================================
+
+DESCRIPTION:
+- Fine-tune SQLCoder 7B on Phase 4 Q2SQL task
+- Dataset: 150K samples (120K positive + 30K negative)
+- Time: ~18 hours
+- GPU: RTX 6000 24GB
+
+────────────────────────────────────────────────────────────────────────────────
+6.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload fine-tuning script
+scp /mnt/HDD_Data/000products/coesi/txt2ssql/ftv3/sqlcoder_7b_bird_q2sql.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+scp /mnt/HDD_Data/000products/coesi/txt2ssql/ftv3/qwen25_14b_q2sql.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+────────────────────────────────────────────────────────────────────────────────
+6.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/
+
+# Before running, verify the script points to correct dataset path:
+export LOCAL_DATASET_PATH="/media/space/castangia/Ali_workspace/nov/curated_q2sql/q2sql_train.jsonl"
+# Set environment variables to avoid warnings
+export TOKENIZERS_PARALLELISM=false
+
+# Option A: Fine-tune SQLCoder (default config)
+nohup python sqlcoder_7b_bird_q2sql.py > sqlcoder_training.log 2>&1 &
+echo $! > sqlcoder_training.pid  # Save process ID
+
+# Option B: Fine-tune with custom parameters
+python sqlcoder_7b_bird_q2sql.py \
+  --learning_rate 2e-5 \
+  --batch_size 8 \
+  --epochs 1
+
+# Monitor training progress
+tail -f sqlcoder_training.log
+
+# Run in background with nohup and log everything
+nohup python qwen25_14b_q2sql.py > qwen14b_training.log 2>&1 &
+
+# Save the PID for monitoring
+echo $! > qwen14b_training.pid
+
+# View live log output
+tail -f qwen14b_training.log
+
+
+
+
+
+# Monitor GPU usage
+watch -n 1 nvidia-smi
+
+# Expected output:
+# - ~/Ali_workspace/models/ftv4/sqlcoder-7b-phase4-q2sql/ (model checkpoint)
+# - Training logs in wandb
+# - sqlcoder_training.log
+
+────────────────────────────────────────────────────────────────────────────────
+6.3 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download training logs
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/txt2ssql/sqlcoder_training.log \
+  /mnt/HDD_Data/000products/coesi/txt2ssql/logs/
+
+# Download model checkpoint (WARNING: Large file ~14GB)
+# Only download if needed for local inference
+# scp -r castangia@ipazia126.polito.it:~/Ali_workspace/models/ftv4/sqlcoder-7b-phase4-q2sql \
+#   /mnt/HDD_Data/000products/coesi/models/
+
+
+================================================================================
+MODULE 7: FINE-TUNING - LLAMA 3.1 8B
+================================================================================
+
+DESCRIPTION:
+- Fine-tune Llama 3.1 8B on Phase 4 Q2SQL task
+- Dataset: 150K samples
+- Time: ~75 hours
+- GPU: RTX 6000 24GB
+
+────────────────────────────────────────────────────────────────────────────────
+7.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload fine-tuning script
+scp /mnt/HDD_Data/000products/coesi/txt2ssql/ftv2/llama31_8b_q2sql.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/txt2ssql/
+
+────────────────────────────────────────────────────────────────────────────────
+7.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/txt2ssql
+
+# Option A: Fine-tune Llama 3.1 8B (default config)
+python llama31_8b_q2sql.py
+
+# Option B: Fine-tune with custom parameters
+python llama31_8b_q2sql.py \
+  --learning_rate 1e-5 \
+  --batch_size 4 \
+  --epochs 1
+
+# Monitor training
+tail -f llama_training.log
+
+# Expected output:
+# - ~/Ali_workspace/models/ftv4/llama31-8b-phase4-q2sql/ (model checkpoint)
+# - llama_training.log
+
+────────────────────────────────────────────────────────────────────────────────
+7.3 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download training logs
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/txt2ssql/llama_training.log \
+  /mnt/HDD_Data/000products/coesi/txt2ssql/logs/
+
+# Download model checkpoint (WARNING: Large file ~16GB)
+# scp -r castangia@ipazia126.polito.it:~/Ali_workspace/models/ftv4/llama31-8b-phase4-q2sql \
+#   /mnt/HDD_Data/000products/coesi/models/
+
+
+================================================================================
+MODULE 8: EVALUATION - BENCHMARK GENERATION
+================================================================================
+
+DESCRIPTION:
+- Create evaluation benchmarks from training data
+- Taxonomy-based sampling
+- Ground truth execution results
+
+────────────────────────────────────────────────────────────────────────────────
+8.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload benchmark generators
+scp /mnt/HDD_Data/000products/coesi/ai4db/create_ftv2_evaluation_benchmark.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/assist_cim/
+
+scp /mnt/HDD_Data/000products/coesi/ai4db/benchmark_generator_v2.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload distribution reporter
+scp /mnt/HDD_Data/000products/coesi/assist_cim/distribution_reporter.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload evaluator
+scp /mnt/HDD_Data/000products/coesi/assist_cim/evaluator_v2.py \
+    castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+────────────────────────────────────────────────────────────────────────────────
+8.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/
+
+
+
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model openrouter:openai/gpt-4o \
+  --mode Q2SQL \
+  --model_type plain \
+  --max_iterations 5 \
+  --include_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --output gpt4oturbo_ftv3_results.json \
+  --report_file gpt4oturbo_ftv3_report.txt
+
+
+# Option A: Create standard FTv2 benchmark (80 samples, mixed difficulty)
+python create_ftv2_evaluation_benchmark.py \
+  --input ../ai4db/training_datasets/stage3_augmented_dataset_annotated.jsonl \
+  --output ftv2_evaluation_benchmark_100.jsonl \
+  --size 80 \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated"
+
+# Option B: Create easy benchmark (simpler queries)
+python create_ftv2_evaluation_benchmark.py \
+  --input ../ai4db/training_datasets/stage3_augmented_dataset_annotated.jsonl \
+  --output ftv2_evaluation_benchmark_100_easy_v3.jsonl \
+  --size 100 \
+  --easy_mode \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated"
+
+# Option C: Create taxonomy-based benchmark (custom distribution)
+python benchmark_generator_v2.py \
+  --input ../ai4db/training_datasets/stage3_augmented_dataset_annotated.jsonl \
+  --output benchmark_taxonomy_v2.jsonl \
+  --size 100 \
+  --task_simple_select 0.60 \
+  --task_sql_aggregation 0.10 \
+  --task_sql_join 0.05 \
+  --task_spatial_measurement 0.10 \
+  --task_spatial_join 0.10 \
+  --task_spatial_accessor 0.05 \
+  --domain_cim_vector 0.70 \
+  --domain_other 0.30 \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated"
+
+
+# execute benchmark_generator_v2
+python benchmark_generator_v2.py \
+  --input /media/space/castangia/Ali_workspace/nov/merged_dataset_phase4.jsonl \
+  --output benchmark_taxonomy_100.jsonl \
+  --size 200 \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --seed 42
+
+
+# Option D: Analyze dataset distribution
+python distribution_reporter.py \
+  --input ../ai4db/training_datasets/stage3_augmented_dataset_annotated.jsonl \
+  --output dataset_distribution_report.txt
+
+# Expected output files:
+# - ftv2_evaluation_benchmark_*.jsonl
+# - ftv2_evaluation_benchmark_*.meta.json
+# - dataset_distribution_report.txt
+
+────────────────────────────────────────────────────────────────────────────────
+8.3 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download benchmarks
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/benchmark_taxonomy_100.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download benchmark metadata
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/benchmark_taxonomy_100.meta.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets/
+
+# Download distribution reports
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/assist_cim/dataset_distribution_report.txt \
+  /mnt/HDD_Data/000products/coesi/assist_cim/
+
+
+================================================================================
+MODULE 9: EVALUATION - MODEL TESTING
+================================================================================
+
+DESCRIPTION:
+- Evaluate fine-tuned models with EA (Eventual Accuracy)
+- Taxonomy-based performance analysis
+- Multiple metrics: EM, EX, EA, Deep EM, SC
+
+────────────────────────────────────────────────────────────────────────────────
+9.1 UPLOAD FILES
+────────────────────────────────────────────────────────────────────────────────
+
+# Upload evaluation scripts
+scp /mnt/HDD_Data/000products/coesi/assist_cim/evaluate_models.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/assist_cim/
+
+scp /mnt/HDD_Data/000products/coesi/assist_cim/evaluator_v2.py \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload database schema
+scp /mnt/HDD_Data/000products/coesi/assist_cim/CIM_DATABASE_SCHEMA.txt \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload .env file (for OpenRouter API if testing API models)
+scp /mnt/HDD_Data/000products/coesi/ai4db/.env \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+# Upload benchmark
+scp /mnt/HDD_Data/000products/coesi/ai4db/benchmark_taxonomy_v2_gt.jsonl \
+  castangia@ipazia126.polito.it:~/Ali_workspace/nov/
+
+────────────────────────────────────────────────────────────────────────────────
+9.2 EXECUTION OPTIONS
+────────────────────────────────────────────────────────────────────────────────
+#reverse ssh tunnel to give access to the dockerized database
+
+ssh -R 15432:localhost:15432 castangia@ipazia126.polito.it
+
+
+ssh castangia@ipazia126.polito.it
+conda activate ai4cimdb
+cd ~/Ali_workspace/nov/assist_cim
+
+# Option A: Evaluate SQLCoder (basic metrics)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:/home/castangia/Ali_workspace/nov/models/sqlcoder-7b-bird-r16-q2sql-1epoch \
+  --mode Q2SQL \
+  --model_type sqlcoder \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --process_mode complete \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/ \
+  --output sqlcoder_ftv3_results_test3.json \
+  --report_file sqlcoder_ftv3_report_test3.txt
+
+# Option : Evaluate SQLCoder ftv2 (basic metrics)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:/home/castangia/Ali_workspace/models/ftv3/sqlcoder-7b-bird-r16-q2sql-1epoch \
+  --mode Q2SQL \
+  --model_type sqlcoder \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --process_mode complete \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/ftv2/ \
+  --output sqlcoder_ftv2_results.json \
+  --report_file sqlcoder_ftv2_report.txt
+
+# Option B: Evaluate Llama 3.1 8B
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_v2_gt.jsonl \
+  --model hf:meta-llama/Llama-3.1-8B-Instruct \
+  --mode Q2SQL \
+  --model_type llama \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --output llama_plain_results.json \
+  --report_file llama_plain_report.txt
+
+# Option C: Evaluate fine tunned SQLCoder with taxonomy analysis (v2 evaluator)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_v2_gt.jsonl \
+  --model hf:/home/castangia/Ali_workspace/models/ftv3/sqlcoder-7b-bird-r16-q2sql-1epoch \
+  --mode Q2SQL \
+  --model_type sqlcoder \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --output sqlcoder_ft_results.json \
+  --report_file sqlcoder_ft_report.txt
+
+# evaluate plain sqlcoder (base model)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:defog/sqlcoder-7b-2 \
+  --mode Q2SQL \
+  --model_type sqlcoder \
+  --max_iterations 5 \
+  --include_schema \
+  --process_mode complete \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/ftv2/ \
+  --output sqlcoder_plain_results.json \
+  --report_file sqlcoder_plain_report.txt
+
+# Option C: Evaluate fine tunned qwen 14b with taxonomy analysis (v2 evaluator)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_v2_gt.jsonl \
+  --model hf:/home/castangia/Ali_workspace/models/ftv3/qwen25-14b-r16-q2sql \
+  --mode Q2SQL \
+  --model_type qwen \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --output qwen14b_ft_results.json \
+  --report_file qwen14b_ft_report.txt
+
+# evaluate plain qwen 14GB
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_v2_gt.jsonl \
+  --model hf:Qwen/Qwen2.5-14B-Instruct \
+  --mode Q2SQL \
+  --model_type qwen \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --output qwen14b_plain_results.json \
+  --report_file qwen14b_plain_report.txt
+
+
+# evaluate qwen checkpoints
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:/home/castangia/Ali_workspace/nov/models/qwen25-14b-r16-q2sql/checkpoint-1638 \
+  --mode Q2SQL \
+  --model_type qwen \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/qwen14b_checkpoint_1638 \
+  --output qwen14b_checkpoint_1638_results.json \
+  --report_file qwen14b_checkpoint_1638_report.txt
+
+# Checkpoint 1092
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:/home/castangia/Ali_workspace/nov/models/qwen25-14b-r16-q2sql/checkpoint-1092 \
+  --mode Q2SQL \
+  --model_type qwen \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/qwen14b_checkpoint_1092 \
+  --output qwen14b_checkpoint_1092_results.json \
+  --report_file qwen14b_checkpoint_1092_report.txt
+
+#evaluate plain qwen 14b (base model)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:Qwen/Qwen2.5-14B-Instruct \
+  --mode Q2SQL \
+  --model_type qwen \
+  --max_iterations 5 \
+  --include_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/qwen14b_plain \
+  --output qwen14b_plain_results.json \
+  --report_file qwen14b_plain_report.txt
+
+  
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:/home/castangia/Ali_workspace/nov/models/qwen25-14b-r16-q2sql/checkpoint-546 \
+  --mode Q2SQL \
+  --model_type qwen \
+  --max_iterations 5 \
+  --use_finetuned_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/qwen14b_checkpoint_546 \
+  --output qwen14b_checkpoint_546_results.json \
+  --report_file qwen14b_checkpoint_546_report.txt
+
+
+# Option D: Evaluate gpt4omini OpenRouter API model (for comparison)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_v2_gt.jsonl \
+  --model openrouter:openai/gpt-4o-mini \
+  --mode Q2SQL \
+  --model_type plain \
+  --max_iterations 5 \
+  --include_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --output gpt4omini_results.json \
+  --report_file gpt4omini_report.txt
+
+# evaluate frontier model gpt 4o 200B
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model openrouter:openai/gpt-4o \
+  --mode Q2SQL \
+  --model_type plain \
+  --max_iterations 5 \
+  --include_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/ \
+  --output gpt4o_ftv3_results.json \
+  --report_file gpt4o_ftv3_report.txt
+
+# evaluate frontier model gpt 4 (turbo) 1.8 T
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model openrouter:openai/gpt-4 \
+  --mode Q2SQL \
+  --model_type plain \
+  --max_iterations 5 \
+  --include_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/ \
+  --output gpt4_ftv3_results.json \
+  --report_file gpt4_ftv3_report.txt
+
+# Option D: Evaluate sonnet 3.5 OpenRouter API model (for comparison)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model openrouter:anthropic/claude-3.5-sonnet \
+  --mode Q2SQL \
+  --model_type plain \
+  --max_iterations 5 \
+  --include_schema \
+  --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated" \
+  --artifacts_dir results/ \
+  --output claude35sonnet_ftv3_results.json \
+  --report_file claude35sonnet_ftv3_report.txt
+
+# Monitor evaluation progress
+tail -f ea_model_artifacts_v2/q2sql_ea_v2/*.jsonl
+
+# Monitor GPU on ipazia
+watch -n 5 nvidia-smi
+
+# Expected output files:
+# - ea_results_q2sql_*.json (detailed results)
+# - ea_v2_report_*.txt (human-readable report)
+# - ea_model_artifacts_v2/q2sql_ea_v2/*.jsonl (per-sample artifacts)
+
+# Complete mode (default): Generate SQL + Evaluate (requires DB)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:... \
+  --process_mode complete \
+  --db_uri "postgresql://..."
+
+# Artifacts only: Generate SQL without DB connection
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --model hf:... \
+  --process_mode artifacts_only \
+  --artifacts_dir results/
+
+# Evaluation only: Load artifacts and evaluate them (requires DB)
+python evaluator_v2.py \
+  --benchmark benchmark_taxonomy_100.jsonl \
+  --artifacts_file results/q2sql_ea_v2/model_artifacts.jsonl \
+  --process_mode evaluation_only \
+  --db_uri "postgresql://..."
+
+# Keep all artifacts (default)
+python evaluator_v2.py --benchmark ... --model ... --keep_artifacts -1
+
+# Keep only the 3 most recent artifacts
+python evaluator_v2.py --benchmark ... --model ... --keep_artifacts 3
+
+# Keep only the 5 most recent artifacts
+python evaluator_v2.py --benchmark ... --model ... --keep_artifacts 5
+
+# Keep all artifacts (explicit)
+python evaluator_v2.py --benchmark ... --model ... --keep_artifacts 0
+
+# Don't keep any old artifacts (keep only current)
+python evaluator_v2.py --benchmark ... --model ... --keep_artifacts 1
+────────────────────────────────────────────────────────────────────────────────
+9.3 DOWNLOAD OUTCOMES
+────────────────────────────────────────────────────────────────────────────────
+
+# Download evaluation results (JSON)
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ea_*.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/sqlcoder_ftv3_results.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/sqlcoder_ftv3_results_test2.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/sqlcoder_ftv2_results.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/sqlcoder_plain_results.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/claude35sonnet_ftv3_results.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/gpt4o_ftv3_results.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/gpt4_ftv3_results.json \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/ftv3/
+
+# Download evaluation reports (TXT)
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ea_v2_report_gpt4omini_20251126_1414.txt \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/
+
+# Download per-sample artifacts
+scp -r castangia@ipazia126.polito.it:~/Ali_workspace/nov/results \
+  /mnt/HDD_Data/000products/coesi/assist_cim/phase4_results
+
+# Download all artifacts (includes per-sample detailed logs)
+scp -r castangia@ipazia126.polito.it:~/Ali_workspace/nov/assist_cim/ea_model_artifacts_v2 \
+  /mnt/HDD_Data/000products/coesi/assist_cim/
+
+
+================================================================================
+MODULE 10: BATCH DOWNLOAD - ALL RESULTS
+================================================================================
+
+DESCRIPTION:
+- Download all outputs from the complete pipeline
+- Useful for final backup or after all stages complete
+
+────────────────────────────────────────────────────────────────────────────────
+10.1 DOWNLOAD COMPLETE NOV DIRECTORY
+────────────────────────────────────────────────────────────────────────────────
+
+# Download everything (WARNING: Large, includes models)
+scp -r castangia@ipazia126.polito.it:~/Ali_workspace/nov \
+  /mnt/HDD_Data/000products/coesi/ipazia_nov_backup
+
+────────────────────────────────────────────────────────────────────────────────
+10.2 DOWNLOAD BY CATEGORY
+────────────────────────────────────────────────────────────────────────────────
+
+# Download all datasets (Stage 1, 2, 3, merged, curated)
+scp -r castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets \
+  /mnt/HDD_Data/000products/coesi/ai4db/training_datasets_phase4
+
+# Download all quality reports
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/*_quality_report.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/reports/
+
+# Download all statistics files
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/ai4db/training_datasets/*_stats.json \
+  /mnt/HDD_Data/000products/coesi/ai4db/reports/
+
+# Download training logs
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/txt2ssql/*.log \
+  /mnt/HDD_Data/000products/coesi/txt2ssql/logs/
+
+# Download all evaluation results
+scp -r castangia@ipazia126.polito.it:~/Ali_workspace/nov/assist_cim/ea_* \
+  /mnt/HDD_Data/000products/coesi/assist_cim/results/
+
+# Download all benchmarks
+scp castangia@ipazia126.polito.it:~/Ali_workspace/nov/assist_cim/ftv2_*.jsonl \
+  /mnt/HDD_Data/000products/coesi/ai4db/
+
+
+================================================================================
+EXPECTED TIMELINE & COSTS
+================================================================================
+
+TIMELINE:
+  Stage 1 (Templates):           20 minutes
+  Stage 1 Validation:            30 minutes
+  Stage 2 (CTGAN):              3-4 hours
+  Stage 2 Validation:            60 minutes
+  Stage 3 (LLM Augmentation):   192 hours (8 days)
+  Negative Samples:              5 minutes
+  Merge + Curation:             30 minutes
+  SQLCoder Fine-Tuning:         18 hours
+  Llama Fine-Tuning:            75 hours (3 days)
+  Evaluation (all models):      3 hours
+  ───────────────────────────────────────────
+  TOTAL:                        ~290 hours (12 days)
+
+COSTS:
+  Dataset Generation:
+    - Stage 1: $0 (CPU)
+    - Stage 2: $0 (academic GPU)
+    - Stage 3: $30 (GPT-4o-mini API)
+    - Negative Samples: $0 (rule-based)
+
+  Fine-Tuning:
+    - SQLCoder: $0 (academic GPU, 18h)
+    - Llama 8B: $0 (academic GPU, 75h)
+    - Total GPU-hours: 93h
+
+  Evaluation:
+    - API Models: $15 (GPT-4o-mini, Claude)
+    - Local Models: $0
+  
+  ───────────────────────────────────────────
+  TOTAL PHASE 4: $45
+  ACADEMIC SAVINGS: $180 (vs Vast.ai), $900 (vs AWS)
+
+
+================================================================================
+PERFORMANCE EXPECTATIONS
+================================================================================
+
+Phase 3 Baseline (Current):
+  - SQLCoder: 75.7% EX, 91.7% Deep EM, 86.1% SC
+  - Out-of-scope: 0% (no handling)
+  - Ambiguity: 0% (no detection)
+  - LIMIT bias: 100% (always adds LIMIT)
+
+Phase 4 Target (After Re-training):
+  - SQLCoder: 82-88% EX (+6-12pp), 93-95% Deep EM, 88-93% SC
+  - Out-of-scope: 95%+ detection
+  - Ambiguity: 90%+ detection
+  - LIMIT bias: 8% (realistic usage)
+
+
+================================================================================
+DIRECTORY STRUCTURE ON IPAZIA
+================================================================================
+
+~/Ali_workspace/nov/
+├── ai4db/                          # Dataset generation
+│   ├── stage1_cim_v2.py
+│   ├── stage2_sdv_pipeline_ipazia.py
+│   ├── stage3_v2.py
+│   ├── generate_negative_samples.py
+│   ├── evaluate_generation_quality.py
+│   ├── merge_datasets.py
+│   ├── negative_samples.jsonl
+│   └── training_datasets/
+│       ├── stage1_cim_dataset.jsonl
+│       ├── stage1_cim_dataset_annotated.jsonl
+│       ├── stage2_synthetic_dataset_ipazia.jsonl
+│       ├── stage2_synthetic_dataset_filtered.jsonl
+│       ├── stage3_augmented_dataset.jsonl
+│       ├── stage3_augmented_dataset_annotated.jsonl
+│       ├── merged_dataset_phase4.jsonl
+│       └── phase4_curated/
+│           ├── q2sql_train.jsonl
+│           ├── q2sql_val.jsonl
+│           └── q2sql_test.jsonl
+│
+├── txt2ssql/                       # Fine-tuning
+│   ├── curate_cim_dataset_ftv2.py
+│   ├── sqlcoder_7b_bird_q2sql.py
+│   ├── llama31_8b_q2sql.py
+│   ├── sqlcoder_training.log
+│   └── llama_training.log
+│
+├── assist_cim/                     # Evaluation
+│   ├── evaluate_models.py
+│   ├── evaluator_v2.py
+│   ├── benchmark_generator_v2.py
+│   ├── distribution_reporter.py
+│   ├── create_ftv2_evaluation_benchmark.py
+│   ├── CIM_DATABASE_SCHEMA.txt
+│   ├── .env
+│   ├── ftv2_evaluation_benchmark_*.jsonl
+│   ├── ea_results_*.json
+│   └── ea_v2_report_*.txt
+│
+└── results/                        # All evaluation results
+    ├── q2sql_ea/
+    └── ea_model_artifacts_v2/
+
+================================================================================
+#dataset composition visualizer
+
+python thesis/dataset_composition_visualizer.py \
+    --merged ai4db/training_datasets/merged_dataset_phase4.jsonl \
+    --curated ai4db/training_datasets/curated_q2sql/q2sql_train.jsonl \
+    --output thesis/Figures/dataset_composition
+
+
+
+python thesis/dataset_composition_visualizer.py \
+  --merged ai4db/training_datasets/merged_dataset_phase4.jsonl \
+  --curated ai4db/training_datasets/curated_q2sql/q2sql_train.jsonl \
+  --benchmark ai4db/training_datasets/benchmark_taxonomy_100.jsonl \
+  --output thesis/Figures/dataset_composition

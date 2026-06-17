@@ -1,0 +1,39 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Ignore subproject-specific files (they have their own .gitignore)
+# Just ignore common patterns
+
+# Conda/pip
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Thesis compilation artifacts
+MSc_Ali_Taherdoustmohammadi_thesis/*.aux
+MSc_Ali_Taherdoustmohammadi_thesis/*.log
+MSc_Ali_Taherdoustmohammadi_thesis/*.out
+MSc_Ali_Taherdoustmohammadi_thesis/*.pdf
+MSc_Ali_Taherdoustmohammadi_thesis/*.bbl
+MSc_Ali_Taherdoustmohammadi_thesis/*.blg
+MSc_Ali_Taherdoustmohammadi_thesis/*.toc
+MSc_Ali_Taherdoustmohammadi_thesis/*.synctex.gz
+
+# Keep the final PDF
+!MSc_Ali_Taherdoustmohammadi_thesis/main.pdf

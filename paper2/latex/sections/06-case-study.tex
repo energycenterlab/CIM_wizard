@@ -12,7 +12,8 @@ Four datasource types are registered with STAC metadata: vector (OSM), census, r
 Each ingest assigns a \texttt{datasource\_id} propagated to provenance records.
 
 \textbf{Models.}
-Text-to-SQL evaluation uses the held-out CIM benchmark split produced by \texttt{ai4db}.
+Text-to-SQL evaluation (H4) uses the 201-sample held-out benchmark from the CIM Assist thesis~\cite{taherdoust2025cimassist}.
+The same frozen SQLCoder-7B (QLoRA V3) adapter powers O5 \emph{source}-SQL generation in the VKG agents (not the thesis chat agent).
 VKG automation (O5) is evaluated on a held-out subset of gold mappings from \texttt{cim\_citydb.obda} (63 mapping blocks).
 
 \textbf{Ground-truth subsets.}

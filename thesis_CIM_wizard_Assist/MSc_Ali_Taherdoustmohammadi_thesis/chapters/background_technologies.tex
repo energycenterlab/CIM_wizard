@@ -1,0 +1,336 @@
+\chapter{Background Technologies}
+\label{ch:background}
+
+This chapter introduces the foundational technologies underlying the CIM Wizard and CIM Assist systems. We cover spatial databases and PostGIS, large language models and transformer architectures, parameter-efficient fine-tuning techniques, and AI agent frameworks.
+
+\section{Urban Informatics and Smart Cities}
+
+\subsection{Digital Twin Technologies}
+
+Urban informatics integrates geospatial data, sensors, and analytics for comprehensive city management, with several platforms emerging to address different aspects of urban digital transformation. Digital twin technologies have gained prominence in smart city applications~\cite{deng2021review,smartcity_digitaltwin2021}, providing virtual representations of urban systems that enable real-time monitoring and simulation-based decision making. Recent advances in urban energy management~\cite{smartcities_energy2023,nouvel2015combining} demonstrate the integration of IoT, digital twins, and GIS-based statistical models for multi-scale policy support.
+
+\subsection{Urban Platform Examples}
+
+OpenCity~\cite{opencity} represents an open-source platform designed for urban simulation and planning, with particular emphasis on multi-agent urban modeling that simulates complex interactions between city stakeholders and infrastructure systems. While OpenCity provides powerful simulation capabilities, its primary focus on agent-based modeling results in limited support for direct database query interfaces, restricting ad-hoc analytical access to underlying urban data.
+
+CityLeo~\cite{cityleo} takes a different approach by providing an LLM-enhanced urban data platform specifically designed for decision support applications. The platform integrates multiple data sources spanning demographics, transportation networks, and environmental monitoring, creating a unified urban information ecosystem. However, CityLeo's general-purpose design orientation means it lacks the specialized features and domain-specific optimizations necessary for detailed urban energy modeling and building-level energy analysis.
+
+\subsection{Building Information Modeling Standards}
+
+Building Information Modeling provides comprehensive 3D object-oriented representations of building structures, standardized through industry specifications such as IFC (Industry Foundation Classes) and CityGML~\cite{dong2013citygml,smartcities_bim2023}. BIM systems excel at capturing detailed geometric and semantic information about individual buildings, supporting lifecycle management from design through construction and maintenance phases. However, this building-centric focus creates a significant gap when scaling to city-wide energy analysis, as BIM frameworks lack the computational infrastructure and analytical capabilities necessary for integrated urban energy modeling across hundreds or thousands of buildings simultaneously.
+
+Large-scale building energy datasets~\cite{miller2020buildingdata} provide valuable resources for urban energy modeling but require sophisticated analytical frameworks to extract actionable insights. The convergence of these technologies reveals critical needs for platform flexibility, data integration across multi-schema sources, and extensible architectures that support custom analytical capabilities without core system modifications.
+
+
+
+\section{Spatial Databases and PostGIS}
+
+\subsection{Spatial Data Types}
+
+Spatial databases extend traditional relational databases with geometric and geographic data types, enabling sophisticated spatial analysis capabilities essential for urban informatics applications. The Open Geospatial Consortium (OGC) defines standard spatial types that form the foundation of spatial database operations. \textbf{Point} geometries represent single locations such as building centroids or sensor positions, while \textbf{LineString} geometries model linear features as sequences of connected points, making them ideal for representing road networks or utility lines. \textbf{Polygon} geometries define closed shapes with interior areas and optional holes, commonly used for building footprints, land parcels, or administrative boundaries. For more complex spatial entities, the OGC standard defines collection types including \textbf{MultiPoint}, \textbf{MultiLineString}, and \textbf{MultiPolygon} geometries that group multiple simple geometries of the same type, as well as \textbf{GeometryCollection} for heterogeneous collections mixing different geometry types within a single spatial object.
+
+\subsection{PostGIS Extension}
+
+PostGIS extends PostgreSQL with comprehensive spatial capabilities, transforming it into a powerful spatial database management system~\cite{obe2021postgis}. The extension provides dual geometric representations through \textbf{Geometry} types for planar 2D projected coordinates and \textbf{Geography} types for spherical geodetic coordinates, allowing applications to choose the most appropriate representation based on their spatial accuracy requirements and computational needs. To enable efficient spatial query performance, PostGIS implements specialized \textbf{Spatial Indexing} structures including GiST (Generalized Search Tree) and SP-GiST (Space-Partitioned Generalized Search Tree) indexes that dramatically reduce query execution time for spatial operations. The system supports over 6000 \textbf{Coordinate Reference Systems (CRS)} with automatic coordinate transformations between different spatial reference systems, essential for integrating spatial data from diverse sources with varying geographic projections. Additionally, PostGIS provides comprehensive \textbf{Raster Support} capabilities enabling storage and analysis of raster data such as digital elevation models and land cover classifications, facilitating integrated raster-vector spatial analysis workflows.
+
+\subsection{Spatial Operations}
+
+PostGIS provides an extensive library of spatial functions organized into four functional categories enabling sophisticated geometric analysis. Spatial relationship predicates form the foundation of spatial queries through functions determining geometric interactions: \texttt{ST\_Intersects} tests for shared space between geometries, \texttt{ST\_Contains} evaluates complete containment, \texttt{ST\_Within} checks inverse containment, and \texttt{ST\_DWithin} verifies proximity within distance thresholds. Spatial measurement functions enable quantitative analysis including \texttt{ST\_Area} for polygon area calculation, \texttt{ST\_Distance} for minimum distance determination, \texttt{ST\_Length} for linear feature measurement, and \texttt{ST\_Perimeter} for boundary length computation. Spatial processing functions facilitate geometric transformations through \texttt{ST\_Buffer} for buffer zone creation, \texttt{ST\_Intersection} for geometric overlap computation, \texttt{ST\_Union} for geometry merging, and \texttt{ST\_Centroid} for geometric center calculation. Raster-vector integration capabilities enable seamless cross-model analysis through \texttt{ST\_Value} for raster sampling at point locations, \texttt{ST\_Clip} for raster clipping to polygon boundaries, and \texttt{ST\_AsRaster} for vector-to-raster conversion.
+
+\subsection{Query Example}
+
+A typical spatial query in the CIM domain:
+
+\begin{lstlisting}[style=sqlstyle, caption=PostGIS spatial join with measurement]
+SELECT 
+    b.building_id,
+    b.building_name,
+    ST_Area(b.building_geometry) as footprint_area,
+    c.population_density,
+    ST_Distance(b.building_geometry, s.station_geometry) as distance_to_station
+FROM 
+    cim_vector.buildings b
+    INNER JOIN cim_census.census_tracts c 
+        ON ST_Intersects(b.building_geometry, c.tract_geometry)
+    CROSS JOIN LATERAL (
+        SELECT station_geometry
+        FROM cim_vector.subway_stations
+        ORDER BY b.building_geometry <-> station_geometry
+        LIMIT 1
+    ) s
+WHERE 
+    ST_Area(b.building_geometry) > 100
+    AND c.population_density > 5000;
+\end{lstlisting}
+
+This query demonstrates spatial joins (\texttt{ST\_Intersects}), measurements (\texttt{ST\_Area}, \texttt{ST\_Distance}), and spatial indexing (KNN operator \texttt{<->}).
+
+\section{3DCityDB Extension and CityJSON}
+
+3DCityDB is a spatial database management system for 3D city modeling and simulation, based on the Open Geospatial Consortium (OGC) CityGML standard~\cite{gröger2012citygml}. The system provides comprehensive spatial operations and analytical capabilities for 3D city modeling, enabling storage, query, and analysis of complex urban geometries and semantic information.
+
+\subsection{CityGML Schema Structure}
+
+CityGML defines a hierarchical schema for representing city objects at multiple levels of detail (LoD 0-4), organized into thematic modules. The Core Module provides base classes for all city objects including \texttt{CityObject}, \texttt{CityModel}, and geometric primitives. Domain-specific modules cover urban features comprehensively: the Building Module represents structures from footprints (LoD0) to detailed interiors (LoD4), the Transportation Module models road networks and railways, the Vegetation Module captures trees and green spaces, and the Water Body Module represents aquatic features. Additional modules include Land Use for zoning classifications, Relief for terrain and elevation models, and City Furniture for street equipment and urban amenities.
+
+\subsection{Application Domain Extensions (ADEs)}
+
+CityGML supports Application Domain Extensions (ADEs) that extend the base schema with domain-specific attributes and relationships. Two critical ADEs for urban energy modeling are:
+
+\paragraph{Energy ADE}
+
+The Energy ADE~\cite{energy_ade} extends building objects with comprehensive energy-related properties essential for urban energy modeling. Thermal properties include U-values for building envelope components (walls, roofs, floors, windows) along with thermal transmittance and heat capacity parameters. Construction elements are detailed through material layer specifications, insulation properties, and glazing characteristics enabling accurate thermal simulation. Energy systems encompass heating, cooling, and ventilation equipment with associated efficiency ratings and operational parameters. Historical energy consumption data, energy certificates, and performance indicators support validation and calibration. Renewable energy installations including solar panels, heat pumps, and district heating connections enable scenario analysis for sustainable energy transitions.
+
+\paragraph{Utility Network ADE}
+
+The Utility Network ADE extends CityGML with comprehensive infrastructure network modeling capabilities. Electrical networks are represented through grid topology including buses, lines, transformers, and load connections enabling power flow analysis. District heating systems are modeled with pipes, heat exchangers, substations, and building connections for thermal network simulation. Water networks capture both supply and wastewater infrastructure, while gas networks represent distribution pipelines and connections. Network topology representation includes connectivity relationships, flow directions, and capacity constraints essential for infrastructure planning and operational optimization.
+
+\subsection{CityJSON Format}
+
+CityJSON is a JSON-based encoding of CityGML that provides a lightweight, web-friendly representation of 3D city models~\cite{cityjson}. Unlike XML-based CityGML, CityJSON offers:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Compact Representation}: Reduced file sizes through geometry compression and shared vertex arrays
+  \item \textbf{Web Compatibility}: Native JSON format suitable for REST APIs and web applications
+  \item \textbf{Simplified Parsing}: Easier integration with JavaScript and Python ecosystems
+  \item \textbf{Extension Support}: Compatible with Energy ADE and Utility Network ADE through extensions
+\end{itemize}
+
+3DCityDB and CityJSON are complementary technologies: 3DCityDB provides the database backend for persistent storage and spatial queries, while CityJSON serves as the exchange format for web services and client applications. Together, they enable comprehensive 3D city modeling with energy and infrastructure extensions crucial for urban energy simulation.
+
+
+\section{TABULA: From CIM to Urban Energy Modeling}
+
+The TABULA project~\cite{tabula} provides a comprehensive building typology database for European countries, enabling standardized energy performance assessment across diverse building stocks. TABULA archetypes classify buildings based on construction period, building type, and energy performance characteristics, serving as a bridge between City Information Models (CIM) and Urban Energy Modeling (UEM) workflows.
+
+\subsection{Building Archetype Classification}
+
+TABULA archetypes are organized hierarchically through four classification dimensions: national context (country-specific building stock characteristics), building typology (single-family, multi-family, apartment blocks, commercial), construction period (historical epochs reflecting evolving construction standards from pre-1945 through modern periods), and energy performance class (original state, moderate renovation, deep renovation). Each archetype provides standardized thermal properties including U-values for building envelope components (walls, roofs, floors, windows), thermal bridge characteristics, air tightness parameters, and typical energy system configurations, enabling consistent energy performance assessment across European building stocks.
+
+
+
+\subsection{Role in Energy Simulation}
+
+The TABULA-based enrichment process enables energy simulation through five critical functions. Standardized input provision supplies validated U-values to simulation tools (EnergyPlus, Modelica, TRNSYS) eliminating manual parameterization. Scalability is achieved through automated archetype assignment across hundreds or thousands of buildings where manual parameterization would be infeasible. Validation is ensured as TABULA archetypes derive from empirical building stock surveys reflecting actual construction practices rather than idealized assumptions. Scenario analysis capability enables exploration of renovation alternatives (moderate versus deep renovation) through energy performance class switching. Interoperability through CityGML Energy ADE format ensures compatibility with multiple simulation platforms, enabling seamless data exchange between CIM Wizard and downstream energy simulation tools. This integration demonstrates how CIM Wizard's calculator architecture transforms sparse geospatial data into simulation-ready models through systematic feature calculation, archetype assignment, and standardized representation. 
+
+
+
+\section{Large Language Models}
+
+\subsection{Transformer Architecture}
+
+Large Language Models (LLMs) are based on the transformer architecture~\cite{vaswani2017attention} introduced by Vaswani et al. (2017), featuring five key components that enable effective sequence modeling. Self-attention mechanisms enable parallel processing of sequential data by computing attention weights between all token pairs simultaneously. Multi-head attention allows multiple attention mechanisms to learn different representation subspaces, capturing diverse semantic relationships. Positional encoding injects sequence order information through sinusoidal or learned embeddings, compensating for the architecture's lack of inherent sequential processing. Position-wise feed-forward networks follow attention layers, providing nonlinear transformations. Layer normalization and residual connections stabilize training of deep networks, enabling effective gradient flow through dozens of transformer layers.
+
+\subsection{Decoder-Only Language Models}
+
+Modern LLMs (GPT, Llama, Qwen) use decoder-only transformer architecture:
+
+\begin{equation}
+P(x_{t+1} | x_1, x_2, \ldots, x_t) = \text{softmax}(\mathbf{W}_o \cdot \text{Transformer}(x_1, \ldots, x_t))
+\end{equation}
+
+Where the model autoregressively predicts the next token based on previous context. This architecture enables three key capabilities: causal attention where each token attends only to previous positions preventing information leakage from future tokens, generative capability through sequential sampling producing coherent natural text, and in-context learning allowing task adaptation through prompting without requiring parameter updates.
+
+\subsection{Model Families}
+
+This work utilizes several open-source model families:
+
+\paragraph{Llama (Meta AI)}
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Llama 2}~\cite{touvron2023llama}: Foundation models with improved safety and instruction following
+  \item \textbf{Llama 3}~\cite{dubey2024llama}: Latest generation with 8B, 14B, and larger parameter variants
+  \item \textbf{Architecture}: Grouped Query Attention (GQA) for efficiency
+  \item \textbf{Context Length}: 128K tokens (8K effective for fine-tuning)
+  \item \textbf{Training Data}: Multilingual web corpus, code, mathematics
+\end{itemize}
+
+\paragraph{Qwen (Alibaba)}
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Qwen 2}~\cite{yang2024qwen2}: Technical foundation for code and reasoning tasks
+  \item \textbf{Qwen 2.5}: 14B and 32B parameter variants
+  \item \textbf{Specialization}: Strong code understanding and generation
+  \item \textbf{Context Length}: 32K tokens
+  \item \textbf{Advantage}: Superior performance on structured generation tasks
+\end{itemize}
+
+\paragraph{Specialized Models}
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{SQLCoder (Defog AI)}: 7B model pre-trained on Spider and BIRD benchmarks
+  \item \textbf{DeepSeek-Coder}: 6.7B model specialized for code generation
+  \item \textbf{Mistral}: 7B parameter model with sliding window attention
+\end{itemize}
+
+\section{LLM Engineering for Domain-Specific Services}
+
+Building production-ready natural language interfaces for specialized domains requires careful consideration of two complementary approaches: agentic engineering using frontier models with external knowledge retrieval, and fine-tuning local models to internalize domain-specific knowledge. This section examines both strategies and their trade-offs for creating assistive services.
+
+\subsection{Two-Pass Architecture for Service Assistants}
+
+Creating effective LLM-powered assistants for domain-specific services typically involves two complementary passes that address different stages of system development and deployment. The first pass employs agentic engineering with LangChain, leveraging large frontier models such as GPT-4, Claude, and Gemini integrated with external tools. This approach utilizes LangChain and LangGraph frameworks to provide orchestration for tool-augmented reasoning, enabling systems to dynamically retrieve database schemas, API documentation, and domain knowledge as retrievable context. The sophisticated reasoning capabilities of large models with parameters exceeding one trillion enable complex planning and decision-making processes. A key advantage of this approach lies in its dynamic adaptation capabilities, allowing systems to handle schema changes and incorporate new tools without requiring retraining. However, this flexibility comes with inherent limitations including API costs that scale with usage, network latency that impacts response times, privacy concerns arising from data transmission to external services, and dependency on external service availability that introduces operational risks.
+
+The second pass focuses on fine-tuning local models to internalize domain knowledge directly into smaller, deployable models. This approach transforms domain-specific patterns into learned model weights, enabling specialized performance without external dependencies. Local deployment ensures that sensitive data never leaves organizational infrastructure, addressing critical privacy requirements for applications handling confidential information. The knowledge internalization process enables specialized models to achieve higher accuracy on domain-specific tasks compared to general-purpose models operating with external context. From an economic perspective, fine-tuning offers a fundamentally different cost structure: a one-time training investment replaces the per-query API fees characteristic of agentic approaches. Additionally, local inference eliminates network round-trips, resulting in lower latency that enhances user experience and enables real-time applications where response time is critical.
+
+\subsection{Architectural Choice: RAG vs Fine-Tuning}
+
+For domain-specific services like spatial SQL generation, two primary architectural approaches exist, each offering distinct advantages and trade-offs that must be carefully evaluated based on deployment requirements, cost constraints, and performance objectives.
+
+\subsubsection{Approach 1: Multi-Agent RAG with Frontier Models}
+
+The multi-agent RAG approach employs large frontier models with parameters exceeding one trillion, combined with Retrieval-Augmented Generation to dynamically access domain-specific knowledge. This architecture stores database schemas, table structures, and column definitions in vector databases that are retrieved dynamically for each query, enabling systems to access current schema information without requiring model retraining. Task-specific knowledge including PostGIS spatial function documentation, SQL examples, and query patterns are similarly stored as retrievable context, allowing the system to incorporate the latest documentation and examples dynamically. The reasoning engine consists of large frontier models such as GPT-4 or Claude 3.5, which provide sophisticated reasoning capabilities about schema relationships and spatial operations that enable complex query generation. The multi-agent architecture distributes responsibilities across specialized agents: schema inspection agents analyze database structures, query planning agents determine optimal query strategies, SQL generation agents construct queries, and validation agents ensure correctness before execution.
+
+The advantages of this approach center on its flexibility and adaptability. Systems can handle schema changes without retraining, making them suitable for environments where database structures evolve frequently. The approach leverages cutting-edge reasoning capabilities available in frontier models, enabling sophisticated problem-solving that may exceed the capabilities of smaller fine-tuned models. The dynamic knowledge incorporation allows systems to access the latest documentation and examples, ensuring that the system benefits from continuously updated information sources. However, these advantages come with significant disadvantages. High per-query costs create economic challenges for high-volume deployments, with costs accumulating linearly with usage. Privacy concerns arise from transmitting potentially sensitive queries to external APIs, making this approach unsuitable for applications with strict data confidentiality requirements. Network latency introduces delays of several seconds per query, impacting user experience and limiting applicability to real-time applications. Ongoing operational costs accumulate continuously, creating long-term economic pressure. Additionally, the large model inference required for each query generates substantial CO\textsubscript{2} footprints through cloud infrastructure operations and network transmission.
+
+\subsubsection{Approach 2: Fine-Tuned Local Models}
+
+The fine-tuned local model approach internalizes domain knowledge directly into smaller models ranging from 8 to 32 billion parameters, typically using models such as Llama or Qwen fine-tuned with QLoRA techniques. This internalization process occurs during training, where database schema patterns, table relationships, and column semantics are learned and encoded into model weights. Similarly, task-specific knowledge including PostGIS spatial functions, SQL generation patterns, and query structures become part of the model's learned representations, eliminating the need for external knowledge retrieval during inference.
+
+The advantages of fine-tuning local models span multiple dimensions critical for production deployment. Privacy protection is complete, as local deployment ensures that sensitive data never leaves organizational infrastructure, making this approach essential for applications handling confidential urban energy data or demographic information. The cost structure fundamentally differs from RAG approaches: an initial one-time training investment replaces ongoing per-query API fees, making fine-tuning economically advantageous for sustained production deployments. Ongoing operational costs remain minimal, limited to compute infrastructure maintenance rather than accumulating per-query charges. Latency is substantially reduced through local inference that eliminates network round-trips, enabling response times suitable for interactive applications. The environmental impact is lower due to smaller model sizes, local deployment eliminating network transmission overhead, and one-time training energy investment that amortizes over the model's operational lifetime. Accuracy on domain-specific tasks exceeds that of general models operating with external context, reflecting the value of specialized knowledge encoding. System robustness benefits from consistent performance without dependency on external services, eliminating concerns about API rate limits, service outages, or network disruptions.
+
+The disadvantages of fine-tuning reflect the trade-offs inherent in knowledge internalization. Schema changes require model retraining, making this approach less suitable for environments with frequently evolving database structures. Initial training requires substantial time investment, typically ranging from tens to hundreds of hours depending on model size and dataset complexity. The approach offers less flexibility than RAG for rapidly changing knowledge, as updating the model requires retraining rather than simply updating external knowledge sources. Despite these limitations, fine-tuning provides superior value for applications with stable schemas, privacy requirements, and sustained usage patterns where the upfront investment is justified by long-term operational benefits.
+
+\subsection{Cost-Benefit Analysis}
+
+The economic and environmental trade-offs between RAG-based and fine-tuning approaches reveal fundamental differences in cost structure, operational efficiency, and long-term sustainability that significantly impact deployment decisions for domain-specific natural language interfaces.
+
+From an initial investment perspective, RAG approaches appear attractive due to their minimal upfront costs, requiring only vector database setup and integration with existing API services. However, this apparent advantage masks the substantial ongoing operational expenses that accumulate with usage. In contrast, fine-tuning approaches require an initial training investment, though this cost can be substantially reduced or eliminated entirely when academic GPU access is available. The one-time nature of this training investment fundamentally differs from the recurring cost structure of API-based systems.
+
+The operational cost structure reveals the most significant economic distinction between these approaches. RAG systems incur per-query API fees that scale linearly with usage, creating substantial monthly operational expenses for high-volume deployments. These costs accumulate continuously, making RAG approaches economically challenging for production systems with consistent query volumes. Fine-tuning approaches, conversely, shift costs to the initial training phase, with ongoing operational expenses limited to compute infrastructure maintenance rather than per-query fees. This cost structure transformation enables substantial annual savings for fine-tuning approaches, particularly as query volume increases, making fine-tuning economically advantageous for sustained production deployments.
+
+Environmental considerations further differentiate these approaches. RAG systems generate higher carbon footprints through multiple mechanisms: large model inference requires substantial computational resources, network transmission adds energy overhead for each query, and cloud infrastructure operations contribute additional emissions. Fine-tuning approaches achieve lower environmental impact through several factors: smaller models reduce inference energy requirements, local deployment eliminates network transmission overhead, and the one-time training energy investment contrasts favorably with the ongoing energy consumption of continuous API inference. The training phase represents a fixed energy cost that amortizes over the model's operational lifetime, whereas RAG approaches generate continuous energy consumption that accumulates indefinitely.
+
+Performance characteristics also distinguish these approaches, though the relationship between cost and accuracy is complex. RAG systems using general models with schema context achieve moderate accuracy levels, reflecting the limitations of external knowledge retrieval and general-purpose reasoning. Fine-tuning approaches demonstrate superior accuracy through domain-specific knowledge internalization, with improvements that reflect the depth of domain adaptation achieved during training. The performance gap between these approaches highlights the value of specialized knowledge encoding, though the magnitude of improvement varies based on training data quality, model selection, and domain complexity.
+
+\subsection{Recommendation for CIM Assist}
+
+For CIM Assist, fine-tuning local models provides superior value across multiple dimensions that align with the specific requirements of urban energy modeling applications. Privacy considerations are paramount, as urban energy data contains sensitive building and demographic information that requires local processing to maintain confidentiality and comply with data protection regulations. The cost structure of fine-tuning proves economically advantageous, with one-time training investments contrasting favorably against ongoing API fees that accumulate with usage volume. Performance characteristics demonstrate clear superiority, with domain-adapted models achieving substantially higher accuracy compared to general models operating with schema context alone. The stability of the CIM Wizard database schema further supports the fine-tuning approach, as relatively infrequent schema changes reduce the need for retraining, making the upfront investment more justifiable. Finally, local deployment ensures production readiness through improved reliability, reduced latency, and independence from external services that could introduce operational risks.
+
+However, RAG approaches remain valuable for specific scenarios where their flexibility provides advantages. Rapid prototyping before fine-tuning benefits from the immediate deployment capability of RAG systems, enabling quick validation of system requirements before committing to training investments. Handling frequently changing schemas represents another scenario where RAG's dynamic knowledge retrieval proves advantageous, as systems can adapt to schema modifications without retraining. Incorporating latest documentation dynamically allows RAG systems to leverage up-to-date information that may not be reflected in training datasets. Multi-database scenarios where fine-tuning each database would be impractical benefit from RAG's ability to operate across diverse schemas without requiring separate training for each database.
+
+This work demonstrates that fine-tuning local models in the 8-32B parameter range achieves production-ready performance with superior privacy, cost efficiency, and environmental impact compared to RAG-based approaches using frontier models. The combination of domain-specific knowledge internalization, local deployment capabilities, and favorable economic characteristics makes fine-tuning the recommended approach for CIM Assist, while recognizing that RAG systems serve important roles in specific deployment scenarios.
+
+
+
+\section{Parameter-Efficient Fine-Tuning}
+
+\subsection{Full Fine-Tuning Limitations}
+
+Traditional fine-tuning approaches that update all model parameters face several prohibitive resource constraints. A 14B parameter model requires approximately 56GB of GPU memory when training in FP16 precision, placing it beyond the reach of most consumer and research-grade hardware. Scaling laws~\cite{kaplan2020scaling} demonstrate that model performance improves predictably with parameter count, but full fine-tuning of large models remains computationally expensive. Alternative approaches like knowledge distillation~\cite{hinton2015distilling} can transfer knowledge from large models to smaller ones, but parameter-efficient methods offer more direct adaptation strategies. The computational expense compounds this challenge, as full fine-tuning necessitates complete backward passes through all layers during each training iteration, resulting in slow convergence that demands millions of gradient updates to achieve satisfactory performance. Furthermore, the storage overhead becomes impractical when adapting models to multiple tasks, as each task-specific version requires maintaining a complete model copy, multiplying storage requirements linearly with the number of downstream applications.
+
+\subsection{Low-Rank Adaptation (LoRA)}
+
+LoRA (Hu et al., 2021) introduces trainable rank-decomposition matrices into transformer layers:
+
+\begin{equation}
+\mathbf{W}' = \mathbf{W}_0 + \mathbf{BA}
+\end{equation}
+
+Where:
+\begin{itemize}[leftmargin=1.2em]
+  \item $\mathbf{W}_0 \in \mathbb{R}^{d \times k}$ is the frozen pre-trained weight matrix
+  \item $\mathbf{B} \in \mathbb{R}^{d \times r}$ and $\mathbf{A} \in \mathbb{R}^{r \times k}$ are trainable low-rank matrices
+  \item $r \ll \min(d, k)$ is the rank (typically 8-16)
+\end{itemize}
+
+\textbf{Advantages:} The LoRA approach~\cite{hu2022lora} provides several critical advantages for parameter-efficient fine-tuning. Most significantly, it reduces trainable parameters by approximately 99\%, transforming a 14B parameter model into merely 16M trainable parameters while maintaining comparable performance to full fine-tuning. This dramatic reduction yields substantial memory efficiency, as only the small adapter matrices require gradient computation and storage during training. The modular nature of LoRA enables practical multi-task deployment, allowing multiple task-specific adapters to be swapped dynamically at inference time while sharing a single frozen base model. This architecture preserves the pre-trained knowledge encoded in the base weights, preventing catastrophic forgetting while enabling effective task adaptation.
+
+\subsection{Quantized LoRA (QLoRA)}
+
+QLoRA~\cite{dettmers2023qlora} further reduces memory requirements by quantizing the base model while maintaining LoRA's parameter-efficient adaptation strategy. The approach introduces \textbf{4-bit NormalFloat (NF4) Quantization}, a custom data type specifically optimized for the normally distributed weight values typical in neural networks, providing better precision than standard 4-bit integer quantization. To maximize memory savings, QLoRA employs \textbf{Double Quantization}, which quantizes even the quantization constants themselves, achieving an additional reduction in memory footprint. The system leverages \textbf{Paged Optimizers} that utilize NVIDIA unified memory architecture to manage optimizer states efficiently across CPU and GPU memory. The combined effect of these innovations enables fine-tuning of 14B parameter models within 18-20GB of memory, making large language model adaptation accessible on consumer-grade 24GB GPUs and democratizing advanced model development for the research community.
+
+\paragraph{QLoRA Configuration}
+
+Typical configuration for this work:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Quantization}: 4-bit NF4 with double quantization
+  \item \textbf{LoRA Rank ($r$)}: 8 or 16
+  \item \textbf{LoRA Alpha ($\alpha$)}: 16 or 32 (scaling factor = $\alpha / r$)
+  \item \textbf{LoRA Dropout}: 0.05-0.1 for regularization
+  \item \textbf{Target Modules}: q\_proj, k\_proj, v\_proj, o\_proj, gate\_proj, up\_proj, down\_proj
+  \item \textbf{Learning Rate}: $1.5 \times 10^{-4}$ to $2.0 \times 10^{-4}$
+\end{itemize}
+
+\subsection{Training Process}
+
+The fine-tuning process follows:
+
+\begin{enumerate}[leftmargin=1.2em]
+  \item \textbf{Load Base Model}: Load pre-trained model in 4-bit quantized format
+  \item \textbf{Initialize LoRA Adapters}: Add trainable low-rank matrices to target layers
+  \item \textbf{Prepare Dataset}: Format training samples with chat templates
+  \item \textbf{Training Loop}: Update only LoRA parameters through gradient descent
+  \item \textbf{Merge and Save}: Optionally merge adapters with base model
+\end{enumerate}
+
+\section{AI Agents and LangGraph}
+
+\subsection{Agent Architecture}
+
+AI agents extend language models with tool use and iterative reasoning through a perception-action loop comprising five phases. Perception receives user queries and environmental state information. Reasoning plans action sequences through model inference determining which tools to invoke. Action executes selected tools including database queries, API calls, and computations. Observation captures tool outputs and error messages providing feedback for subsequent reasoning. Reflection enables iteration, continuing the loop until goals are achieved or maximum step limits are reached.
+
+\subsection{LangGraph Framework}
+
+LangGraph, part of the LangChain ecosystem~\cite{chase2022langchain}, provides stateful agent orchestration for building complex AI workflows:
+
+\paragraph{Core Concepts}
+
+LangGraph provides four core abstractions for stateful agent orchestration. State graphs represent workflows as directed graphs where nodes are processing steps and edges are transitions. State schemas employ typed dictionaries maintaining agent state across execution, ensuring type safety and state consistency. Conditional edges enable dynamic routing based on agent decisions, supporting complex branching logic. Persistence checkpoints state for human-in-the-loop workflows, allowing interruption and resumption.
+
+\paragraph{Agent Execution Flow}
+
+Agent execution proceeds through five phases: input nodes receive user queries and initialize state, agent nodes invoke LLMs to generate actions (tool calls or final answers), tool nodes execute selected tools and update state with results, conditional edges route to agent nodes for iteration or output nodes to finish, and output nodes return final results to users.
+
+\subsection{Database Tools}
+
+Text-to-SQL agents typically integrate four essential database tools: \texttt{sql\_db\_list\_tables} for discovering available tables, \texttt{sql\_db\_schema} for retrieving table schemas, \texttt{sql\_db\_query\_checker} for validating SQL syntax before execution, and \texttt{sql\_db\_query} for executing queries and returning results.
+
+\paragraph{Example Tool Implementation}
+
+\begin{lstlisting}[style=pythonstyle, caption=Database schema tool with spatial awareness]
+from langchain.tools import BaseTool
+
+class SpatialSchemaInspectorTool(BaseTool):
+    name = "sql_db_schema"
+    description = "Get table schemas with geometry column detection"
+    
+    def _run(self, table_names: str) -> str:
+        tables = table_names.split(',')
+        schema_info = []
+        
+        for table in tables:
+            # Get standard columns
+            columns = db.get_table_columns(table)
+            
+            # Detect geometry columns
+            geom_cols = [col for col in columns 
+                        if 'geometry' in col.lower() or 'geom' in col.lower()]
+            
+            schema_info.append(f"Table: {table}\n"
+                              f"Columns: {', '.join(columns)}\n"
+                              f"Spatial Columns: {', '.join(geom_cols)}")
+        
+        return '\n\n'.join(schema_info)
+\end{lstlisting}
+
+\subsection{Error Handling and Retry Logic}
+
+Robust agent implementations incorporate four safety mechanisms: maximum iteration limits prevent infinite loops (typically 5 attempts), timeout management enforces query execution limits (typically 120 seconds), error feedback passes execution errors back to agents enabling self-correction, and graceful degradation returns partial results when complete answers fail, ensuring user-facing robustness.
+
+
+\section{Summary}
+
+This chapter introduced the foundational technologies:
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{PostGIS}: Spatial databases with geometry types, spatial operations, and raster support enabling complex urban analytics
+  \item \textbf{Large Language Models}: Transformer-based architectures (Llama, Qwen) providing natural language understanding and generation
+  \item \textbf{QLoRA}: Parameter-efficient fine-tuning enabling 14B model training on single 24GB GPU through 4-bit quantization and low-rank adapters
+  \item \textbf{LangGraph}: Stateful agent framework enabling iterative reasoning with database tools and execution feedback
+  \item \textbf{Urban Informatics}: Digital twin technologies, BIM standards, and smart city platforms providing context for integrated urban energy systems
+\end{itemize}
+
+These technologies form the technical foundation for CIM Wizard and CIM Assist, which are positioned in the context of related work in Chapter~\ref{ch:sota} and detailed in the methodology in Chapter~\ref{ch:methodology}.
+

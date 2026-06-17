@@ -18,7 +18,7 @@
 \title{CIM Wizard 2.0: Confidence-Aware Urban Building Modeling via Semi Data Warehouse, UBEM Ontology Stack, and LLM-Automated Virtual Knowledge Graph}
 
 \author{
-\IEEEauthorblockN{Author Names TBD}
+\IEEEauthorblockN{Ali Taherdoustmohammadi}
 \IEEEauthorblockA{Politecnico di Torino --- Energy Center\\
 Email: \texttt{[TBD]}}
 }
@@ -29,7 +29,7 @@ Email: \texttt{[TBD]}}
 
 \begin{abstract}
 Urban building energy modeling (UBEM) at city scale mixes measured, inferred, and default inputs, yet practitioners typically receive a single attribute value without lineage or uncertainty.
-We present \textbf{CIM Wizard 2.0}, extending our prior priority-fallback pipeline with: (1)~a STAC-aligned semi data warehouse registering heterogeneous datasources; (2)~a three-layer UBEM ontology virtualised via Ontop OBDA; (3)~an 88K-pair CIM-scoped text-to-SQL benchmark; (4)~fine-tuned spatial-SQL language models; (5)~a multi-agent VKG automation pipeline; and (6)~multi-method feature execution with provenance records and ordinal confidence scoring.
+We present \textbf{CIM Wizard 2.0}, extending our prior priority-fallback pipeline with: (1)~a STAC-aligned semi data warehouse; (2)~a three-layer UBEM ontology virtualised via Ontop OBDA; (3)~a CIM-scoped text-to-SQL dataset (34,993 training pairs; 201-sample benchmark from the CIM Assist thesis); (4)~QLoRA-fine-tuned SQLCoder-7B; (5)~a multi-agent VKG pipeline that \emph{reuses} the fine-tuned model for OBDA source-SQL generation (pivoting from thesis NL database access); and (6)~multi-method execution with provenance and ordinal confidence.
 We formulate six testable hypotheses (H1--H6) with baselines and metrics spanning AI accuracy, semantic fidelity, and trustworthiness.
 On a pilot case study, fine-tuned SQLCoder-7B achieves 84.6\% execution accuracy versus 30.9\% for GPT-4o; VKG mappings preserve 94\% SPARQL answer F1; and confidence scores correlate negatively with cross-method disagreement ($\rho=-0.54$), supporting confidence as a practical validation surrogate when ground truth is partial.
 \end{abstract}

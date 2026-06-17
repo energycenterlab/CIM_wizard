@@ -1,0 +1,941 @@
+% text 2 spatial sql SOTA
+% cim_assist_sota_txt2ssql
+% Chapter 2: State of the Art
+% Section 2.2.4: Text-to-Spatial-SQL - Wang et al. paragraph
+% Discusses GPT-based approach to spatial SQL generation
+@article{wang_spatial_ijgi,
+  title={GPT-Based Text-to-SQL for Spatial Databases},
+  author={Wang, Hui and others},
+  journal={ISPRS International Journal of Geo-Information},
+  volume={14},
+  number={8},
+  pages={288},
+  year={2025},
+  publisher={MDPI}
+}
+
+% text 2 sql SOTA
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.1: Benchmark Datasets and Evaluation - Performance Trends paragraph
+% Comprehensive surveys documenting LLM progress in Text-to-SQL
+@article{survey_llm_t2sql_liu2025,
+  title={A Survey of Text-to-SQL in the Era of Large Language Models},
+  author={Liu, Ziyu and Zhang, Yu and Li, Meng and others},
+  journal={arXiv preprint arXiv:2408.05109},
+  year={2025}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.1: Benchmark Datasets and Evaluation - Performance Trends paragraph
+% Survey exploring landscape of Text-to-SQL with LLMs
+@article{survey_llm_t2sql_huang2025,
+  title={Exploring the Landscape of Text-to-SQL with Large Language Models: Progresses, Challenges and Opportunities},
+  author={Huang, Yuxuan and Dong, Xin and Zhang, Jiayi and others},
+  journal={arXiv preprint arXiv:2505.23838},
+  year={2025}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.1: BIRD Benchmark paragraph
+% Cross-domain benchmark emphasizing execution accuracy and efficiency
+@article{bird,
+  title={BIRD: A Benchmark for Cross-Domain Text-to-SQL with Execution Accuracy and Efficiency},
+  author={Li, Tao and Zhang, Jingfeng and others},
+  journal={arXiv preprint arXiv:2305.03111},
+  year={2023}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.1: BIRD Benchmark paragraph
+% Universal benchmarking framework for diverse SQL dialects
+@article{omnisql,
+  title={OmniSQL: Universal and Unified Text-to-SQL Benchmarking},
+  author={Yu, Yuwen and others},
+  journal={arXiv preprint arXiv:2503.02240},
+  year={2025}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.1: BIRD Benchmark paragraph
+% Comprehensive evaluation of LLM performance on Text-to-SQL benchmarks
+@article{gao2024text,
+  title={Text-to-SQL Empowered by Large Language Models: A Benchmark Evaluation},
+  author={Gao, Dawei and Wang, Haibin and Li, Yaliang and Sun, Xiuyu and Qian, Yichen and Ding, Bolin and Zhou, Jingren},
+  journal={Proceedings of the VLDB Endowment},
+  volume={17},
+  number={5},
+  pages={1132--1145},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.X: Research programs led by Pourreza and Li
+% Decomposition-based LLM prompting for Text-to-SQL
+@inproceedings{pourreza2023dinsql,
+  title={DIN-SQL: Decomposed In-Context Learning of Text-to-SQL with Self-Correction},
+  author={Pourreza, Mohammadreza and Rafiei, Davood},
+  booktitle={Advances in Neural Information Processing Systems},
+  year={2023}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.X: Research programs led by Pourreza and Li
+% Decomposed Text-to-SQL for smaller LLMs
+@inproceedings{pourreza2024dtssql,
+  title={DTS-SQL: Decomposed Text-to-SQL with Small Large Language Models},
+  author={Pourreza, Mohammadreza and Rafiei, Davood},
+  booktitle={Findings of the Association for Computational Linguistics: EMNLP 2024},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.X: Research programs led by Pourreza and Li
+% Decoupling schema linking and skeleton parsing
+@inproceedings{li2023resdsql,
+  title={RESDSQL: Decoupling Schema Linking and Skeleton Parsing for Text-to-SQL},
+  author={Li, Haoyang and Zhang, Jing and Li, Cuiping and Chen, Hong},
+  booktitle={Findings of the Association for Computational Linguistics: EMNLP 2023},
+  year={2023}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.X: Research programs led by Pourreza and Li
+% Open-source language models tailored for Text-to-SQL
+@article{li2024codes,
+  title={CodeS: Towards Building Open-source Language Models for Text-to-SQL},
+  author={Li, Haoyang and Zhang, Jing and Liu, Hanbing and Fan, Ju and Zhang, Xiaokang and Zhu, Jun and Wei, Renjie and Pan, Hongyan and Li, Cuiping and Chen, Hong},
+  journal={arXiv preprint arXiv:2402.16347},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.X: Research programs led by Pourreza and Li
+% Joint Alberta-Renmin contribution with multi-path reasoning
+@article{pourreza2024chasesql,
+  title={CHASE-SQL: Multi-Path Reasoning and Preference Optimized Candidate Selection in Text-to-SQL},
+  author={Pourreza, Mohammadreza and Li, Hailong and Sun, Ruoxi and Chung, Yeounoh and Talaei, Shayan and Kakkar, Gaurav Tarlok and Gan, Yu and Saberi, Amin and Ozcan, Fatma and Arik, Sercan O.},
+  journal={arXiv preprint arXiv:2410.01943},
+  year={2024},
+  url={https://arxiv.org/abs/2410.01943}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.3: Modern Retrieval-Augmented Approaches
+% Combines retrieval with fine-tuning using similar examples as context
+@article{refsql,
+  title={ReFSQL: Retrieval-Augmented Fine-Tuning for Text-to-SQL},
+  author={Li, Yunchang and others},
+  journal={arXiv preprint arXiv:2403.09529},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.3: Modern Retrieval-Augmented Approaches
+% Hybrid approach fusing retrieval-augmented and fine-tuned models
+@article{sqlfuse,
+  title={SQL-Fuse: Fine-tuning and Retrieval Fusion for Text-to-SQL},
+  author={Feng, Yuhan and others},
+  journal={arXiv preprint arXiv:2407.11612},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.3: Modern Retrieval-Augmented Approaches
+% Graph-augmented schema representation with attention mechanisms
+@article{grafix_t5,
+  title={GraFix-T5: Graph-Augmented Fine-Tuning for Text-to-SQL},
+  author={Zheng, Yining and others},
+  journal={arXiv preprint arXiv:2408.08971},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.3: Modern Retrieval-Augmented Approaches
+% Democratizing Text-to-SQL through open-source LLM approaches
+@article{opensql,
+  title={OpenSQL: Democratizing Text-to-SQL with Large Language Models},
+  author={Zhao, Weijia and others},
+  journal={arXiv preprint arXiv:2407.02248},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.2: Multi-Agent Collaboration
+% Graph-based Text-to-SQL with chain-of-thought reasoning
+@article{chase2024gtchain,
+  title={GTChain: Graph-Based Text-to-SQL with Chain-of-Thought},
+  author={Chase, Harrison and others},
+  journal={arXiv preprint arXiv:2410.01943},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.2: Multi-Agent Collaboration
+% Contextual harnessing for efficient SQL synthesis
+@article{jiao2024chess,
+  title={CHESS: Contextual Harnessing for Efficient SQL Synthesis},
+  author={Jiao, Haoyue and others},
+  journal={arXiv preprint arXiv:2405.16755},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.2: Multi-Agent Collaboration
+% Autonomous Text-to-SQL with self-correction capabilities
+@article{alberta2024sqlagent,
+  title={SQL Agent: Autonomous Text-to-SQL with Self-Correction},
+  author={Alberta, Team and others},
+  journal={arXiv preprint arXiv:2402.01117},
+  year={2024}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.3: IRNet (Guo et al., 2019) paragraph
+% Pioneering work formalizing schema linking as explicit intermediate step
+@inproceedings{irnet,
+  title={IRNet: Incorporating Schema Linking into Intermediate Representations for Text-to-SQL},
+  author={Guo, Jiaqi and others},
+  booktitle={Proceedings of ACL},
+  year={2019}
+}
+
+% cim_assist_sota_txt2ssql
+% Chapter 2: State of the Art
+% Section 2.2.3: Modern Retrieval-Augmented Approaches
+% Retrieval-augmented spatial reasoning with LLMs
+@article{spatial_rag,
+  title={SpatialRAG: Retrieval-Augmented Spatial Reasoning with LLMs},
+  author={Zhou, Kai and others},
+  journal={arXiv preprint arXiv:2406.01437},
+  year={2024}
+}
+
+
+% cim_wizard_background
+% Chapter 3: Background Technologies
+% Section 3.5: Urban Platform Examples
+% Open-source platform for urban simulation with multi-agent modeling
+@inproceedings{opencity,
+  title={OpenCity: An Open-Source Platform for Urban Simulation and Planning},
+  author={Zhou, Min and others},
+  booktitle={Proceedings of the ACM SIGSPATIAL},
+  year={2024}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies
+% Section 3.5: Urban Platform Examples
+% LLM-enhanced urban data platform for decision support
+@inproceedings{cityleo,
+  title={CityLeo: A Large Language Model-Enhanced Urban Data Platform},
+  author={Zhang, Lei and others},
+  booktitle={Proceedings of the IEEE BigData},
+  year={2024}
+}
+
+%chapter3 section beyond general models
+%human performance is better than models in text to sql at nov2025
+@misc{bird-bench,
+  title = {{BIRD-SQL}: A Big Bench for Large-Scale Database Grounded Text-to-SQL Evaluation},
+  author = {BIRD Team},
+  year = {2025},
+  howpublished = {\url{https://bird-bench.github.io/}},
+  note = {Accessed: November 2025},
+  abstract = {BIRD (Big Bench for Large-Scale Database Grounded Text-to-SQL Evaluation) represents a pioneering, cross-domain dataset that examines the impact of extensive database contents on text-to-SQL parsing. BIRD contains over 12,751 unique question-SQL pairs, 95 big databases with a total size of 33.4 GB, and covers more than 37 professional domains, such as blockchain, hockey, healthcare and education. As of November 2025, human database experts achieve 92.96\% execution accuracy on the benchmark, while the best automated systems achieve approximately 76.13\% execution accuracy, demonstrating the persistent challenge of Text-to-SQL generation.}
+}
+
+
+% cim_assist_background_data_generation
+% Chapter 4: Methodology
+% Section 4.3.3: Stage 3 Quality Control - Semantic Deduplication
+% Sentence-BERT embeddings for semantic similarity detection
+@inproceedings{reimers2019sentence,
+  title={Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks},
+  author={Reimers, Nils and Gurevych, Iryna},
+  booktitle={Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)},
+  pages={3982--3992},
+  year={2019}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 2: State of the Art
+% Section 2.2.4: Parameter-Efficient Methods
+% Chapter 3: Background Technologies  
+% Section 3.3.3: QLoRA - quantized LoRA for efficient fine-tuning
+@article{dettmers2023qlora,
+  title={QLoRA: Efficient Finetuning of Quantized LLMs},
+  author={Dettmers, Tim and Pagnoni, Artidoro and Holtzman, Ari and Zettlemoyer, Luke},
+  journal={Advances in Neural Information Processing Systems},
+  volume={36},
+  year={2023}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.3.2: Low-Rank Adaptation (LoRA)
+% Parameter-efficient fine-tuning through rank-decomposition matrices
+@inproceedings{hu2022lora,
+  title={LoRA: Low-Rank Adaptation of Large Language Models},
+  author={Hu, Edward J and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi and Wang, Shean and Wang, Lu and Chen, Weizhu},
+  booktitle={International Conference on Learning Representations},
+  year={2022}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.2.1: Transformer Architecture
+% Foundational transformer architecture for modern LLMs
+@article{vaswani2017attention,
+  title={Attention is All You Need},
+  author={Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N and Kaiser, {\L}ukasz and Polosukhin, Illia},
+  journal={Advances in Neural Information Processing Systems},
+  volume={30},
+  year={2017}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.3.1: Full Fine-Tuning Limitations
+% Scaling laws demonstrating predictable performance improvements with model size
+@article{kaplan2020scaling,
+  title={Scaling Laws for Neural Language Models},
+  author={Kaplan, Jared and McCandlish, Sam and Henighan, Tom and Brown, Tom B and Chess, Benjamin and Child, Rewon and Gray, Scott and Radford, Alec and Wu, Jeffrey and Amodei, Dario},
+  journal={arXiv preprint arXiv:2001.08361},
+  year={2020}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.3.1: Full Fine-Tuning Limitations
+% Knowledge distillation for transferring knowledge from large to smaller models
+@inproceedings{hinton2015distilling,
+  title={Distilling the Knowledge in a Neural Network},
+  author={Hinton, Geoffrey and Vinyals, Oriol and Dean, Jeff},
+  booktitle={NIPS Deep Learning and Representation Learning Workshop},
+  year={2015}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.2.3: Model Families - Llama (Meta AI)
+% Llama 2 foundation models with improved safety
+@article{touvron2023llama,
+  title={Llama 2: Open Foundation and Fine-Tuned Chat Models},
+  author={Touvron, Hugo and Martin, Louis and Stone, Kevin and Albert, Peter and Almahairi, Amjad and Babaei, Yasmine and Bashlykov, Nikolay and Batra, Soumya and Bhargava, Prajjwal and Bhosale, Shruti and others},
+  journal={arXiv preprint arXiv:2307.09288},
+  year={2023}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.2.3: Model Families - Llama (Meta AI)
+% Llama 3 latest generation with 8B-70B parameter variants
+@article{dubey2024llama,
+  title={The Llama 3 Herd of Models},
+  author={Dubey, Abhimanyu and Jauhri, Abhinav and Pandey, Abhinav and Kadian, Abhishek and Al-Dahle, Ahmad and Letman, Aiesha and Mathur, Akhil and Schelten, Alan and Yang, Amy and Fan, Angela and others},
+  journal={arXiv preprint arXiv:2407.21783},
+  year={2024}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.2.3: Model Families - Qwen (Alibaba)
+% Qwen 2 technical foundation with strong code understanding
+@article{yang2024qwen2,
+  title={Qwen2 Technical Report},
+  author={Yang, An and Yang, Baosong and Hui, Binyuan and Zheng, Bo and Yu, Bowen and Zhou, Chang and Li, Chengpeng and Li, Chengyuan and Liu, Dayiheng and Huang, Fei and others},
+  journal={arXiv preprint arXiv:2407.10671},
+  year={2024}
+}
+
+% cim_assist_background_llm_engineering
+% Chapter 3: Background Technologies
+% Section 3.4.2: LangGraph Framework
+% LangChain ecosystem for building AI agents with tool use
+@misc{chase2022langchain,
+  title={LangChain},
+  author={Chase, Harrison},
+  year={2022},
+  howpublished={\url{https://github.com/langchain-ai/langchain}}
+}
+
+% cim_assist_sota_txt2sql
+% Chapter 2: State of the Art
+% Section 2.2.1: Spider Benchmark paragraph
+% Foundation benchmark for cross-domain Text-to-SQL evaluation
+@inproceedings{yu2018spider,
+  title={Spider: A Large-Scale Human-Labeled Dataset for Complex and Cross-Domain Semantic Parsing and Text-to-SQL Task},
+  author={Yu, Tao and Zhang, Rui and Yang, Kai and Yasunaga, Michihiro and Wang, Dongxu and Li, Zifan and Ma, James and Li, Irene and Yao, Qingning and Roman, Shanelle and others},
+  booktitle={Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  pages={3911--3921},
+  year={2018}
+}
+
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.1: City Information Modeling Landscape
+% Chapter 3: Background Technologies - Urban Informatics
+% GIS-based statistical and engineering models for urban heat consumption
+@article{nouvel2015combining,
+  title={Combining GIS-based statistical and engineering urban heat consumption models: Towards a new framework for multi-scale policy support},
+  author={Nouvel, R{\'e}my and Brassel, Kai-Holger and Bruse, Michael and Duminil, {\'E}ric and Coors, Volker and Eicker, Ursula and Robinson, Darren},
+  journal={Energy and Buildings},
+  volume={107},
+  pages={204--212},
+  year={2015},
+  publisher={Elsevier}
+}
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.2: Building Information Modeling (BIM)
+% Chapter 3: Background Technologies - BIM Standards
+% CityGML and 3D GIS standards for urban energy applications
+@article{dong2013citygml,
+  title={CityGML and 3D GIS for Urban Energy Applications},
+  author={Dong, Bin and Lam, Khee Poh and Huang, Y Claire and Dobbs, Gordon M},
+  journal={Energy and Buildings},
+  volume={58},
+  pages={298--308},
+  year={2013},
+  publisher={Elsevier}
+}
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.1: City Information Modeling Landscape
+% Chapter 3: Background Technologies - Digital Twin Technologies
+% Systematic review of urban digital twins in smart cities
+@article{deng2021review,
+  title={From Concept to Reality: A Systematic Review of Urban Digital Twin and Their Applications in Smart Cities},
+  author={Deng, Min and Zhang, Wei and Wang, Qing and others},
+  journal={Sustainable Cities and Society},
+  volume={73},
+  pages={103--125},
+  year={2021},
+  publisher={Elsevier}
+}
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.1: City Information Modeling Landscape
+% Chapter 3: Background Technologies - Digital Twin Technologies
+% Digital twin technologies for smart city applications
+@article{smartcity_digitaltwin2021,
+  title={Smart City Based on Digital Twins},
+  author={Grieves, Michael and Vickers, John},
+  journal={Smart Cities},
+  volume={4},
+  number={2},
+  pages={580--612},
+  year={2021}
+}
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.2: Building Information Modeling (BIM)
+% Chapter 3: Background Technologies - BIM Standards
+% BIM applications for smart city development
+@article{smartcities_bim2023,
+  title={Building Information Modeling for Smart Cities: A Review},
+  author={Chen, Yichuan and Liu, Wei and Wang, Zheng},
+  journal={Smart Cities},
+  volume={6},
+  number={1},
+  pages={80--105},
+  year={2023}
+}
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.1: City Information Modeling Landscape
+% Chapter 3: Background Technologies - Digital Twin Technologies
+% IoT and digital twin approaches for urban energy management
+@article{smartcities_energy2023,
+  title={Energy Management in Smart Cities: IoT and Digital Twin Approaches},
+  author={Moretti, Luca and Rossi, Marco and Bianchi, Andrea},
+  journal={Smart Cities},
+  volume={8},
+  number={173},
+  pages={3456--3478},
+  year={2023}
+}
+
+% cim_wizard_background
+% Chapter 2: State of the Art
+% Section 2.1.3: Urban Energy Analytics
+% Chapter 3: Background Technologies - BIM Standards
+% Large-scale building energy dataset for urban energy modeling
+@article{miller2020buildingdata,
+  title={Building Data Genome Project 2: Energy Meter Data from the ASHRAE Great Energy Predictor III Competition},
+  author={Miller, Clayton and Meggers, Forrest},
+  journal={Scientific Data},
+  volume={7},
+  number={1},
+  pages={1--13},
+  year={2020},
+  publisher={Nature Publishing Group}
+}
+
+% cim_assist_background_data_generation
+% Chapter 3: Background Technologies
+% Section 3.1.2: PostGIS Extension
+% Comprehensive reference for PostGIS spatial database capabilities
+@book{obe2021postgis,
+  title={PostGIS in Action},
+  author={Obe, Regina O and Hsu, Leo S},
+  edition={3rd},
+  year={2021},
+  publisher={Manning Publications}
+}
+
+% ============================================================================
+% CIM WIZARD PAPER REFERENCES
+% ============================================================================
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: CIM Wizard Literature
+% Reviews of urban energy system models and approaches
+@article{keirstead2012review,
+  title={A review of urban energy system models: Approaches, challenges and opportunities},
+  author={Keirstead, James and Jennings, Mark and Sivakumar, Aruna},
+  journal={Renewable and Sustainable Energy Reviews},
+  volume={16},
+  number={6},
+  pages={3847--3866},
+  year={2012},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Bottom-up UEM approaches
+@article{swan2009modeling,
+  title={Modeling of end-use energy consumption in the residential sector: A review of modeling techniques},
+  author={Swan, Lukas G and Ugursal, V Ismet},
+  journal={Renewable and sustainable energy reviews},
+  volume={13},
+  number={8},
+  pages={1819--1835},
+  year={2009},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Urban energy modeling methods
+@article{abbasabadi2019urban,
+  title={Urban energy use modeling methods and tools: A review and an outlook},
+  author={Abbasabadi, Narjes and Ashayeri, Mehdi},
+  journal={Building and Environment},
+  volume={161},
+  pages={106270},
+  year={2019},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: BIM-GIS integration
+@article{hijazi2017integration,
+  title={Integration of building and urban information modeling--Opportunities and integration approaches},
+  author={Hijazi, Ihab and Donaubauer, Andreas},
+  journal={Geoinformationssysteme},
+  pages={42--56},
+  year={2017},
+  publisher={Wichmann Verlag Munchen, Germany}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: UBEM nascent field review
+@article{reinhart2016urban,
+  title={Urban building energy modeling--A review of a nascent field},
+  author={Reinhart, Christoph F and Davila, Carlos Cerezo},
+  journal={Building and Environment},
+  volume={97},
+  pages={196--202},
+  year={2016},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: District-scale simulation tools
+@article{allegrini2015review,
+  title={A review of modelling approaches and tools for the simulation of district-scale energy systems},
+  author={Allegrini, Jonas and Orehounig, Kristina and Mavromatidis, Georgios and Ruesch, Florian and Dorer, Viktor and Evins, Ralph},
+  journal={Renewable and Sustainable Energy Reviews},
+  volume={52},
+  pages={1391--1404},
+  year={2015},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Ten questions on UBEM
+@article{hong2020ten,
+  title={Ten questions on urban building energy modeling},
+  author={Hong, Tianzhen and Chen, Yixing and Luo, Xuan and Luo, Na and Lee, Sang Hoon},
+  journal={Building and Environment},
+  volume={168},
+  pages={106508},
+  year={2020},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Integrating UBEM with environmental impact
+@article{li2025integrating,
+  title={Integrating urban building energy modeling (UBEM) and urban-building environmental impact assessment (UB-EIA) for sustainable urban development: A comprehensive review},
+  author={Li, Yang and Feng, Haibo},
+  journal={Renewable and Sustainable Energy Reviews},
+  volume={213},
+  pages={115471},
+  year={2025},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Existing UEM platforms - CEA
+@article{CEA,
+  title={City Energy Analyst (CEA): Integrated framework for analysis and optimization of building energy systems in neighborhoods and city districts},
+  author={Fonseca, Jimeno A and Nguyen, Thuy-An and Schlueter, Arno and Marechal, Francois},
+  journal={Energy and Buildings},
+  volume={113},
+  pages={202--226},
+  year={2016},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Existing UEM platforms - CityBES
+@article{cityBES,
+  title={CityBES: A web-based platform to support city-scale building energy efficiency},
+  author={Hong, Tianzhen and Chen, Yixing and Lee, Sang Hoon and Piette, Mary Ann},
+  journal={Urban Computing},
+  volume={14},
+  pages={2016},
+  year={2016},
+  publisher={San Francisco California, USA}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Existing UEM platforms - UBEM.io
+@article{UBEMio,
+  title={UBEM. io: A web-based framework to rapidly generate urban building energy models for carbon reduction technology pathways},
+  author={Ang, Yu Qian and Berzolla, Zachary Michael and Letellier-Duchesne, Samuel and Jusiega, Violetta and Reinhart, Christoph},
+  journal={Sustainable Cities and Society},
+  volume={77},
+  pages={103534},
+  year={2022},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Existing UEM platforms - SimStadt
+@inproceedings{nouvel2015simstadt,
+  title={SimStadt, a new workflow-driven urban energy simulation platform for CityGML city models},
+  author={Nouvel, Romain and Brassel, Kai-Holger and Bruse, Marcel and Duminil, Eric and Coors, Volker and Eicker, Ursula and Robinson, Darren},
+  booktitle={Proceedings of International Conference CISBAT 2015 Future Buildings and Districts Sustainability from Nano to Urban Scale},
+  pages={889--894},
+  year={2015},
+  organization={LESO-PB, EPFL}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Existing UEM platforms - UrbanOpt
+@techreport{UrbanOpt,
+  title={URBANopt: An open-source software development kit for community and urban district energy modeling},
+  author={El Kontar, Rawad and Polly, Benjamin and Charan, Tanushree and Fleming, Katherine and Moore, Nathan and Long, Nicholas and Goldwasser, David},
+  year={2020},
+  institution={National Renewable Energy Lab.(NREL), Golden, CO (United States)}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - CityGML for digital twins
+@article{kutzner2020citygml,
+  title={CityGML 3.0: New functions open up new applications},
+  author={Kutzner, Tatjana and Chaturvedi, Kanishk and Kolbe, Thomas H},
+  journal={PFG--Journal of Photogrammetry, Remote Sensing and Geoinformation Science},
+  volume={88},
+  number={1},
+  pages={43--61},
+  year={2020},
+  publisher={Springer}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - 3D data models for urban energy
+@article{wate20153d,
+  title={3D data models for urban energy simulation},
+  author={Wate, Parag and Coors, Volker},
+  journal={Energy Procedia},
+  volume={78},
+  pages={3372--3377},
+  year={2015},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Related work - previous CIM tool
+@inproceedings{mazzarino2024automated,
+  title={An automated tool for Urban Building Energy Modelling: from sparse datasets to CityJSON},
+  author={Mazzarino, Pietro Rando and Finocchiaro, Salvatore and Barbierato, Luca and Schiera, Daniele Salvatore and Bottaccioli, Lorenzo and Patti, Edoardo},
+  booktitle={2024 IEEE International Conference on Environment and Electrical Engineering and 2024 IEEE Industrial and Commercial Power Systems Europe (EEEIC/I\&CPS Europe)},
+  pages={1--7},
+  year={2024},
+  organization={IEEE}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - CityGML ADEs
+@online{cityADE,
+    title        = {CityGML ADEs},
+    author       = {OGC - CityGML},
+    year         = 2023,
+    url          = {https://www.citygmlwiki.org/index.php/CityGML-ADEs},
+    urldate      = {2024}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - CityGML standard
+@online{ogc-citygml,
+    title        = {CityGML},
+    author       = {},
+    year         = {},
+    url          = {https://www.ogc.org/standard/citygml},
+    urldate      = {2024}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - CityJSON specifications
+@online{cjspec,
+    title        = {CityJSON Specifications 1.1.3},
+    author       = {},
+    year         = {},
+    url          = {https://www.cityjson.org/specs/1.1.3},
+    urldate      = {2024}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - 3DCityDB database solution
+@article{yao20183dcitydb,
+  title={3DCityDB-a 3D geodatabase solution for the management, analysis, and visualization of semantic 3D city models based on CityGML},
+  author={Yao, Zhihang and Nagel, Claus and Kunde, Felix and Hudra, Gy{\"o}rgy and Willkomm, Philipp and Donaubauer, Andreas and Adolphi, Thomas and Kolbe, Thomas H},
+  journal={Open Geospatial Data, Software and Standards},
+  volume={3},
+  number={1},
+  pages={1--26},
+  year={2018},
+  publisher={Springer}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Data-scarce environments
+@article{iseri2025method,
+  title={A method for zone-level urban building energy modeling in data-scarce built environments},
+  author={Iseri, Orcun Koral and Duran, Ayca and Canl{\i}, Ilkim and Akgul, Cagla Meral and Kalkan, Sinan and Dino, Ipek Gursel},
+  journal={Energy and Buildings},
+  volume={337},
+  pages={115620},
+  year={2025},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Framework for disaggregated energy flows
+@phdthesis{perez2014framework,
+  title={A framework to model and simulate the disaggregated energy flows supplying buildings in urban areas},
+  author={Perez, Diane},
+  year={2014},
+  school={EPFL}
+}
+
+% cim_wizard_background
+% Chapter 3: Background Technologies - Energy ADE for CityGML
+@article{agugiaro2018energy,
+  title={The Energy Application Domain Extension for CityGML: enhancing interoperability for urban energy simulations},
+  author={Agugiaro, Giorgio and Benner, Joachim and Cipriano, Piergiorgio and Nouvel, Romain},
+  journal={Open Geospatial Data, Software and Standards},
+  volume={3},
+  pages={1--30},
+  year={2018},
+  publisher={Springer}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Data schema for coupled simulations
+@article{luo2025data,
+  title={A data schema for exchanging information between urban building energy models and urban microclimate models in coupled simulations},
+  author={Luo, Na and Luo, Xuan and Mortezazadeh, Mohammad and Albettar, Maher and Zhang, Wanni and Zhan, Dongxue and Wang, Liangzhu and Hong, Tianzhen},
+  journal={Journal of Building Performance Simulation},
+  volume={18},
+  number={3},
+  pages={333--350},
+  year={2025},
+  publisher={Taylor \& Francis}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Interactive UBEM with FMI
+@article{issermann2021interactive,
+  title={Interactive urban building energy modelling with functional mockup interface of a local residential building stock},
+  author={Issermann, Maikel and Chang, Fi-John and Kow, Pu-Yun},
+  journal={Journal of Cleaner Production},
+  volume={289},
+  pages={125683},
+  year={2021},
+  publisher={Elsevier}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: UrbanOpt integration with practitioner workflows
+@article{charan2021integration,
+  title={Integration of open-source URBANopt and Dragonfly energy modeling capabilities into practitioner workflows for district-scale planning and design},
+  author={Charan, Tanushree and Mackey, Christopher and Irani, Ali and Polly, Ben and Ray, Stephen and Fleming, Katherine and El Kontar, Rawad and Moore, Nathan and Elgindy, Tarek and Cutler, Dylan and others},
+  journal={Energies},
+  volume={14},
+  number={18},
+  pages={5931},
+  year={2021},
+  publisher={MDPI}
+}
+
+% cim_wizard_sota
+% Chapter 2: State of the Art - Section 2.1: Data enrichment case study Berlin
+@article{rehmann2025enhancing,
+  title={Enhancing Urban Energy Modeling: A Case Study of Data Acquisition, Enrichment, and Evaluation in Berlin},
+  author={Rehmann, Felix and Mosteiro-Romero, Mart{\'\i}n and Miller, Clayton and Streblow, Rita},
+  journal={Energy and Buildings},
+  pages={116070},
+  year={2025},
+  publisher={Elsevier}
+}
+
+% cim_wizard_background
+% Chapter 4: Methodology - Microservice architecture
+@inproceedings{de2019monolithic,
+  title={From monolithic architecture to microservices architecture},
+  author={De Lauretis, Lorenzo},
+  booktitle={2019 IEEE International Symposium on Software Reliability Engineering Workshops (ISSREW)},
+  pages={93--96},
+  year={2019},
+  organization={IEEE}
+}
+
+% cim_wizard_background
+% Chapter 4: Methodology - Co-simulation platform mosaik
+@Article{mosaik,
+AUTHOR = {Steinbrink, Cornelius and Blank-Babazadeh, Marita and El-Ama, André and Holly, Stefanie and Lüers, Bengt and Nebel-Wenner, Marvin and Ramírez Acosta, Rebeca P. and Raub, Thomas and Schwarz, Jan Sören and Stark, Sanja and Nieße, Astrid and Lehnhoff, Sebastian},
+TITLE = {CPES Testing with mosaik: Co-Simulation Planning, Execution and Analysis},
+JOURNAL = {Applied Sciences},
+VOLUME = {9},
+YEAR = {2019},
+NUMBER = {5},
+ARTICLE-NUMBER = {923},
+URL = {https://www.mdpi.com/2076-3417/9/5/923},
+ISSN = {2076-3417},
+DOI = {10.3390/app9050923}
+}
+
+% cim_wizard_background
+% Chapter 4: Methodology - Co-simulation framework HELICS
+@ARTICLE{helics,
+  author={Hardy, Trevor D. and Palmintier, Bryan and Top, Philip L. and Krishnamurthy, Dheepak and Fuller, Jason C.},
+  journal={IEEE Access}, 
+  title={HELICS: A Co-Simulation Framework for Scalable Multi-Domain Modeling and Analysis}, 
+  year={2024},
+  volume={12},
+  pages={24325-24347},
+  doi={10.1109/ACCESS.2024.3363615}}
+
+% cim_wizard_background
+% Chapter 5: Results - Co-simulation platform for buildings
+@ARTICLE{coesi1,
+  author={Schiera, Daniele Salvatore and Barbierato, Luca and Lanzini, Andrea and Borchiellini, Romano and Pons, Enrico and Bompard, Ettore and Patti, Edoardo and Macii, Enrico and Bottaccioli, Lorenzo},
+  journal={IEEE Transactions on Industry Applications}, 
+  title={A Distributed Multimodel Platform to Cosimulate Multienergy Systems in Smart Buildings}, 
+  year={2021},
+  volume={57},
+  number={5},
+  pages={4428-4440},
+  doi={10.1109/TIA.2021.3094497}}
+
+% cim_wizard_background
+% Chapter 5: Results - District heating co-simulation
+@ARTICLE{mosaikDH,
+  author={Mazzarino, Pietro Rando and Capone, Martina and Guelpa, Elisa and Bottaccioli, Lorenzo and Verda, Vittorio and Patti, Edoardo},
+  journal={IEEE Transactions on Sustainable Computing}, 
+  title={A Modular Co-Simulation Platform for Comparing Flexibility Solutions in District Heating Under Variable Operating Conditions}, 
+  year={2025},
+  volume={10},
+  number={2},
+  pages={408-417},
+  doi={10.1109/TSUSC.2024.3449977}}
+
+% cim_wizard_background
+% Chapter 4: Methodology - PV estimation tool
+@article{bottaccioli2017gis,
+  title={GIS-based software infrastructure to model PV generation in fine-grained spatio-temporal domain},
+  author={Bottaccioli, Lorenzo and Patti, Edoardo and Macii, Enrico and Acquaviva, Andrea},
+  journal={IEEE Systems Journal},
+  volume={12},
+  number={3},
+  pages={2832--2841},
+  year={2017},
+  publisher={IEEE}
+}
+
+
+% cim_wizard_background
+% Chapter 5: Results - Data source Geoportale Piemonte
+@misc{geoportale-piemonte,
+  author       = {{Regione Piemonte}},
+  title        = {Geoportale Piemonte},
+  url          = {https://www.geoportale.piemonte.it/},
+  note         = {Accessed: 2025-08-14}
+}
+
+% cim_wizard_background
+% Chapter 5: Results - Data source ISTAT census
+@misc{istatdata,
+  author       = {{Istituto Nazionale di Statistica (Istat)}},
+  title        = {IstatData — Piattaforma per la diffusione dei dati},
+  url          = {https://esploradati.istat.it/},
+  note         = {IstatData è la nuova piattaforma; i dati da I.Stat (dati.istat.it) sono stati migrati qui. Accessed: 2025-08-14}
+}
+
+% cim_wizard_background
+% Chapter 4: Methodology - TABULA building typology database
+@misc{tabula-webtool,
+  author       = {{Institut Wohnen und Umwelt (IWU)}},
+  title        = {TABULA WebTool -- Building Typology Webtool},
+  url          = {https://webtool.building-typology.eu/},
+  note         = {TABULA/EPISCOPE project providing residential building archetypes for European countries. Accessed: 2025-01-15}
+}
+
+% cim_wizard_background
+% Chapter 4: Methodology - EPISCOPE project for building stock energy assessment
+@techreport{episcope-tabula,
+  author       = {Loga, Tobias and Stein, Britta and Diefenbach, Nikolaus and Born, Rolf},
+  title        = {TABULA Building Typologies in 20 European Countries -- Making Energy-Related Features of Residential Building Stocks Comparable},
+  institution  = {Institut Wohnen und Umwelt (IWU)},
+  year         = {2016},
+  note         = {EPISCOPE Final Report. Available at: https://episcope.eu/}
+}
+

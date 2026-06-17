@@ -1,0 +1,174 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF8
+
+\documentclass[a4paper,11pt,twoside,english]{toptesi}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a-1b]{pdfx}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{url}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{csquotes}
+\usepackage{tocloft}
+
+\graphicspath{{Figures/}}
+
+% SQL and Python code highlighting
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{sqlstyle}{
+    language=SQL,
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=sqlstyle}
+
+\hypersetup{%
+    pdfpagemode={UseOutlines},
+    bookmarksopen,
+    pdfstartview={FitH},
+    colorlinks,
+    linkcolor={blue},
+    citecolor={blue},
+    urlcolor={blue}
+  }
+
+\newtheorem{definition}{Definition}
+
+% List of Equations setup
+\newcommand{\listequationsname}{List of Equations}
+\newlistof{myequations}{equ}{\listequationsname}
+
+% Command to add equation to list (use after \begin{equation}...\end{equation})
+% Usage: \addequationtoc{Description of the equation}
+\newcommand{\addequationtoc}[1]{%
+    \addcontentsline{equ}{myequations}{\protect\numberline{\theequation}#1}%
+}
+
+\begin{document}
+\english
+
+\ateneo{Politecnico di Torino}
+\corsodilaurea{Digital skills for sustainable societal transitions}
+
+\titolo{CIM Wizard and CIM Assist: \newline
+An Object-Oriented Platform for Extensible City Information Modeling \newline
+and Autonomous LLM Agent for Spatial Querying}
+
+\candidato{Ali \textsc{Taherdoust Mohammadi}}
+\relatore{Prof.\ Lorenzo  \textsc{Bottaccioli}}
+\secondorelatore{Prof.\ Edoardo  \textsc{Patti}}
+\terzorelatore{PhD.\ Pietro Rando \textsc{Mazzarino}}
+\sedutadilaurea{\textsc{Academic~Year} 2025-2026}
+\logosede{Cover/Logoblu}
+
+\CorsoDiLaureaIn{Master Degree course in\space}
+\TesiDiLaurea{Master Degree Thesis}
+\InName{in}
+\CandidateName{Candidate}
+\AdvisorName{Supervisors}
+
+\frontespizio % make cover page
+
+\ringraziamenti
+
+I would like to express my sincere gratitude to my supervisors, Prof. Lorenzo Bottaccioli, Prof. Edoardo Patti and Dr. Pietro Mazzuri, for their continuous support, guidance, and invaluable insights throughout this research work.
+
+I am deeply grateful to my family for their unwavering support and encouragement during my academic journey.
+
+Special thanks to the Politecnico di Torino community for providing an excellent research environment and access to computational resources necessary for this work.
+
+\abstract
+
+Urban energy modeling currently faces two critical obstacles: (1) the lack of an extensible, standardized platform that allows researchers to easily define and integrate custom building feature calculation methods beyond a fixed set of functions, which is necessary to overcome the challenge of sparse and heterogeneous data resources; and (2) the inaccessibility of complex PostGIS spatial SQL to non-technical users, which severely limits efficient data querying and analysis. This thesis presents a comprehensive framework to address these issues through two integrated, open-source systems: CIM Wizard Integrated, an object-oriented platform for city information modeling, and CIM Assist, an LLM-powered natural language interface for spatial data access.
+
+CIM Wizard directly tackles the extensibility and standardization gap by providing a robust, object-oriented FastAPI framework. The platform includes 17 predefined calculators/methods as sample prototypes but is fundamentally designed to allow energy researchers to define and integrate their own customizable methods and logic, ensuring maximum flexibility for diverse urban energy studies. It seamlessly integrates multi-schema PostGIS databases (vector, census, network, raster) with automatic dependency resolution and fallback strategies, filling a critical need for flexible urban energy analytics.
+
+CIM Assist addresses the database interaction complexity through an LLM-powered natural language interface using a sophisticated two-stage approach: (1) an innovative dataset generation pipeline combining rule-based templates (10,800 samples at 98-100\% NoErr) with multi-strategy LLM augmentation using GPT-4o-mini, producing 50,000 augmented samples with 97.34\% NoErr rate at \$50 total cost; (2) direct Q2SQL fine-tuning using QLoRA on SQLCoder 7B, selected for its SQL-specific pre-training on the BIRD benchmark, achieving optimal balance between accuracy and inference speed; and (3) LangGraph-based agent integration with database introspection tools enabling comprehensive evaluation through execution feedback.
+
+The systematic evaluation framework employs multiple complementary metrics (NoErr, EM, Deep EM, EX, SC, EA) demonstrating 84.58\% execution accuracy (EX) for fine-tuned SQLCoder 7B, outperforming frontier models like GPT-4o (30.85\%) by 54 percentage points. Agent-based self-correction reveals minimal improvement (EA matching EX), indicating high first-shot quality. The complete pipeline achieves production-ready performance for real-world spatial SQL applications while democratizing access to complex urban energy databases and providing an extensible, open-source foundation for future urban energy research.
+
+
+
+%\textbf{Keywords:} City Information Modeling, Text-to-SQL, Spatial Databases, Large Language Models, Fine-Tuning, PostGIS, Urban Energy Analytics
+
+\indici
+
+% List of Figures, Tables, Listings, and Equations
+\listoffigures
+\listoftables
+\lstlistoflistings
+%\listofmyequations
+
+% Acronyms
+\input{chapters/acronyms}
+
+\mainmatter
+
+\input{chapters/introduction}
+\input{chapters/state_of_the_art}
+\input{chapters/background_technologies}
+
+\input{chapters/methodology}
+\input{chapters/results}
+\input{chapters/conclusion}
+
+\appendix
+\input{chapters/appendix_calculators}
+\input{chapters/appendix_citygml}
+
+\bibliographystyle{plain}
+\bibliography{biblio}
+
+
+\end{document}

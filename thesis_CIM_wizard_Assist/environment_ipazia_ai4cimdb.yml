@@ -1,0 +1,163 @@
+name: ai4cimdb
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+
+dependencies:
+  # ============================================================================
+  # PYTHON VERSION
+  # ============================================================================
+  - python=3.10.*
+
+  # ============================================================================
+  # CORE SCIENTIFIC COMPUTING
+  # ============================================================================
+  - numpy>=1.24.0
+  - pandas>=2.0.0
+  - scipy>=1.10.0
+  - scikit-learn>=1.3.0
+
+  # ============================================================================
+  # DEEP LEARNING (PyTorch for CTGAN, fine-tuning, transformers)
+  # ============================================================================
+  # GPU support for ipazia126
+  - pytorch>=2.0.0
+  - torchvision>=0.15.0
+  - pytorch-cuda=11.8
+
+  # ============================================================================
+  # DATA VISUALIZATION
+  # ============================================================================
+  - matplotlib>=3.7.0
+  - seaborn>=0.12.0
+
+  # ============================================================================
+  # WEB AND API
+  # ============================================================================
+  - requests>=2.31.0
+  - urllib3>=2.0.0
+
+  # ============================================================================
+  # JUPYTER (for experimentation)
+  # ============================================================================
+  - jupyter>=1.0.0
+  - ipython>=8.0.0
+  - notebook>=7.0.0
+  - ipykernel>=6.0.0
+
+  # ============================================================================
+  # DATABASE CONNECTIVITY (for dataset generation)
+  # ============================================================================
+  - psycopg2>=2.9.0
+  - sqlalchemy>=2.0.0
+
+  # ============================================================================
+  # CODE QUALITY (optional)
+  # ============================================================================
+  - black>=23.0.0
+  - flake8>=6.0.0
+
+  # ============================================================================
+  # GEOSPATIAL (for dataset metadata)
+  # ============================================================================
+  - geopandas>=0.14.0
+  - shapely>=2.0.0
+  - fiona>=1.9.0
+
+  # ============================================================================
+  # WEB FRAMEWORK (if needed)
+  # ============================================================================
+  - fastapi>=0.104.0
+  - uvicorn>=0.24.0
+  - pydantic>=2.0.0
+
+  # ============================================================================
+  # PIP PACKAGES (not available via conda or newer versions needed)
+  # ============================================================================
+  - pip>=23.0.0
+  - pip:
+      # ========================================================================
+      # DATASET GENERATION (AI4DB)
+      # ========================================================================
+      # SDV - Synthetic Data Vault (Stage 2 CTGAN)
+      - sdv==1.9.0
+      
+      # SQL parsing (Stage 2)
+      - sqlparse==0.4.4
+      
+      # Sentence transformers (Stage 3 - semantic similarity)
+      - sentence-transformers>=2.2.2
+      
+      # Transformers (Stage 3 augmentation, fine-tuning)
+      - transformers==4.44.0
+      - tokenizers>=0.15.0
+      - huggingface-hub>=0.19.0
+      - safetensors>=0.4.0
+      - accelerate==0.33.0
+      
+      # NLP utilities
+      - nltk>=3.8.0
+      
+      # Validation
+      - jsonschema>=4.19.0
+      
+      # Date utilities
+      - python-dateutil>=2.8.0
+      
+      # Progress bars
+      - tqdm>=4.66.0
+      
+      # Environment variables
+      - python-dotenv>=1.0.0
+      
+      # ========================================================================
+      # FINE-TUNING (TXT2SSQL) - GPU OPTIMIZED
+      # ========================================================================
+      # PEFT - Parameter-Efficient Fine-Tuning (LoRA)
+      - peft==0.12.0
+      
+      # BitsAndBytes - Quantization (GPU)
+      - bitsandbytes==0.43.1
+      
+      # TRL - Transformer Reinforcement Learning
+      - trl==0.9.6
+      
+      # Datasets - HuggingFace datasets
+      - datasets==2.20.0
+      
+      # WandB - Experiment tracking
+      - wandb>=0.16.0
+      
+      # ========================================================================
+      # AGENT EVALUATION (if needed on server)
+      # ========================================================================
+      # LangChain ecosystem
+      - langchain>=0.1.0
+      - langchain-core>=0.1.0
+      - langchain-community>=0.0.20
+      - langgraph>=0.0.20
+      
+      # Ollama integration
+      - langchain-ollama>=0.0.1
+      
+      # ========================================================================
+      # GEOSPATIAL (additional)
+      # ========================================================================
+      # GeoAlchemy2 - Spatial SQLAlchemy
+      - geoalchemy2>=0.14.0
+
+# ============================================================================
+# INSTALLATION NOTES FOR IPAZIA126
+# ============================================================================
+
+# On ipazia126 GPU server:
+# conda env create -f environment_ipazia_ai4cimdb.yml
+# conda activate ai4cimdb
+
+# To update existing environment:
+# conda env update -f environment_ipazia_ai4cimdb.yml --prune
+
+# Verify GPU access:
+# python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA devices: {torch.cuda.device_count()}')"
+

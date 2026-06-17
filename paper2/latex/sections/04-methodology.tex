@@ -22,18 +22,31 @@ Seed mappings in \texttt{cim\_citydb.obda} cover buildings, thermal zones, energ
 
 \subsection{Phase 3: LLM capability (O3, O4)}
 
-\textbf{Dataset generation.}
-\texttt{stage1\_cim\_v2.py} produces rule-based question--SQL pairs with task taxonomy (18 types) and domain taxonomy (five schema patterns).
-\texttt{stage3\_v2.py} augments via LLM paraphrase, SQL rewrite, and question-to-SQL strategies.
-Pairs are merged, curated, and split for training.
+\textbf{Dataset generation} (CIM Assist / \texttt{ai4db}).\\
+Stage~1 (\texttt{stage1\_cim\_v2.py}) produced 10,800 rule-based question--SQL pairs across 52 templates (98--100\% NoErr).
+Stage~2 augmented to 50,000 samples via GPT-4o-mini at \$50 total cost (97.34\% NoErr).
+After multi-dimensional stratification (task type, domain, complexity, question tone), the training set contains \textbf{34,993} pairs (90\% positive spatial SQL; 10\% negative samples).
+The held-out benchmark has \textbf{201} stratified samples with 100\% executable gold SQL~\cite{taherdoust2025cimassist}.
 
-\textbf{Fine-tuning.}
-We fine-tune Qwen~2.5-14B and Llama~3.1-14B with LoRA in direct (Q2SQL) and two-stage (Q2Inst + QInst2SQL) configurations.
-Evaluation uses \texttt{evaluator\_v2.py} reporting EM, EX, Deep EM, SC, and EA with taxonomy-stratified breakdowns (H4).
+\textbf{Fine-tuning} (thesis; reused in Paper~2).\\
+We fine-tuned \texttt{defog/sqlcoder-7b-2} with QLoRA~\cite{dettmers2023qlora,hu2022lora} on an NVIDIA RTX~6000 (IPAZIA cluster, Politecnico di Torino).
+SQLCoder-7B completed training in 51\,hours (2,187 steps; evaluation loss 0.036) using 18\,GB VRAM.
+Qwen~2.5-14B was also trained but rejected due to poor benchmark EX despite larger size~\cite{taherdoust2025cimassist}.
+Table~\ref{tab:finetuning} summarises the production configuration.
+
+\input{tables/finetuning_config}
+
+\textbf{Evaluation.}
+\texttt{evaluator\_v2.py} reports EM, EX, Deep EM, SC, and EA with taxonomy-stratified breakdowns (H4).
+The fine-tuned SQLCoder-7B (V3) reaches \textbf{84.58\% EX} and \textbf{84.58\% EA} (89\% first-shot success; minimal gain from self-correction), versus 30.85\% EX for GPT-4o~\cite{taherdoust2025cimassist}.
 
 \subsection{Phase 4: VKG automation (O5)}
 
-Inspired by LLM4VKG, a multi-agent pipeline performs:
+\textbf{Pivot from CIM Assist.}
+In the thesis, the fine-tuned model powered \texttt{agent\_cim\_assist.py} for interactive NL$\rightarrow$SQL over CIM Wizard.
+In Paper~2, the \emph{same} model generates \emph{source SQL} for Ontop mappings; RDF \emph{target} templates are assembled from ontology rules (not free-form LLM output).
+
+Inspired by LLM4VKG~\cite{xiao2025llm4vkg}, a multi-agent pipeline performs:
 (1)~schema graph extraction;
 (2)~ontology alignment with mapping-pattern recognition (SE, SR, SRm, SH);
 (3)~source SQL generation via fine-tuned LLM;

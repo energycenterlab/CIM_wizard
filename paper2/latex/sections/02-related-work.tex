@@ -25,8 +25,9 @@ Our \texttt{ai4db} pipeline generates taxonomy-labelled pairs covering 18 task t
 
 \subsection{Fine-tuned spatial-SQL LLMs (O4)}
 
-Domain fine-tuning improves execution accuracy (EX) over frontier models on specialised SQL.
-We adopt LoRA fine-tuning of Qwen~2.5 and Llama~3.1 code models and evaluate with EM, EX, Deep EM, semantic correctness (SC), and eventual accuracy (EA) after agentic repair~\cite{xiao2025llm4vkg}.
+Domain fine-tuning improves execution accuracy (EX) over frontier models on specialised SQL~\cite{survey_llm_t2sql_liu2025,wang_spatial_ijgi}.
+Our MSc thesis (\emph{CIM Assist}) established SQLCoder-7B + QLoRA on a CIM PostGIS benchmark (84.6\% EX)~\cite{taherdoust2025cimassist,dettmers2023qlora}.
+Paper~2 extends this capability from interactive database access to OBDA \emph{source}-SQL generation (O5).
 
 \subsection{VKG automation and OBDA (O5)}
 

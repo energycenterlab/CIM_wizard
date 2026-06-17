@@ -25,6 +25,75 @@
 
 **Urban building and energy models are difficult to validate.** At city scale we rarely have ground-truth labels for every building attribute (height, type, U-value proxies, occupancy, consumption). Models therefore mix **measured**, **inferred**, and **simulated** inputs — but users still receive a **single number** without knowing how trustworthy it is.
 
+### Problem framing: validate inputs + method, not only output
+
+Most UBEM pipelines rely on **black-box validation**: compare the final attribute or stock-level energy output against ground truth and treat a match as success. At city scale this is often **infeasible** (no labels for every building) and **misleading** (a correct-looking output can hide wrong inputs, wrong method choice, or an unverifiable inference chain).
+
+**Paper 2 adopts a more rigorous stance:** validate the **inputs** and the **method execution** independently of whether we can fully validate the **output**. This aligns with established modelling and software-engineering literature:
+
+#### 1. Verification vs. validation (V&V)
+
+In computational modelling and simulation, researchers distinguish:
+
+
+| Term                                | Question                         | What it checks                                                                                                                                              |
+| ----------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Model verification** (the method) | *Did we build the system right?* | Internal implementation, mathematics, and logic match the developer's conceptual description — **independent of real-world output** (Thacker et al., 2004). |
+| **Model validation** (the output)   | *Did we build the right system?* | Degree to which final output represents the real world for its intended use (Thacker et al., 2004).                                                         |
+
+
+**CIM Wizard 2.0 implication:** run **all** calculator methods, record which method produced each value, and verify that each method executed on valid inputs with traceable lineage — even when output ground truth is absent.
+
+#### 2. Conceptual model validation
+
+Before execution, the **theoretical assumptions** of a method must be justified: causal relationships, applicability conditions, and mathematical structure. This is separate from checking whether a numeric result matches a reference.
+
+**CIM Wizard 2.0 implication:** expose method metadata (priority, input dependencies, datasource tier) so experts can assess whether a method is *appropriate* for a building context, not only whether its number looks plausible.
+
+#### 3. Input validation and data validity
+
+**Input validation** ensures data entering a method satisfies constraints and expected distributions *before* processing. In ML systems, this includes detecting out-of-distribution inputs that could corrupt downstream results (Ghobari et al., 2025).
+
+**CIM Wizard 2.0 implication:** O1 warehouse registration + STAC metadata completeness; flag missing or stale datasources; confidence scoring weights **source tier** and **input completeness** before trusting a computed feature.
+
+#### 4. White-box (structural) testing
+
+Unlike black-box testing (output only), **white-box** validation inspects internal execution paths, logic branches, and data flows of an algorithm.
+
+**CIM Wizard 2.0 implication:** provenance records capture `input_features`, `datasource_ids`, `method_name`, and `status` per execution; VKG/SPARQL lineage queries make the internal path auditable.
+
+```mermaid
+flowchart TB
+  subgraph blackbox["Black-box validation (often infeasible at city scale)"]
+    IN1[Hidden inputs] --> M1[Opaque method] --> OUT1[Single output]
+    OUT1 --> GT[Compare to ground truth]
+  end
+  subgraph whitebox["Paper 2: input + method validation"]
+    IN2[Registered datasources\n+ validity checks] --> M2[All methods executed\n+ provenance] --> OUT2[Value + confidence]
+    IN2 -.->|audit| VKG2[VKG lineage query]
+    M2 -.->|audit| VKG2
+  end
+```
+
+
+
+#### Literature search queries (for related work expansion)
+
+Use these phrases in Google Scholar / Scopus to find papers on **method and input validation** decoupled from output matching:
+
+- `"model verification" AND "model validation" methodology`
+- `"conceptual model validation" assumptions`
+- `"input validation" OR "data validity" robustness`
+- `"white-box testing" algorithm validation internal logic`
+- `UBEM uncertainty` OR `building energy model` provenance lineage`
+
+#### References (validation framing)
+
+- B. H. Thacker, S. W. Doebling, F. M. Hemez, M. C. Anderson, J. E. Pepin, & E. A. Rodriguez (2004). *Concepts of Model Verification and Validation.* OSTI. [https://doi.org/10.2172/835920](https://doi.org/10.2172/835920)
+- Ghobari, D., Amini, M. H., Tran, D. Q., Park, S., Nejati, S., & Sabetzadeh, M. (2025). Test Input Validation for Vision-based DL Systems: An Active Learning Approach. *arXiv*. [https://doi.org/10.48550/arxiv.2501.01606](https://doi.org/10.48550/arxiv.2501.01606)
+
+**Domain context (this paper):** urban building energy modelling and city-scale digital twins — heterogeneous geospatial inputs (OSM, census, LiDAR, CityGML), multi-method feature calculators, and LLM-assisted semantic virtualisation.
+
 **Paper 1 (CIM Wizard baseline):** calculators run methods in **priority order**; the first successful method wins. One value per feature is stored for the baseline scenario. Provenance is implicit.
 
 **Paper 2 (this work):** we cannot always prove correctness, but we can make outputs **auditable** and **comparable** by:
@@ -52,6 +121,8 @@ flowchart LR
   problem --> answer
 ```
 
+
+
 **Hypothesis:** *Structured provenance + multi-method comparison + semantic querying is a practical substitute for full ground-truth validation in urban modeling — enabling sensitivity analysis and confidence scoring until accuracy can be improved with better measurements.*
 
 ---
@@ -60,16 +131,20 @@ flowchart LR
 
 Each objective has a **definition**, **implementation anchor** in the monorepo, **literature review** (§2), and **evaluation criteria**.
 
-| ID | Objective | Repo / artefact | Success criterion |
-|----|-----------|-----------------|-------------------|
-| **O1** | Create a **semi data warehouse** for CIM Wizard datasources | `datalake/` | Datasources registered with STAC metadata; ingest + discovery API |
-| **O2** | Create an **ontology stack for UBEM** | `semantic/ontop/` | Layered TBox (meta / upper / domain); alignment across CityGML, BOT, SOSA, GeoSPARQL |
-| **O3** | Create a **CIM-scoped dataset** to fine-tune text-to-SQL | `ai4db/` | 88K+ question–SQL pairs; task/domain taxonomy; spatial + multi-schema coverage |
-| **O4** | **Fine-tune and validate** spatial-SQL LLMs | `txt2ssql/`, `assist_cim/` | EX ≥ 85%, EA ≥ 90% on CIM benchmark (`evaluator_v2.py`) |
-| **O5** | **Multi-agent system** to automate VKG / OBDA mapping (fine-tuned LLM + literature patterns) | planned + `semantic/SEMANTIC-plan.md` | Draft `.obda` passes SQL execution + Ontop + SPARQL smoke tests |
-| **O6** | **Integrate** warehouse + auto-VKG into CIM Wizard for **provenance & confidence** | `cim_wizard_integrated_2026/` | All methods run; provenance + confidence per `(building, feature, method)`; queryable via SQL/SPARQL |
 
-**Dependency graph:**
+| ID     | Objective                                                                                    | Repo / artefact                       | Success criterion                                                                                    |
+| ------ | -------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **O1** | Create a **semi data warehouse** for CIM Wizard datasources                                  | `datalake/`                           | Datasources registered with STAC metadata; ingest + discovery API                                    |
+| **O2** | Create an **ontology stack for UBEM**                                                        | `semantic/ontop/`                     | Layered TBox (meta / upper / domain); alignment across CityGML, BOT, SOSA, GeoSPARQL                 |
+| **O3** | Create a **CIM-scoped dataset** to fine-tune text-to-SQL                                     | `ai4db/`                              | 34,993 training pairs + 201-sample benchmark (thesis); task/domain taxonomy                          |
+| **O4** | **Fine-tune and validate** spatial-SQL LLMs                                                  | `txt2ssql/`, `assist_cim/`            | SQLCoder-7B QLoRA; EX 84.58 on benchmark (`evaluator_v2.py`)                                         |
+| **O5** | **Multi-agent system** to automate VKG / OBDA mapping (fine-tuned LLM + literature patterns) | planned + `semantic/SEMANTIC-plan.md` | Draft `.obda` passes SQL execution + Ontop + SPARQL smoke tests                                      |
+| **O6** | **Integrate** warehouse + auto-VKG into CIM Wizard for **provenance & confidence**           | `cim_wizard_integrated_2026/`         | All methods run; provenance + confidence per `(building, feature, method)`; queryable via SQL/SPARQL |
+
+
+**Dependency graph** (overall schema; see `latex/figures/overall_schema.png`):
+
+Overall schema O1–O6
 
 ```mermaid
 flowchart TB
@@ -87,6 +162,38 @@ flowchart TB
   O2 --> O6
 ```
 
+
+
+### CIM Assist thesis → Paper 2 pivot (important)
+
+> **Do not confuse the two use cases.** The MSc thesis (*CIM Wizard and CIM Assist*, Politecnico di Torino) fine-tuned an LLM to let **non-technical users query the CIM Wizard PostGIS database in natural language** via a LangGraph agent (`assist_cim/agent_cim_assist.py`). **Paper 2 reuses the same fine-tuned model for a different downstream task:** generating the **source SQL** side of Ontop OBDA mappings in the **multi-agent VKG automation pipeline (O5)** — not end-user chat.
+
+
+| Aspect           | CIM Assist (thesis)                              | Paper 2 (O4 → O5)                                                    |
+| ---------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
+| **Primary goal** | Natural-language database access for researchers | Automate Virtual Knowledge Graph / OBDA construction                 |
+| **LLM output**   | Executable PostGIS SQL answers to user questions | `source` SQL in `.obda` mapping blocks                               |
+| **Agent role**   | ReAct + `SQLDatabaseToolkit` + self-correction   | Schema / alignment / SQL / target / validator agents (LLM4VKG-style) |
+| **Validation**   | EX, EA, SC on 201-sample benchmark               | SQL EX + Ontop load + SPARQL preservation (H5)                       |
+| **Code**         | `assist_cim/`, `txt2ssql/ftv2/`                  | `semantic/`, planned O5 agents                                       |
+
+
+**Thesis fine-tuning summary** (full detail in `thesis_CIM_wizard_Assist/MSc_Ali_Taherdoustmohammadi_thesis/`):
+
+
+| Item             | Value                                                                                                      |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| Dataset pipeline | Stage 1: 10,800 rule-based samples (98–100 NoErr); Stage 2: 50,000 GPT-4o-mini augmented (50, 97.34 NoErr) |
+| Training set     | 34,993 curated pairs (stratified by task/domain/complexity/tone)                                           |
+| Benchmark        | 201 held-out samples; 100 executable gold SQL                                                              |
+| Model            | SQLCoder-7B + QLoRA (rank 16, 4-bit); 51 h on RTX 6000; eval loss 0.036                                    |
+| Best result      | **84.58 EX / EA**; Deep EM 81.59; SC 63.18 — vs GPT-4o 30.85 EX                                            |
+| HuggingFace      | `taherdoust/txt2ssql_20july2025` (dataset); LoRA adapters from `txt2ssql/ftv2/`                            |
+| Qwen 2.5 14B     | Trained but **rejected** — poor benchmark EX despite larger size                                           |
+
+
+**Key thesis references** (see `thesis_CIM_wizard_Assist/.../biblio.bib`): Spider, BIRD, DIN-SQL, QLoRA, LoRA, Wang et al. (GPT text-to-spatial-SQL), Liu/Huang T2SQL surveys, Shi/Wu/Ma UBEM ontologies.
+
 ---
 
 ### Objectives — quantitative reframing (evaluation path)
@@ -97,97 +204,115 @@ flowchart TB
 
 #### Evaluation template (apply to every objective)
 
-| Field | Question to answer |
-|-------|-------------------|
-| **Hypothesis (H)** | What measurable claim do we test? |
-| **Baseline (B)** | What do we compare against? |
-| **Metric (M)** | What number(s) do we report? |
-| **Dataset (D)** | On what data do we measure? |
+
+| Field                 | Question to answer                        |
+| --------------------- | ----------------------------------------- |
+| **Hypothesis (H)**    | What measurable claim do we test?         |
+| **Baseline (B)**      | What do we compare against?               |
+| **Metric (M)**        | What number(s) do we report?              |
+| **Dataset (D)**       | On what data do we measure?               |
 | **Success threshold** | What counts as supporting the hypothesis? |
+
 
 #### Hypotheses mapped to O1–O6
 
-| ID | Hypothesis | Baseline | Primary metrics | Dataset | Target (illustrative) |
-|----|------------|----------|-----------------|---------|------------------------|
-| **H1** (O1) | Warehouse-backed lineage increases attributable provenance without unacceptable ingest overhead | Direct ingest to `cim_*` without `datasource_id` | Provenance link rate; ingest success rate; ingest time per 1k features | Case-study datasources + full pipeline run | Link rate ↑ ≥ X%; overhead ≤ Y% |
-| **H2** (O2) | UBEM ontology VKG faithfully virtualises CIM operational schemas | Raw SQL over same PostgreSQL tables | Schema coverage %; SPARQL answer preservation (F1); query success rate; p95 latency | `test-queries.sparql` + held-out SQL ground truth | F1 ≥ Z; 100% smoke queries pass |
-| **H3** (O3) | CIM benchmark is large, diverse, and executable | Generic benchmarks (Spider/BIRD subset) or ad-hoc queries | # pairs; taxonomy balance; gold SQL executability %; spatial function coverage | `ai4db` train/val/test splits | ≥88K pairs; executability ≥ 99% |
-| **H4** (O4) | Fine-tuned CIM spatial-SQL LLM beats general models on PostGIS tasks | GPT-4o-mini / SQLCoder-7B zero-shot; optionally Paper-1 manual SQL | EM, EX, Deep EM, SC, EA (`evaluator_v2.py`); ΔEX vs baseline | `benchmark_generator_v2` held-out set | EX ≥ 85%; EA ≥ 90%; ΔEX ≥ +10 pp |
-| **H5** (O5) | Multi-agent OBDA reduces authoring effort while preserving mapping correctness | Manual `cim_citydb.obda`; BootOX/Ontop direct; generic LLM (no fine-tune) | Mapping F1; source SQL EX; SPARQL preservation; automation rate (% accepted w/o edit); time per mapping | Gold OBDA subset (N mappings); RODI-style holdout | F1 ≥ 0.7; automation rate ≥ 60% |
-| **H6** (O6) | Confidence scores are informative when ground truth is partial | Paper 1 priority-only single value; random confidence assignment | Provenance coverage; method agreement rate; Spearman ρ(confidence, spread); calibration on truth subset; UBEM stock sensitivity | Case-study city; optional LiDAR/OSM/meter subset | ρ ≤ −0.5; low-confidence filter changes stock less than random filter |
+
+| ID          | Hypothesis                                                                                      | Baseline                                                                  | Primary metrics                                                                                                                 | Dataset                                           | Target (illustrative)                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
+| **H1** (O1) | Warehouse-backed lineage increases attributable provenance without unacceptable ingest overhead | Direct ingest to `cim_`* without `datasource_id`                          | Provenance link rate; ingest success rate; ingest time per 1k features                                                          | Case-study datasources + full pipeline run        | Link rate ↑ ≥ X%; overhead ≤ Y%                                       |
+| **H2** (O2) | UBEM ontology VKG faithfully virtualises CIM operational schemas                                | Raw SQL over same PostgreSQL tables                                       | Schema coverage %; SPARQL answer preservation (F1); query success rate; p95 latency                                             | `test-queries.sparql` + held-out SQL ground truth | F1 ≥ Z; 100% smoke queries pass                                       |
+| **H3** (O3) | CIM benchmark is large, diverse, and executable                                                 | Generic benchmarks (Spider/BIRD subset) or ad-hoc queries                 | # pairs; taxonomy balance; gold SQL executability %; spatial function coverage                                                  | `ai4db` train/val/test splits                     | ≥88K pairs; executability ≥ 99%                                       |
+| **H4** (O4) | Fine-tuned CIM spatial-SQL LLM beats general models on PostGIS tasks                            | GPT-4o-mini / SQLCoder-7B zero-shot; optionally Paper-1 manual SQL        | EM, EX, Deep EM, SC, EA (`evaluator_v2.py`); ΔEX vs baseline                                                                    | `benchmark_generator_v2` held-out set             | EX ≥ 85%; EA ≥ 90%; ΔEX ≥ +10 pp                                      |
+| **H5** (O5) | Multi-agent OBDA reduces authoring effort while preserving mapping correctness                  | Manual `cim_citydb.obda`; BootOX/Ontop direct; generic LLM (no fine-tune) | Mapping F1; source SQL EX; SPARQL preservation; automation rate (% accepted w/o edit); time per mapping                         | Gold OBDA subset (N mappings); RODI-style holdout | F1 ≥ 0.7; automation rate ≥ 60%                                       |
+| **H6** (O6) | Confidence scores are informative when ground truth is partial                                  | Paper 1 priority-only single value; random confidence assignment          | Provenance coverage; method agreement rate; Spearman ρ(confidence, spread); calibration on truth subset; UBEM stock sensitivity | Case-study city; optional LiDAR/OSM/meter subset  | ρ ≤ −0.5; low-confidence filter changes stock less than random filter |
+
 
 #### Per-objective metric detail
 
 **O1 — Semi data warehouse**
 
-| Metric | Formula / definition |
-|--------|---------------------|
-| Provenance link rate | `records with resolvable datasource_id / total provenance records` |
-| Metadata completeness | `filled STAC required fields / required fields` |
-| Ingest success rate | `successful ingests / attempted ingests` |
-| Ingest overhead | `T_warehouse_ingest − T_direct_ingest` per 1k features |
+
+| Metric                | Formula / definition                                               |
+| --------------------- | ------------------------------------------------------------------ |
+| Provenance link rate  | `records with resolvable datasource_id / total provenance records` |
+| Metadata completeness | `filled STAC required fields / required fields`                    |
+| Ingest success rate   | `successful ingests / attempted ingests`                           |
+| Ingest overhead       | `T_warehouse_ingest − T_direct_ingest` per 1k features             |
+
 
 **O2 — UBEM ontology stack**
 
-| Metric | Formula / definition |
-|--------|---------------------|
-| Schema coverage | `mapped tables+columns / relevant DB schema elements` |
+
+| Metric                     | Formula / definition                                                |
+| -------------------------- | ------------------------------------------------------------------- |
+| Schema coverage            | `mapped tables+columns / relevant DB schema elements`               |
 | SPARQL answer preservation | F1 comparing VKG SPARQL results vs gold SQL results (LLM4VKG-style) |
-| Query success rate | `passing queries / test-queries suite` |
-| Query latency | p50 / p95 SPARQL-to-SQL execution time |
+| Query success rate         | `passing queries / test-queries suite`                              |
+| Query latency              | p50 / p95 SPARQL-to-SQL execution time                              |
+
 
 **O3 — CIM text-to-SQL dataset**
 
-| Metric | Formula / definition |
-|--------|---------------------|
-| Dataset size | # question–SQL pairs (train / val / test) |
-| Taxonomy balance | min count per task type & domain type; Shannon entropy |
-| Gold executability | `% benchmark SQL that runs without error on live DB` |
-| Difficulty spread | % samples per complexity level (1/2/3) |
+
+| Metric             | Formula / definition                                   |
+| ------------------ | ------------------------------------------------------ |
+| Dataset size       | # question–SQL pairs (train / val / test)              |
+| Taxonomy balance   | min count per task type & domain type; Shannon entropy |
+| Gold executability | `% benchmark SQL that runs without error on live DB`   |
+| Difficulty spread  | % samples per complexity level (1/2/3)                 |
+
 
 **O4 — Fine-tuned LLM** (already implemented in `assist_cim/evaluator_v2.py`)
 
-| Metric | Formula / definition |
-|--------|---------------------|
-| EM | Exact string match of generated vs gold SQL |
-| EX | Execution accuracy (result-set match) |
-| Deep EM | Structural match (tables, joins, spatial functions) |
-| SC | Semantic correctness (execution + structure + non-empty) |
-| EA | Accuracy after agentic self-correction loops |
+
+| Metric                 | Formula / definition                                              |
+| ---------------------- | ----------------------------------------------------------------- |
+| EM                     | Exact string match of generated vs gold SQL                       |
+| EX                     | Execution accuracy (result-set match)                             |
+| Deep EM                | Structural match (tables, joins, spatial functions)               |
+| SC                     | Semantic correctness (execution + structure + non-empty)          |
+| EA                     | Accuracy after agentic self-correction loops                      |
 | **Required ablations** | Q2SQL vs Q2Inst+QInst2SQL; with/without schema prompt; 14B vs 32B |
+
 
 **O5 — Multi-agent VKG automation**
 
-| Metric | Formula / definition |
-|--------|---------------------|
-| Mapping F1 | TP/FP/FN over mapping elements vs gold `.obda` |
-| Source SQL EX | `% generated source SQL executes and returns expected rows` |
-| SPARQL preservation | answer F1 on benchmark queries: auto-OBDA vs gold-OBDA |
-| Automation rate | `% mapping blocks accepted without manual edit` |
-| Authoring effort | median time to produce N mappings (manual vs agent-assisted) |
+
+| Metric              | Formula / definition                                         |
+| ------------------- | ------------------------------------------------------------ |
+| Mapping F1          | TP/FP/FN over mapping elements vs gold `.obda`               |
+| Source SQL EX       | `% generated source SQL executes and returns expected rows`  |
+| SPARQL preservation | answer F1 on benchmark queries: auto-OBDA vs gold-OBDA       |
+| Automation rate     | `% mapping blocks accepted without manual edit`              |
+| Authoring effort    | median time to produce N mappings (manual vs agent-assisted) |
+
 
 **O6 — Integration, provenance & confidence** (headline quantitative contribution)
 
-| Category | Metric | Formula / definition |
-|----------|--------|---------------------|
-| Completeness | Method coverage | `% configured methods actually executed` |
-| Completeness | Provenance coverage | `% (building, feature) pairs with full lineage record` |
-| Disagreement | Agreement rate @ τ | `% buildings where all methods agree within tolerance τ` |
-| Disagreement | MAD per feature | median absolute deviation across methods |
-| Disagreement | Conflict rate | `% buildings with spread > τ` |
-| Confidence | Spearman ρ | correlation(confidence level, cross-method spread) — expect negative |
-| Calibration | Calibration error | on truth subset: \|confidence − (1 − normalised error)\| |
-| Downstream | Stock UBEM sensitivity | `% Δ annual demand when swapping method A vs B` |
-| Downstream | Low-confidence filter utility | demand change excluding confidence ≤ 2 vs excluding random 20% |
+
+| Category     | Metric                        | Formula / definition                                                 |
+| ------------ | ----------------------------- | -------------------------------------------------------------------- |
+| Completeness | Method coverage               | `% configured methods actually executed`                             |
+| Completeness | Provenance coverage           | `% (building, feature) pairs with full lineage record`               |
+| Disagreement | Agreement rate @ τ            | `% buildings where all methods agree within tolerance τ`             |
+| Disagreement | MAD per feature               | median absolute deviation across methods                             |
+| Disagreement | Conflict rate                 | `% buildings with spread > τ`                                        |
+| Confidence   | Spearman ρ                    | correlation(confidence level, cross-method spread) — expect negative |
+| Calibration  | Calibration error             | on truth subset: |confidence − (1 − normalised error)|               |
+| Downstream   | Stock UBEM sensitivity        | `% Δ annual demand when swapping method A vs B`                      |
+| Downstream   | Low-confidence filter utility | demand change excluding confidence ≤ 2 vs excluding random 20%       |
+
 
 **Suggested tolerances τ (case study — calibrate):**
 
-| Feature | Agreement tolerance τ |
-|---------|----------------------|
-| `building_height` | ±2 m |
-| `building_area` | ±10% |
-| `building_type` | exact match |
-| `building_volume` | ±15% |
+
+| Feature           | Agreement tolerance τ |
+| ----------------- | --------------------- |
+| `building_height` | ±2 m                  |
+| `building_area`   | ±10%                  |
+| `building_type`   | exact match           |
+| `building_volume` | ±15%                  |
+
 
 **Ground-truth subsets for calibration (use at least one):**
 
@@ -199,11 +324,13 @@ flowchart TB
 
 Group objectives so Results is not a pipeline tour:
 
-| Pillar | Objectives | What reviewers see |
-|--------|------------|-------------------|
-| **P1 — AI accuracy** | O3, O4, O5 | Dataset stats; EX/EA tables; mapping F1; ablations |
-| **P2 — Semantic fidelity** | O2, O5 | Schema coverage; SPARQL preservation; query latency |
-| **P3 — Trustworthiness** | O1, O6 | Provenance coverage; disagreement; confidence calibration; UBEM sensitivity |
+
+| Pillar                     | Objectives | What reviewers see                                                          |
+| -------------------------- | ---------- | --------------------------------------------------------------------------- |
+| **P1 — AI accuracy**       | O3, O4, O5 | Dataset stats; EX/EA tables; mapping F1; ablations                          |
+| **P2 — Semantic fidelity** | O2, O5     | Schema coverage; SPARQL preservation; query latency                         |
+| **P3 — Trustworthiness**   | O1, O6     | Provenance coverage; disagreement; confidence calibration; UBEM sensitivity |
+
 
 ```mermaid
 flowchart LR
@@ -224,17 +351,21 @@ flowchart LR
   P2 --> P3
 ```
 
+
+
 #### Planned results tables (minimum set)
 
-| Table | Content | Pillar |
-|-------|---------|--------|
-| **T1** | CIM dataset statistics (size, taxonomy, executability) | P1 |
-| **T2** | LLM benchmark by task/domain/complexity (EX, EA) | P1 |
-| **T3** | Fine-tuned vs baselines + ablations (ΔEX) | P1 |
-| **T4** | OBDA automation vs manual/gold (F1, automation rate) | P1/P2 |
-| **T5** | VKG schema coverage + SPARQL preservation | P2 |
-| **T6** | Provenance coverage + method disagreement by feature | P3 |
-| **T7** | Confidence calibration + UBEM stock sensitivity | P3 |
+
+| Table  | Content                                                | Pillar |
+| ------ | ------------------------------------------------------ | ------ |
+| **T1** | CIM dataset statistics (size, taxonomy, executability) | P1     |
+| **T2** | LLM benchmark by task/domain/complexity (EX, EA)       | P1     |
+| **T3** | Fine-tuned vs baselines + ablations (ΔEX)              | P1     |
+| **T4** | OBDA automation vs manual/gold (F1, automation rate)   | P1/P2  |
+| **T5** | VKG schema coverage + SPARQL preservation              | P2     |
+| **T6** | Provenance coverage + method disagreement by feature   | P3     |
+| **T7** | Confidence calibration + UBEM stock sensitivity        | P3     |
+
 
 #### What to avoid in the paper
 
@@ -266,25 +397,29 @@ flowchart LR
 
 ### 1.2 From Paper 1 to Paper 2
 
-| Aspect | Paper 1 | Paper 2 |
-|--------|---------|---------|
-| Methods | Priority fallback | **All methods** (O6) |
-| Output | One value / feature | Value matrix + **provenance + confidence** |
-| Data inputs | Ad hoc schemas | **Warehouse registry** (O1) |
-| Semantics | SQL/REST | **UBEM ontology + VKG** (O2, O5) |
-| SQL generation | Manual | **Fine-tuned LLM** (O3, O4) |
-| OBDA | Manual `.obda` | **Multi-agent automation** (O5) |
+
+| Aspect         | Paper 1             | Paper 2                                    |
+| -------------- | ------------------- | ------------------------------------------ |
+| Methods        | Priority fallback   | **All methods** (O6)                       |
+| Output         | One value / feature | Value matrix + **provenance + confidence** |
+| Data inputs    | Ad hoc schemas      | **Warehouse registry** (O1)                |
+| Semantics      | SQL/REST            | **UBEM ontology + VKG** (O2, O5)           |
+| SQL generation | Manual              | **Fine-tuned LLM** (O3, O4)                |
+| OBDA           | Manual `.obda`      | **Multi-agent automation** (O5)            |
+
 
 ### 1.3 Research questions (mapped to objectives)
 
-| RQ | Question | Objective |
-|----|----------|-----------|
-| RQ1 | How to catalogue heterogeneous geospatial datasources for UBEM pipelines? | O1 |
-| RQ2 | Which ontology layers best support building energy + observation + geometry integration? | O2 |
-| RQ3 | How to build a domain-specific text-to-SQL training set for PostGIS multi-schema queries? | O3 |
-| RQ4 | Do fine-tuned LLMs outperform general models on CIM spatial SQL? | O4 |
-| RQ5 | Can agents automate OBDA mapping using fine-tuned SQL + ontology patterns? | O5 |
-| RQ6 | Can provenance + confidence improve trust in CIM Wizard without full ground truth? | O6 |
+
+| RQ  | Question                                                                                  | Objective |
+| --- | ----------------------------------------------------------------------------------------- | --------- |
+| RQ1 | How to catalogue heterogeneous geospatial datasources for UBEM pipelines?                 | O1        |
+| RQ2 | Which ontology layers best support building energy + observation + geometry integration?  | O2        |
+| RQ3 | How to build a domain-specific text-to-SQL training set for PostGIS multi-schema queries? | O3        |
+| RQ4 | Do fine-tuned LLMs outperform general models on CIM spatial SQL?                          | O4        |
+| RQ5 | Can agents automate OBDA mapping using fine-tuned SQL + ontology patterns?                | O5        |
+| RQ6 | Can provenance + confidence improve trust in CIM Wizard without full ground truth?        | O6        |
+
 
 ### 1.4 Contributions (by objective)
 
@@ -316,27 +451,31 @@ flowchart LR
 
 #### 2.1.1 Definitions
 
-| Term | Definition (for this paper) |
-|------|----------------------------|
-| **Data lake** | Storage of raw/semi-structured data in native formats; schema-on-read; weak upfront modelling (Inmon/Zhamak debates). |
-| **Data warehouse** | Structured, integrated, subject-oriented store optimised for analytics; schema-on-write. |
-| **Semi data warehouse** | *Our term:* catalogue + metadata discipline of a warehouse, but retains heterogeneous/raw payloads and late binding — suited to mixed UBEM inputs (vectors, rasters, APIs, files). |
-| **STAC** (SpatioTemporal Asset Catalog) | JSON catalogue standard for geospatial assets: Item, Collection, Catalog; enables discovery by space/time. |
-| **FAIR** | Findable, Accessible, Interoperable, Reusable — principles for research data management. |
+
+| Term                                    | Definition (for this paper)                                                                                                                                                        |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Data lake**                           | Storage of raw/semi-structured data in native formats; schema-on-read; weak upfront modelling (Inmon/Zhamak debates).                                                              |
+| **Data warehouse**                      | Structured, integrated, subject-oriented store optimised for analytics; schema-on-write.                                                                                           |
+| **Semi data warehouse**                 | *Our term:* catalogue + metadata discipline of a warehouse, but retains heterogeneous/raw payloads and late binding — suited to mixed UBEM inputs (vectors, rasters, APIs, files). |
+| **STAC** (SpatioTemporal Asset Catalog) | JSON catalogue standard for geospatial assets: Item, Collection, Catalog; enables discovery by space/time.                                                                         |
+| **FAIR**                                | Findable, Accessible, Interoperable, Reusable — principles for research data management.                                                                                           |
+
 
 #### 2.1.2 Prior work & similar projects
 
-| Work / project | Relevance to O1 |
-|----------------|-----------------|
-| **STAC specification** (radiantearth) | Metadata model for `datalake/models/datasource.py` |
-| **SpatioTemporal Asset Catalog on COG** | Raster/vector asset patterns for DTM/DSM |
-| **openEO**, **OGC API — Features / Records** | API-based datasource ingestion |
-| **MetaCarto / STAC Index** | Federated catalogue discovery |
-| **Google Earth Engine catalog** | Large-scale geospatial asset registry (conceptual parallel) |
-| **Microsoft Planetary Computer STAC** | Production STAC + analytics |
-| **SenML**, **OGC SensorThings API** | IoT / sensor datasource patterns (link to O6 provenance) |
-| **Data lakehouse** (Delta/Iceberg) | Hybrid lake+warehouse — compare/contrast with our *semi* approach |
-| **ISO 19115 / DCAT** | Geographic and data catalogue metadata standards |
+
+| Work / project                               | Relevance to O1                                                   |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| **STAC specification** (radiantearth)        | Metadata model for `datalake/models/datasource.py`                |
+| **SpatioTemporal Asset Catalog on COG**      | Raster/vector asset patterns for DTM/DSM                          |
+| **openEO**, **OGC API — Features / Records** | API-based datasource ingestion                                    |
+| **MetaCarto / STAC Index**                   | Federated catalogue discovery                                     |
+| **Google Earth Engine catalog**              | Large-scale geospatial asset registry (conceptual parallel)       |
+| **Microsoft Planetary Computer STAC**        | Production STAC + analytics                                       |
+| **SenML**, **OGC SensorThings API**          | IoT / sensor datasource patterns (link to O6 provenance)          |
+| **Data lakehouse** (Delta/Iceberg)           | Hybrid lake+warehouse — compare/contrast with our *semi* approach |
+| **ISO 19115 / DCAT**                         | Geographic and data catalogue metadata standards                  |
+
 
 #### 2.1.3 Gap
 
@@ -354,28 +493,32 @@ flowchart LR
 
 #### 2.2.1 Definitions
 
-| Term | Definition |
-|------|------------|
-| **UBEM** | Urban Building Energy Modeling — city-scale simulation of building stock energy use. |
-| **CIM** | City Information Model — spatial + semantic container for digital twin cities. |
+
+| Term               | Definition                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| **UBEM**           | Urban Building Energy Modeling — city-scale simulation of building stock energy use.   |
+| **CIM**            | City Information Model — spatial + semantic container for digital twin cities.         |
 | **Ontology stack** | Layered vocabularies: meta (RDF/OWL), upper (BFO/DOLCE), domain (CityGML, BOT, Brick). |
-| **OBDA / VKG** | Ontology-Based Data Access; virtual RDF graph over relational DB via mappings. |
+| **OBDA / VKG**     | Ontology-Based Data Access; virtual RDF graph over relational DB via mappings.         |
+
 
 #### 2.2.2 Prior work
 
-| Paper / standard | Contribution | Link to O2 |
-|------------------|--------------|------------|
+
+| Paper / standard                                           | Contribution                                                      | Link to O2                                        |
+| ---------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------- |
 | **Shi et al. (2023)** — *Advanced Engineering Informatics* | OntoCIM: BIM-GIS-IoT ontology; five-step integration; SPARQL apps | CIM upper pattern; application ontology extension |
-| **Wu et al. (2023)** — *Energy & Buildings* | Ontology BEM: Brick + BOT; thermal zoning; IDF translation | HVAC + topology for single-building BEM |
-| **Ma et al. (2024)** — *Sustainable Cities and Society* | BTO + UBO; city-scale EnergyPlus; GeoSPARQL in UBO | UBEM templates + instances at scale |
-| **CityGML / 3DCityDB** | Urban object model + DB schema | `citydb.*`, `citygml2.owl` |
-| **BOT** (Rasmussen et al.) | Building topology | `bot:Building`, `bot:Space`, `bot:containsZone` |
-| **Brick** | HVAC equipment semantics | Future HVAC provenance |
-| **SOSA / SSN** | Observations, sensors, FOI | Energy KPIs as `sosa:Observation` |
-| **GeoSPARQL** | Geometry in RDF | `geo:asWKT` in OBDA |
-| **OWL-Time** | Temporal entities | Time series periods |
-| **ifcOWL / buildingSMART** | BIM semantics on IFC | Complement to CityGML |
-| **PROV-O** | Provenance ontology | O6 confidence lineage in VKG |
+| **Wu et al. (2023)** — *Energy & Buildings*                | Ontology BEM: Brick + BOT; thermal zoning; IDF translation        | HVAC + topology for single-building BEM           |
+| **Ma et al. (2024)** — *Sustainable Cities and Society*    | BTO + UBO; city-scale EnergyPlus; GeoSPARQL in UBO                | UBEM templates + instances at scale               |
+| **CityGML / 3DCityDB**                                     | Urban object model + DB schema                                    | `citydb.*`, `citygml2.owl`                        |
+| **BOT** (Rasmussen et al.)                                 | Building topology                                                 | `bot:Building`, `bot:Space`, `bot:containsZone`   |
+| **Brick**                                                  | HVAC equipment semantics                                          | Future HVAC provenance                            |
+| **SOSA / SSN**                                             | Observations, sensors, FOI                                        | Energy KPIs as `sosa:Observation`                 |
+| **GeoSPARQL**                                              | Geometry in RDF                                                   | `geo:asWKT` in OBDA                               |
+| **OWL-Time**                                               | Temporal entities                                                 | Time series periods                               |
+| **ifcOWL / buildingSMART**                                 | BIM semantics on IFC                                              | Complement to CityGML                             |
+| **PROV-O**                                                 | Provenance ontology                                               | O6 confidence lineage in VKG                      |
+
 
 #### 2.2.3 Gap
 
@@ -397,22 +540,26 @@ flowchart LR
 
 #### 2.3.1 Definitions
 
-| Term | Definition |
-|------|------------|
-| **Text-to-SQL** | NL question → SQL query over a fixed schema. |
-| **Spatial SQL** | PostGIS-extended SQL (`ST_*` functions, `GEOMETRY` types). |
-| **Benchmark** | Paired (question, SQL, metadata) with execution ground truth. |
+
+| Term            | Definition                                                    |
+| --------------- | ------------------------------------------------------------- |
+| **Text-to-SQL** | NL question → SQL query over a fixed schema.                  |
+| **Spatial SQL** | PostGIS-extended SQL (`ST_*` functions, `GEOMETRY` types).    |
+| **Benchmark**   | Paired (question, SQL, metadata) with execution ground truth. |
+
 
 #### 2.3.2 Prior work
 
-| Work | Relevance |
-|------|-----------|
-| **Spider**, **WikiSQL** | General text-to-SQL; no PostGIS |
-| **BIRD** | Large cross-domain DB benchmark |
-| **GeoQuery**, **SpatialQA** | Early geo-NL interfaces |
-| **SparC**, **KaggleDBQA** | Complex multi-turn / domain DBs |
-| **SeaView**, geospatial NL benchmarks | Limited multi-schema PostGIS |
-| **This project `ai4db/`** | CIM-specific: 18 task types, 5 domain types, census+network+raster |
+
+| Work                                  | Relevance                                                          |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| **Spider**, **WikiSQL**               | General text-to-SQL; no PostGIS                                    |
+| **BIRD**                              | Large cross-domain DB benchmark                                    |
+| **GeoQuery**, **SpatialQA**           | Early geo-NL interfaces                                            |
+| **SparC**, **KaggleDBQA**             | Complex multi-turn / domain DBs                                    |
+| **SeaView**, geospatial NL benchmarks | Limited multi-schema PostGIS                                       |
+| **This project `ai4db/`**             | CIM-specific: 18 task types, 5 domain types, census+network+raster |
+
 
 #### 2.3.3 Gap
 
@@ -425,7 +572,7 @@ flowchart LR
 - `stage3_v2.py` — LLM augmentation (paraphrase, sql_rewrite, question_to_sql).
 - `merge_datasets.py`, `curator.py`, `generate_negative_samples.py` — training hygiene.
 - `benchmark_generator_v2.py` — stratified evaluation sets.
-- **Extension planned:** `citydb` / `ng2_*` + OBDA-source SQL templates for O5.
+- **Extension planned:** `citydb` / `ng2_`* + OBDA-source SQL templates for O5.
 
 ---
 
@@ -433,24 +580,28 @@ flowchart LR
 
 #### 2.4.1 Definitions
 
-| Metric | Definition (`assist_cim/evaluator_v2.py`) |
-|--------|------------------------------------------|
-| **EM** | Exact Match — string equality of SQL |
-| **EX** | Execution Accuracy — result set match |
-| **Deep EM** | Structural SQL correctness (tables, spatial functions) |
-| **SC** | Semantic Correctness — execution + structure + non-empty |
-| **EA** | Eventual Accuracy — after agentic self-correction loops |
+
+| Metric      | Definition (`assist_cim/evaluator_v2.py`)                |
+| ----------- | -------------------------------------------------------- |
+| **EM**      | Exact Match — string equality of SQL                     |
+| **EX**      | Execution Accuracy — result set match                    |
+| **Deep EM** | Structural SQL correctness (tables, spatial functions)   |
+| **SC**      | Semantic Correctness — execution + structure + non-empty |
+| **EA**      | Eventual Accuracy — after agentic self-correction loops  |
+
 
 #### 2.4.2 Prior work
 
-| Work | Relevance |
-|------|-----------|
-| **SQLCoder**, **DIN-SQL**, **DAIL-SQL** | LLM text-to-SQL methods |
-| **CodeLlama / Qwen2.5-Coder** | Code-capable base models |
-| **LoRA / QLoRA** | Efficient domain fine-tuning (`txt2ssql/ftv2`) |
-| **Unsloth** | Fast 32B fine-tuning |
-| **LangGraph SQL agents** | `agent_cim_assist.py` — tool use + repair |
-| **Hofer et al. (ESWC 2024)** | LLM-generated RML mappings — related eval mindset |
+
+| Work                                    | Relevance                                         |
+| --------------------------------------- | ------------------------------------------------- |
+| **SQLCoder**, **DIN-SQL**, **DAIL-SQL** | LLM text-to-SQL methods                           |
+| **CodeLlama / Qwen2.5-Coder**           | Code-capable base models                          |
+| **LoRA / QLoRA**                        | Efficient domain fine-tuning (`txt2ssql/ftv2`)    |
+| **Unsloth**                             | Fast 32B fine-tuning                              |
+| **LangGraph SQL agents**                | `agent_cim_assist.py` — tool use + repair         |
+| **Hofer et al. (ESWC 2024)**            | LLM-generated RML mappings — related eval mindset |
+
 
 #### 2.4.3 Gap
 
@@ -471,23 +622,27 @@ flowchart LR
 
 #### 2.5.1 Definitions
 
-| Term | Definition |
-|------|------------|
-| **VKG** | Virtual Knowledge Graph — RDF interface over SQL sources without full materialisation. |
-| **OBDA mapping** | Pair `(source SQL, target RDF template)` in Ontop `.obda`. |
-| **Mapping patterns** | SE, SR, SRm, SH (Calvanese et al. / LLM4VKG). |
+
+| Term                 | Definition                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| **VKG**              | Virtual Knowledge Graph — RDF interface over SQL sources without full materialisation. |
+| **OBDA mapping**     | Pair `(source SQL, target RDF template)` in Ontop `.obda`.                             |
+| **Mapping patterns** | SE, SR, SRm, SH (Calvanese et al. / LLM4VKG).                                          |
+
 
 #### 2.5.2 Prior work
 
-| Work | Relevance |
-|------|-----------|
-| **LLM4VKG** (Xiao et al., IJCAI 2025) | LLM + mapping patterns for VKG bootstrap; RODI benchmark |
-| **BootOX**, **IncMap**, **Ontop direct mapping** | Rule-based / semi-automatic OBDA |
-| **Bereta & Koubarakis (2016)** | Ontop of geospatial DBs — `ST_AsText`, GeoSPARQL literals |
-| **GeoTriples** (Kyzirakos et al.) | Geospatial R2RML with user revision |
-| **From SQL to KG — multi-agent** (OpenReview) | Multi-agent ETL + graph construction |
-| **Lembo et al. (2017)** | OBDA specification evolution / repair |
-| **Hofer et al.** | LLM RML — not Ontop lifecycle |
+
+| Work                                             | Relevance                                                 |
+| ------------------------------------------------ | --------------------------------------------------------- |
+| **LLM4VKG** (Xiao et al., IJCAI 2025)            | LLM + mapping patterns for VKG bootstrap; RODI benchmark  |
+| **BootOX**, **IncMap**, **Ontop direct mapping** | Rule-based / semi-automatic OBDA                          |
+| **Bereta & Koubarakis (2016)**                   | Ontop of geospatial DBs — `ST_AsText`, GeoSPARQL literals |
+| **GeoTriples** (Kyzirakos et al.)                | Geospatial R2RML with user revision                       |
+| **From SQL to KG — multi-agent** (OpenReview)    | Multi-agent ETL + graph construction                      |
+| **Lembo et al. (2017)**                          | OBDA specification evolution / repair                     |
+| **Hofer et al.**                                 | LLM RML — not Ontop lifecycle                             |
+
 
 #### 2.5.3 Gap
 
@@ -513,14 +668,18 @@ flowchart TB
   A5 --> A6
 ```
 
-| Agent | Input | Output |
-|-------|-------|--------|
-| Schema | `information_schema`, sample stats | DB graph `G_Σ` |
-| Alignment | `G_Σ`, seed ontology O2 | SE/SR/SRm/SH instances + property matches |
-| SQL | Mapping intent, schema card | `source` SQL (fine-tuned LLM) |
-| Target | Ontology term, column bind | `target` RDF template |
-| Validator | Draft mapping | pass/fail + error trace |
-| Merge | Approved mappings | updated `.obda` |
+
+
+
+| Agent     | Input                              | Output                                    |
+| --------- | ---------------------------------- | ----------------------------------------- |
+| Schema    | `information_schema`, sample stats | DB graph `G_Σ`                            |
+| Alignment | `G_Σ`, seed ontology O2            | SE/SR/SRm/SH instances + property matches |
+| SQL       | Mapping intent, schema card        | `source` SQL (fine-tuned LLM)             |
+| Target    | Ontology term, column bind         | `target` RDF template                     |
+| Validator | Draft mapping                      | pass/fail + error trace                   |
+| Merge     | Approved mappings                  | updated `.obda`                           |
+
 
 ---
 
@@ -528,22 +687,26 @@ flowchart TB
 
 #### 2.6.1 Definitions
 
-| Term | Definition |
-|------|------------|
-| **Provenance** | Record of *what source* and *what method* produced a value. |
-| **Confidence level** | Ordinal or numeric score combining source tier, method agreement, input completeness. |
-| **Multi-method matrix** | All `(feature, method)` results for a building, not only priority winner. |
+
+| Term                    | Definition                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| **Provenance**          | Record of *what source* and *what method* produced a value.                           |
+| **Confidence level**    | Ordinal or numeric score combining source tier, method agreement, input completeness. |
+| **Multi-method matrix** | All `(feature, method)` results for a building, not only priority winner.             |
+
 
 #### 2.6.2 Prior work
 
-| Work | Relevance |
-|------|-----------|
-| **W3C PROV-DM / PROV-O** | Standard provenance model |
-| **Uncertainty in UBEM** (e.g. Monte Carlo envelopes) | Sensitivity — we add **discrete method comparison** |
-| **OSM quality studies**, **LiDAR vs footprint** | Empirical method disagreement |
-| **Sensitivity analysis in UBEM tools** (UMI, CEA, TEASER) | Stock-level uncertainty — rarely per-building lineage |
-| **Shi / Wu / Ma** | Ontology pipelines without calculator-level confidence |
-| **Digital twin maturity models** | Trust / lineage as maturity criterion |
+
+| Work                                                      | Relevance                                              |
+| --------------------------------------------------------- | ------------------------------------------------------ |
+| **W3C PROV-DM / PROV-O**                                  | Standard provenance model                              |
+| **Uncertainty in UBEM** (e.g. Monte Carlo envelopes)      | Sensitivity — we add **discrete method comparison**    |
+| **OSM quality studies**, **LiDAR vs footprint**           | Empirical method disagreement                          |
+| **Sensitivity analysis in UBEM tools** (UMI, CEA, TEASER) | Stock-level uncertainty — rarely per-building lineage  |
+| **Shi / Wu / Ma**                                         | Ontology pipelines without calculator-level confidence |
+| **Digital twin maturity models**                          | Trust / lineage as maturity criterion                  |
+
 
 #### 2.6.3 Gap
 
@@ -554,23 +717,27 @@ flowchart TB
 
 **Confidence factors (weighted — calibrate in case study):**
 
-| Factor | Signal | Example |
-|--------|--------|---------|
-| **Source tier** | Measured > observed > inferred > default | Meter > raster > OSM tag > TABULA default |
-| **Method agreement** | Std dev across methods for same feature | Height: raster ≈ OSM → high; raster ≫ default → low |
-| **Input completeness** | % required inputs present | Missing census zone → penalise census-based methods |
-| **Warehouse freshness** | `datasource.updated` age | Stale OSM extract → lower confidence |
-| **Execution status** | success vs failed vs skipped | Failed method excluded from best-value view |
+
+| Factor                  | Signal                                   | Example                                             |
+| ----------------------- | ---------------------------------------- | --------------------------------------------------- |
+| **Source tier**         | Measured > observed > inferred > default | Meter > raster > OSM tag > TABULA default           |
+| **Method agreement**    | Std dev across methods for same feature  | Height: raster ≈ OSM → high; raster ≫ default → low |
+| **Input completeness**  | % required inputs present                | Missing census zone → penalise census-based methods |
+| **Warehouse freshness** | `datasource.updated` age                 | Stale OSM extract → lower confidence                |
+| **Execution status**    | success vs failed vs skipped             | Failed method excluded from best-value view         |
+
 
 **Confidence levels (example ordinal scale):**
 
-| Level | Label | Rule (illustrative) |
-|-------|-------|---------------------|
-| 5 | Verified | Measured datasource + method success |
-| 4 | High | Tier-1 inferred; ≥2 methods agree within tolerance |
-| 3 | Medium | Single tier-2 method; no conflict |
-| 2 | Low | Default/statistical method; or method conflict |
-| 1 | Uncertain | Missing inputs; large cross-method spread |
+
+| Level | Label     | Rule (illustrative)                                |
+| ----- | --------- | -------------------------------------------------- |
+| 5     | Verified  | Measured datasource + method success               |
+| 4     | High      | Tier-1 inferred; ≥2 methods agree within tolerance |
+| 3     | Medium    | Single tier-2 method; no conflict                  |
+| 2     | Low       | Default/statistical method; or method conflict     |
+| 1     | Uncertain | Missing inputs; large cross-method spread          |
+
 
 **Integration points:**
 
@@ -583,14 +750,16 @@ flowchart TB
 
 ### 2.7 Cross-objective gap summary (Table — synthesis)
 
-| Prior state | Limitation | Addressed by |
-|-------------|------------|--------------|
-| Ad hoc files/APIs | No datasource IDs | O1 |
-| Single ontology per paper | No unified UBEM stack | O2 |
-| Generic text-to-SQL benchmarks | No CIM PostGIS | O3 |
-| General LLMs on spatial SQL | Low EX on CIM | O4 |
-| Manual OBDA / generic LLM4VKG | No CIM + provenance VKG | O5 |
-| Priority-only execution | No confidence / audit | O6 |
+
+| Prior state                    | Limitation              | Addressed by |
+| ------------------------------ | ----------------------- | ------------ |
+| Ad hoc files/APIs              | No datasource IDs       | O1           |
+| Single ontology per paper      | No unified UBEM stack   | O2           |
+| Generic text-to-SQL benchmarks | No CIM PostGIS          | O3           |
+| General LLMs on spatial SQL    | Low EX on CIM           | O4           |
+| Manual OBDA / generic LLM4VKG  | No CIM + provenance VKG | O5           |
+| Priority-only execution        | No confidence / audit   | O6           |
+
 
 ---
 
@@ -636,16 +805,20 @@ flowchart TB
   PROV --> OBDA
 ```
 
+
+
 ### 3.3 Repository map
 
-| Objective | Path |
-|-----------|------|
-| O1 | `datalake/` |
-| O2 | `semantic/ontop/`, `semantic/SEMANTIC-plan.md` |
-| O3 | `ai4db/` |
-| O4 | `txt2ssql/ftv2/`, `assist_cim/evaluator_v2.py` |
-| O5 | planned `semantic/agents/` or `assist_cim/vkg_agent/` |
-| O6 | `cim_wizard_integrated_2026/`, provenance schema TBD |
+
+| Objective | Path                                                  |
+| --------- | ----------------------------------------------------- |
+| O1        | `datalake/`                                           |
+| O2        | `semantic/ontop/`, `semantic/SEMANTIC-plan.md`        |
+| O3        | `ai4db/`                                              |
+| O4        | `txt2ssql/ftv2/`, `assist_cim/evaluator_v2.py`        |
+| O5        | planned `semantic/agents/` or `assist_cim/vkg_agent/` |
+| O6        | `cim_wizard_integrated_2026/`, provenance schema TBD  |
+
 
 ---
 
@@ -695,17 +868,21 @@ flowchart TB
   P4 --> P5
 ```
 
+
+
 **Reading order:** Phases 1–3 can proceed partly in parallel; Phase 4 depends on O2 + O4; Phase 5 is the integration proof that consumes all prior phases.
 
 ### 4.2 Phase summary table (Table — Methodology phases)
 
-| Phase | Name | Objectives | Primary inputs | Core activities | Primary outputs | Validation gate |
-|-------|------|------------|----------------|-----------------|-----------------|-----------------|
-| **1** | Data foundation | O1 | Raw files, APIs, OGC services, project uploads | Classify datasource; STAC register; ingest; assign `datasource_id` | Semi data warehouse catalogue; synced `cim_vector` / refs | Ingest succeeds; datasource discoverable by tag/footprint |
-| **2** | Semantic model | O2 | Domain standards (CityGML, BOT, SOSA, GeoSPARQL); Paper 2 lit. stack | Layer ontologies; write `alignment.ttl`; manual seed `.obda` | TBox + alignment; baseline `cim_citydb.obda` | Protégé load; Ontop mapping syntax OK |
-| **3** | LLM capability | O3, O4 | CIM DB schema; task/domain taxonomy; HF base models | Rule-gen + LLM augment; curate splits; LoRA fine-tune; benchmark eval | `txt2ssql` dataset; fine-tuned Q2SQL model; EX/EA report | EX ≥ 85%, EA ≥ 90% on held-out CIM benchmark |
-| **4** | VKG automation | O5 | DB schema graph; seed ontology (Phase 2); fine-tuned LLM (Phase 3) | Multi-agent: align → generate `source` SQL → assemble `target` RDF → validate | Draft `.obda` patches; provenance VKG mappings | SQL executes on DB; Ontop test; `test-queries.sparql` pass |
-| **5** | Integration & confidence | O6 | Warehouse IDs (Ph.1); VKG (Ph.4); `configuration.json` methods | `all_methods` execution; provenance persist; confidence score; API + SPARQL | Provenance matrix; confidence per building-feature; queryable lineage | Case study metrics; method agreement stats |
+
+| Phase | Name                     | Objectives | Primary inputs                                                       | Core activities                                                               | Primary outputs                                                       | Validation gate                                            |
+| ----- | ------------------------ | ---------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **1** | Data foundation          | O1         | Raw files, APIs, OGC services, project uploads                       | Classify datasource; STAC register; ingest; assign `datasource_id`            | Semi data warehouse catalogue; synced `cim_vector` / refs             | Ingest succeeds; datasource discoverable by tag/footprint  |
+| **2** | Semantic model           | O2         | Domain standards (CityGML, BOT, SOSA, GeoSPARQL); Paper 2 lit. stack | Layer ontologies; write `alignment.ttl`; manual seed `.obda`                  | TBox + alignment; baseline `cim_citydb.obda`                          | Protégé load; Ontop mapping syntax OK                      |
+| **3** | LLM capability           | O3, O4     | CIM DB schema; task/domain taxonomy; HF base models                  | Rule-gen + LLM augment; curate splits; LoRA fine-tune; benchmark eval         | `txt2ssql` dataset; fine-tuned Q2SQL model; EX/EA report              | EX ≥ 85%, EA ≥ 90% on held-out CIM benchmark               |
+| **4** | VKG automation           | O5         | DB schema graph; seed ontology (Phase 2); fine-tuned LLM (Phase 3)   | Multi-agent: align → generate `source` SQL → assemble `target` RDF → validate | Draft `.obda` patches; provenance VKG mappings                        | SQL executes on DB; Ontop test; `test-queries.sparql` pass |
+| **5** | Integration & confidence | O6         | Warehouse IDs (Ph.1); VKG (Ph.4); `configuration.json` methods       | `all_methods` execution; provenance persist; confidence score; API + SPARQL   | Provenance matrix; confidence per building-feature; queryable lineage | Case study metrics; method agreement stats                 |
+
 
 ### 4.3 Data-flow schema (entities & relationships)
 
@@ -758,26 +935,32 @@ erDiagram
   }
 ```
 
+
+
 **Key relationships (narrative for §Methodology):**
 
-| From | To | Relation |
-|------|-----|----------|
-| `DATASOURCE` | `PROVENANCE_RECORD` | Every method run cites which warehouse sources were read |
-| `CALCULATOR_METHOD` | `FEATURE_VALUE` | Each method can produce one value per building (multi-method matrix) |
-| `PROVENANCE_RECORD` | `CONFIDENCE_SCORE` | Confidence derived from source tier + cross-method agreement |
-| `OBDA_MAPPING` | `VKG_INDIVIDUAL` | Ontop virtualises DB rows as RDF individuals |
-| `FINE_TUNED_LLM` | `OBDA_MAPPING` | Generates or repairs `source_sql`; templates fix `target_rdf` |
+
+| From                | To                  | Relation                                                             |
+| ------------------- | ------------------- | -------------------------------------------------------------------- |
+| `DATASOURCE`        | `PROVENANCE_RECORD` | Every method run cites which warehouse sources were read             |
+| `CALCULATOR_METHOD` | `FEATURE_VALUE`     | Each method can produce one value per building (multi-method matrix) |
+| `PROVENANCE_RECORD` | `CONFIDENCE_SCORE`  | Confidence derived from source tier + cross-method agreement         |
+| `OBDA_MAPPING`      | `VKG_INDIVIDUAL`    | Ontop virtualises DB rows as RDF individuals                         |
+| `FINE_TUNED_LLM`    | `OBDA_MAPPING`      | Generates or repairs `source_sql`; templates fix `target_rdf`        |
+
 
 ### 4.4 Activity breakdown by objective (within phases)
 
-| Objective | Phase | Activities (ordered) |
-|-----------|-------|----------------------|
-| **O1** | 1 | Define semi-warehouse concept → STAC item schema → ingest API → link `datasource_id` to calculator config |
-| **O2** | 2 | Select L1/L2/L3 vocabularies → import stubs → `alignment.ttl` → seed OBDA for buildings/zones/observations |
-| **O3** | 3 | `stage1_cim_v2` templates → `stage3_v2` augmentation → merge/curate → publish benchmark JSONL |
-| **O4** | 3 | Choose architecture (Q2SQL vs two-stage) → LoRA train → `evaluator_v2` taxonomy report → deploy adapter |
-| **O5** | 4 | DB graph extraction → LLM4VKG pattern match → SQL agent (O4) → target template agent → validator loop |
-| **O6** | 5 | Extend executor `all_methods` → provenance schema migration → confidence function → VKG provenance mappings → case study |
+
+| Objective | Phase | Activities (ordered)                                                                                                     |
+| --------- | ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| **O1**    | 1     | Define semi-warehouse concept → STAC item schema → ingest API → link `datasource_id` to calculator config                |
+| **O2**    | 2     | Select L1/L2/L3 vocabularies → import stubs → `alignment.ttl` → seed OBDA for buildings/zones/observations               |
+| **O3**    | 3     | `stage1_cim_v2` templates → `stage3_v2` augmentation → merge/curate → publish benchmark JSONL                            |
+| **O4**    | 3     | Choose architecture (Q2SQL vs two-stage) → LoRA train → `evaluator_v2` taxonomy report → deploy adapter                  |
+| **O5**    | 4     | DB graph extraction → LLM4VKG pattern match → SQL agent (O4) → target template agent → validator loop                    |
+| **O6**    | 5     | Extend executor `all_methods` → provenance schema migration → confidence function → VKG provenance mappings → case study |
+
 
 ### 4.5 Validation gates (quality checkpoints)
 
@@ -796,23 +979,29 @@ flowchart LR
   G4 --> G5
 ```
 
-| Gate | Check | Tool / artefact |
-|------|-------|-----------------|
-| **G1** | Datasource ingest + `datasource_id` resolvable | `datalake` API, manual query |
-| **G2** | Ontology imports resolve; alignment consistent | Protégé, `catalog-v001.xml` |
-| **G3** | Fine-tuned model EX/EA on CIM benchmark | `assist_cim/evaluator_v2.py` |
-| **G4** | Generated mapping: SQL runs + Ontop loads + SPARQL smoke | PostgreSQL, Ontop, `test-queries.sparql` |
-| **G5** | All methods executed; confidence assigned; lineage SPARQL works | CIM Wizard API, Protégé Ontop tab |
+
+
+
+| Gate   | Check                                                           | Tool / artefact                          |
+| ------ | --------------------------------------------------------------- | ---------------------------------------- |
+| **G1** | Datasource ingest + `datasource_id` resolvable                  | `datalake` API, manual query             |
+| **G2** | Ontology imports resolve; alignment consistent                  | Protégé, `catalog-v001.xml`              |
+| **G3** | Fine-tuned model EX/EA on CIM benchmark                         | `assist_cim/evaluator_v2.py`             |
+| **G4** | Generated mapping: SQL runs + Ontop loads + SPARQL smoke        | PostgreSQL, Ontop, `test-queries.sparql` |
+| **G5** | All methods executed; confidence assigned; lineage SPARQL works | CIM Wizard API, Protégé Ontop tab        |
+
 
 ### 4.6 Methodology vs Paper 1 baseline (comparison)
 
-| Step | Paper 1 | Paper 2 methodology |
-|------|---------|---------------------|
-| Ingest external data | Direct to `cim_*` schemas | Phase 1: warehouse register first |
-| Feature calculation | Priority fallback → one value | Phase 5: all methods → matrix |
-| Lineage | Logs only | Phase 5: structured provenance + confidence |
-| Semantic access | None | Phases 2+4+5: VKG |
-| SQL for mappings | Hand-written `.obda` | Phases 3+4: dataset + fine-tuned LLM + agents |
+
+| Step                 | Paper 1                       | Paper 2 methodology                           |
+| -------------------- | ----------------------------- | --------------------------------------------- |
+| Ingest external data | Direct to `cim_`* schemas     | Phase 1: warehouse register first             |
+| Feature calculation  | Priority fallback → one value | Phase 5: all methods → matrix                 |
+| Lineage              | Logs only                     | Phase 5: structured provenance + confidence   |
+| Semantic access      | None                          | Phases 2+4+5: VKG                             |
+| SQL for mappings     | Hand-written `.obda`          | Phases 3+4: dataset + fine-tuned LLM + agents |
+
 
 ### 4.7 Case study execution path (how phases run in practice)
 
@@ -876,18 +1065,20 @@ flowchart LR
 
 ### 8.2 Provenance record schema (Table 1)
 
-| Field | Description |
-|-------|-------------|
-| `provenance_id` | UUID |
-| `project_id`, `scenario_id`, `building_id` | Context |
-| `feature_name`, `method_name`, `method_priority` | Calculator identity |
-| `status` | success / failed / skipped |
-| `value`, `unit` | Result |
-| `datasource_ids` | O1 warehouse links |
-| `input_features` | Dependency snapshot |
-| `confidence_level` | 1–5 (O6 model) |
-| `confidence_factors` | JSON breakdown of weights |
-| `executed_at`, `executor_version` | Audit |
+
+| Field                                            | Description                |
+| ------------------------------------------------ | -------------------------- |
+| `provenance_id`                                  | UUID                       |
+| `project_id`, `scenario_id`, `building_id`       | Context                    |
+| `feature_name`, `method_name`, `method_priority` | Calculator identity        |
+| `status`                                         | success / failed / skipped |
+| `value`, `unit`                                  | Result                     |
+| `datasource_ids`                                 | O1 warehouse links         |
+| `input_features`                                 | Dependency snapshot        |
+| `confidence_level`                               | 1–5 (O6 model)             |
+| `confidence_factors`                             | JSON breakdown of weights  |
+| `executed_at`, `executor_version`                | Audit                      |
+
 
 ### 8.3 Confidence computation
 
@@ -915,26 +1106,30 @@ flowchart LR
 
 ### 10.2 Evaluation protocol (hypothesis → experiment)
 
-| Hypothesis | Experiment | Baseline | Report in |
-|------------|------------|----------|-----------|
-| H1 | Ingest same datasources with/without warehouse registration; measure link rate + overhead | Direct `cim_*` ingest | T6 (provenance links) |
-| H2 | Run `test-queries.sparql` + held-out SQL pairs; compare VKG vs gold SQL answers | Raw SQL | T5 |
-| H3 | Publish dataset stats + executability audit on test split | Spider/BIRD-adapted subset (optional) | T1 |
-| H4 | `evaluator_v2.py` on held-out benchmark; compare fine-tuned vs GPT-4o-mini / SQLCoder | Zero-shot LLMs | T2, T3 |
-| H5 | Agent generates N held-out OBDA blocks; score F1 vs gold; measure edit rate | Manual OBDA; BootOX (optional) | T4 |
-| H6 | Run `all_methods`; compute agreement, ρ, calibration subset, UBEM stock Δ | Paper 1 priority-only | T6, T7 |
+
+| Hypothesis | Experiment                                                                                | Baseline                              | Report in             |
+| ---------- | ----------------------------------------------------------------------------------------- | ------------------------------------- | --------------------- |
+| H1         | Ingest same datasources with/without warehouse registration; measure link rate + overhead | Direct `cim_`* ingest                 | T6 (provenance links) |
+| H2         | Run `test-queries.sparql` + held-out SQL pairs; compare VKG vs gold SQL answers           | Raw SQL                               | T5                    |
+| H3         | Publish dataset stats + executability audit on test split                                 | Spider/BIRD-adapted subset (optional) | T1                    |
+| H4         | `evaluator_v2.py` on held-out benchmark; compare fine-tuned vs GPT-4o-mini / SQLCoder     | Zero-shot LLMs                        | T2, T3                |
+| H5         | Agent generates N held-out OBDA blocks; score F1 vs gold; measure edit rate               | Manual OBDA; BootOX (optional)        | T4                    |
+| H6         | Run `all_methods`; compute agreement, ρ, calibration subset, UBEM stock Δ                 | Paper 1 priority-only                 | T6, T7                |
+
 
 ### 10.3 Results tables (T1–T7)
 
-| Table | Rows / columns (draft) |
-|-------|------------------------|
-| **T1** | splits; #pairs; task/domain counts; executability %; top ST_* functions |
-| **T2** | model × {EM, EX, SC, EA} overall + by task type + by complexity |
-| **T3** | fine-tuned vs baselines; ablations (architecture, schema prompt, model size) |
-| **T4** | method × {mapping F1, SQL EX, SPARQL F1, automation %, time/mapping} |
-| **T5** | {schema coverage, query success %, SPARQL F1, p50/p95 latency} |
-| **T6** | per feature: {agreement @τ, MAD, conflict %, provenance coverage %} |
+
+| Table  | Rows / columns (draft)                                                                              |
+| ------ | --------------------------------------------------------------------------------------------------- |
+| **T1** | splits; #pairs; task/domain counts; executability %; top ST_* functions                             |
+| **T2** | model × {EM, EX, SC, EA} overall + by task type + by complexity                                     |
+| **T3** | fine-tuned vs baselines; ablations (architecture, schema prompt, model size)                        |
+| **T4** | method × {mapping F1, SQL EX, SPARQL F1, automation %, time/mapping}                                |
+| **T5** | {schema coverage, query success %, SPARQL F1, p50/p95 latency}                                      |
+| **T6** | per feature: {agreement @τ, MAD, conflict %, provenance coverage %}                                 |
 | **T7** | {ρ(confidence, spread), calibration error, stock demand Δ method swap, Δ low-conf filter vs random} |
+
 
 ### 10.4 Figures
 
@@ -1001,27 +1196,29 @@ flowchart LR
 
 ## Figures & tables checklist
 
-| ID | Title | Section |
-|----|-------|---------|
-| Fig. 0 | Validation gap → confidence approach | Intro |
-| Fig. 1 | Architecture mapped to O1–O6 | §3 |
-| **Fig. 2** | **Five-phase methodology pipeline** | **§4** |
-| **Fig. 3** | **Data-flow entity schema (provenance + VKG)** | **§4** |
-| Fig. 4 | O5 multi-agent VKG pipeline | §8 |
-| Fig. 5 | Warehouse ingest (O1) | §5 |
-| Fig. 6 | Ontology stack layers (O2) | §6 |
-| Fig. 7 | Confidence map (case study) | §10 |
-| Fig. 8 | Method disagreement | §10 |
-| Fig. 9 | Provenance subgraph | §10 |
-| Fig. 10 | Confidence calibration plot | §10 |
-| Fig. 11 | UBEM stock sensitivity | §10 |
-| Table 1 | Objectives O1–O6 (engineering) | Objectives |
-| Table 1b | Hypotheses H1–H6 (quantitative) | Objectives reframing |
-| **Table 2** | **Methodology phases (inputs / outputs / gates)** | **§4** |
-| Table 3 | Provenance + confidence schema | §9 |
-| Table 4 | Confidence level definitions | §2.6.4 |
-| Table 5 | Literature gap synthesis | §2.7 |
-| **T1–T7** | **Quantitative results tables (case study)** | **§10** |
+
+| ID          | Title                                             | Section              |
+| ----------- | ------------------------------------------------- | -------------------- |
+| Fig. 0      | Validation gap → confidence approach              | Intro                |
+| Fig. 1      | Architecture mapped to O1–O6                      | §3                   |
+| **Fig. 2**  | **Five-phase methodology pipeline**               | **§4**               |
+| **Fig. 3**  | **Data-flow entity schema (provenance + VKG)**    | **§4**               |
+| Fig. 4      | O5 multi-agent VKG pipeline                       | §8                   |
+| Fig. 5      | Warehouse ingest (O1)                             | §5                   |
+| Fig. 6      | Ontology stack layers (O2)                        | §6                   |
+| Fig. 7      | Confidence map (case study)                       | §10                  |
+| Fig. 8      | Method disagreement                               | §10                  |
+| Fig. 9      | Provenance subgraph                               | §10                  |
+| Fig. 10     | Confidence calibration plot                       | §10                  |
+| Fig. 11     | UBEM stock sensitivity                            | §10                  |
+| Table 1     | Objectives O1–O6 (engineering)                    | Objectives           |
+| Table 1b    | Hypotheses H1–H6 (quantitative)                   | Objectives reframing |
+| **Table 2** | **Methodology phases (inputs / outputs / gates)** | **§4**               |
+| Table 3     | Provenance + confidence schema                    | §9                   |
+| Table 4     | Confidence level definitions                      | §2.6.4               |
+| Table 5     | Literature gap synthesis                          | §2.7                 |
+| **T1–T7**   | **Quantitative results tables (case study)**      | **§10**              |
+
 
 ---
 
@@ -1046,11 +1243,14 @@ paper2/latex/
 
 ## Open decisions
 
-| # | Topic | Options | Status |
-|---|-------|---------|--------|
-| 1 | Confidence function | Rule-based vs learned | Open |
-| 2 | Provenance storage | `cim_provenance` schema vs extend `building_properties` | Open |
-| 3 | O5 agent framework | LangGraph vs custom | Open |
-| 4 | Case study city | Turin / other | Open |
-| 5 | Paper venue | [TBD] | Open |
-| 6 | H1–H6 success thresholds (X, Y, Z, τ) | Calibrate on pilot run | Open |
+
+| #   | Topic                                 | Options                                                 | Status |
+| --- | ------------------------------------- | ------------------------------------------------------- | ------ |
+| 1   | Confidence function                   | Rule-based vs learned                                   | Open   |
+| 2   | Provenance storage                    | `cim_provenance` schema vs extend `building_properties` | Open   |
+| 3   | O5 agent framework                    | LangGraph vs custom                                     | Open   |
+| 4   | Case study city                       | Turin / other                                           | Open   |
+| 5   | Paper venue                           | [TBD]                                                   | Open   |
+| 6   | H1–H6 success thresholds (X, Y, Z, τ) | Calibrate on pilot run                                  | Open   |
+
+

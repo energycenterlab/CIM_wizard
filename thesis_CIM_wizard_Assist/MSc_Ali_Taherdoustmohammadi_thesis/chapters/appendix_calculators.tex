@@ -1,0 +1,248 @@
+\chapter{CIM Wizard Integrated Calculators}
+\label{app:calculators}
+
+The \texttt{cim\_wizard\_integrated} service exposes its modelling logic through a
+collection of Python ``calculators'' hosted in
+\texttt{app/calculators/}. Each class is initialised with the shared
+\texttt{pipeline\_executor}, giving access to the FastAPI logger, a
+stateful \texttt{data\_manager}, and---when available—an SQLAlchemy or
+Django session. Calculators follow the same pattern:
+\begin{enumerate}[label=\alph*)]
+    \item read prerequisite features via \texttt{pipeline.get\_feature\_safely()};
+    \item run a deterministic or data-driven method (often exposed as
+    \texttt{calculate\_*} or \texttt{by\_*});
+    \item store the result back into the pipeline context, typically under a
+    feature name that matches the class (for example
+    \texttt{building\_area});
+    \item optionally persist the derived values into the PostGIS or 3DCityDB schema.
+\end{enumerate}
+The following sections describe each available calculator, grouped by
+their role inside the CIM Wizard pipeline.
+
+\section{Scenario and Census Initialisation}
+\subsection{Scenario Geometry Calculator}
+\textbf{Class:} \texttt{ScenarioGeoCalculator} (\texttt{scenario\_geo\_calculator.py})\\
+\textbf{Main methods:}
+\begin{itemize}[leftmargin=2em]
+    \item \texttt{calculate\_from\_scenario\_geo()} – accepts the GeoJSON
+    polygon submitted from the UI, generates missing project/scenario
+    identifiers, computes the centroid if the user did not provide map
+    centre information, and stores the derived boundary under
+    \texttt{scenario\_geo}.
+    \item \texttt{calculate\_from\_buildings\_geo()} – when only
+    building footprints are available, the method unions them via
+    Shapely/GeoPandas to obtain a convex hull that plays the role of the
+    scenario boundary.
+\end{itemize}
+Both methods persist the boundary inside the Django model
+\texttt{Project\_Scenario} when the ORM is available.
+
+\subsection{Scenario Census Boundary Calculator}
+\textbf{Class:} \texttt{ScenarioCensusBoundaryCalculator}\\
+\textbf{Main method:} \texttt{calculate\_from\_census\_api()}\\
+The class currently synthesises a census boundary by reusing the
+scenario geometry and wrapping it inside a GeoJSON Feature that contains
+one or more \texttt{census\_zones}. Each zone transports the attributes
+needed by downstream calculators (E8–E16 construction counts, P1
+population, PF1 families). When a SQLAlchemy session exists the method
+stores the MultiPolygon in \texttt{project\_scenario.census\_boundary}.
+
+\subsection{Census Population Calculator}
+\textbf{Class:} \texttt{CensusPopulationCalculator}\\
+\textbf{Main method:} \texttt{calculate\_from\_census\_boundary()}\\
+This utility sums the \texttt{total\_population} field reported in
+the \texttt{scenario\_census\_boundary} feature. When the aggregated
+value is missing it falls back to the per-zone counts. The return value
+is a scalar that becomes the global population budget for volume-based
+distributions.
+
+\section{Geometry Acquisition and Pre-processing}
+\subsection{Building Geo Calculator}
+\textbf{Class:} \texttt{BuildingGeoCalculator}\\
+\textbf{Primary entry points:}
+\begin{itemize}[leftmargin=2em]
+    \item \texttt{calculate\_from\_scenario\_census\_geo()} – validates the
+    scenario boundary, queries OpenStreetMap (via osmnx when available or
+    via Overpass QL otherwise), filters the resulting polygons so that their
+    centroids fall inside the project boundary, and returns a
+    \texttt{FeatureCollection}-like payload under \texttt{building\_geo}.
+    \item \texttt{calculate\_from\_building\_geo()} – ingests raw GeoJSON
+    blobs submitted through the API, normalises IDs and properties, and
+    stores them using the same schema as the OSM-based workflow.
+\end{itemize}
+Helper methods perform OSM usage classification, fallback height
+estimation from tags, and database persistence of geometry records.
+
+\subsection{Building Properties Initialiser}
+\textbf{Class:} \texttt{BuildingPropsCalculator}\\
+\textbf{Main method:} \texttt{init()}\\
+Creates placeholder rows (height/area/volume/floors set to
+\texttt{None}) for each footprint from \texttt{building\_geo}, writes
+them to the vector schema (table \texttt{BuildingProperties}) when the
+SQLAlchemy session is available, and exposes the list as
+\texttt{building\_props}. Subsequent calculators progressively fill the
+missing attributes.
+
+\subsection{Building Geo LoD 1.2 Calculator}
+\textbf{Class:} \texttt{BuildingGeoLod12Calculator}\\
+\textbf{Main method:} \texttt{by\_footprint\_height()}\\
+Generates simplified LoD~1.2 semantic surfaces when both footprints and
+height estimates exist. For every building the calculator crafts
+\texttt{WallSurface}, \texttt{RoofSurface}, and \texttt{GroundSurface}
+records enriched with metadata (surface orientation, area, LoD tag) and
+stores them inside the \texttt{building\_geo\_lod12} feature for later
+export to 3DCityDB.
+
+\section{Physical Feature Calculators}
+\subsection{Area}
+\textbf{Class:} \texttt{BuildingAreaCalculator}\\
+\textbf{Method:} \texttt{calculate\_from\_geometry()}\\
+Reads every footprint from \texttt{building\_geo}, computes the area
+(Shapely projected to UTM~32N with an approximate fallback), logs the
+five most recent samples, writes the results under both
+\texttt{building\_area} and \texttt{building\_areas}, and pushes the
+values into \texttt{BuildingProperties.area}.
+
+\subsection{Height}
+\textbf{Class:} \texttt{BuildingHeightCalculator}\\
+\textbf{Method:} \texttt{calculate\_from\_raster\_tiles()}\\
+Demonstrates the DSM--DTM approach: for the centroid of each building
+the method queries \texttt{cim\_raster.dsm\_raster\_tiles} and
+\texttt{cim\_wizard.dtm\_raster\_tiles} via SQLAlchemy, clamps the
+result between 3~m and 200~m, and stores the list as
+\texttt{building\_height}.
+
+\subsection{Number of Floors}
+\textbf{Class:} \texttt{BuildingNFloorsCalculator}\\
+\textbf{Method:} \texttt{estimate\_by\_height()}\\
+Consumes \texttt{building\_height} and the residential filter (see
+Section~\ref{sec:resfilter}), divides each height by 3~m to obtain an
+integer floor count, skips non-residential buildings, and updates both
+the pipeline feature \texttt{building\_n\_floors} and
+\texttt{BuildingProperties.number\_of\_floors}.
+
+\subsection{Volume}
+\textbf{Class:} \texttt{BuildingVolumeCalculator}\\
+\textbf{Method:} \texttt{calculate\_from\_height\_and\_area()}\\
+Crosses the previously computed heights, areas, and residential flags to
+generate per-building volumes (height $\times$ area). The class logs
+sample calculations, persists the values, and exposes them as both the
+rich \texttt{building\_volume} feature and the convenience list
+\texttt{building\_volumes}.
+
+\section{Residential Filtering and Typology Assignment}
+\subsection{Residential Filter}
+\label{sec:resfilter}
+\textbf{Class:} \texttt{BuildingResidentialFilterCalculator}\\
+\textbf{Method:} \texttt{calculate\_filter\_res()}\\
+Implements a conservative classifier that marks a footprint as
+non-residential when \texttt{area}~$<90~\mathrm{m}^2$, height
+${}<4~\mathrm{m}$, or the OSM \texttt{building}/\texttt{amenity} tags
+match a curated non-residential list. The resulting boolean vector is
+stored as \texttt{filter\_res} and statistics about filtering causes are
+reported in the logs.
+
+\subsection{Building Type Calculator}
+\textbf{Class:} \texttt{BuildingTypeCalculator}\\
+\textbf{Method:} \texttt{by\_census\_osm()}\\
+Starting from the GeoDataFrames produced by the census integration
+branch (Section~\ref{sec:demographics}), this class:
+\begin{enumerate}[label=\roman*),leftmargin=2em]
+    \item forces any building tagged as \texttt{not\_residential\_based\_on\_osm} to be classified as non-residential;
+    \item applies strict thresholds (height $>$~8~m and area $>$~100~m$^2$) to
+    the remaining footprints;
+    \item records zone-level discrepancies between census counts and the
+    assigned types (useful for accuracy reporting).
+\end{enumerate}
+
+\subsection{Construction Year Distribution}
+\textbf{Class:} \texttt{BuildingConstructionYearCalculator}\\
+\textbf{Method:} \texttt{by\_census\_osm()}\\
+Maps the census E8--E16 buckets to year ranges and TABULA periods. For
+each census zone, the function computes the percentage split,
+generates random construction years inside every bucket, shuffles the
+assignments to avoid bias, and attaches three attributes to every
+residential building: \texttt{const\_period\_census},
+\texttt{const\_year}, and \texttt{const\_TABULA}.
+
+\section{Demographic Calculators}
+\label{sec:demographics}
+\subsection{Population Distribution}
+\textbf{Class:} \texttt{BuildingPopulationCalculator}\\
+\textbf{Methods:}
+\begin{itemize}[leftmargin=2em]
+    \item \texttt{calculate\_from\_volume\_distribution()} – uses the total
+    population returned by the census calculator and distributes it
+    proportionally to each residential building volume.
+    \item \texttt{by\_census\_osm()} – operates on the GeoDataFrames,
+    assigning \texttt{n\_people} by weighting the zone population with
+    the ratio between the building volume and the total residential
+    volume in that zone.
+\end{itemize}
+
+\subsection{Families per Building}
+\textbf{Class:} \texttt{BuildingNFamiliesCalculator}\\
+\textbf{Methods:}
+\begin{itemize}[leftmargin=2em]
+    \item \texttt{calculate\_from\_population()} – divides the per-building
+    population by an average family size (2.5) to estimate
+    \texttt{n\_family}.
+    \item \texttt{by\_census\_osm()} – alternative version used inside the
+    GeoDataFrame workflow (defaults to 3 persons per family).
+\end{itemize}
+
+\subsection{Building Demographic Calculator}
+\textbf{Class:} \texttt{BuildingDemographicCalculator}\\
+This orchestrator glues together the previous calculators when the
+GeoDataFrame path is enabled:
+\begin{enumerate}[label=\alph*),leftmargin=2em]
+    \item fetches or calls the scenario census boundary service;
+    \item assigns building types, construction years, volumes, population,
+    and families by delegating to the specialised calculators;
+    \item filters footprints to the project boundary and writes the enriched
+    attributes back to the database;
+    \item composes a final summary under \texttt{building\_demographic},
+    including accuracy reports (for example, whether the number of
+    residential buildings per zone matches census expectations).
+\end{enumerate}
+
+\section{Summary of Feature Dependencies}
+Table~\ref{tab:calc-dependencies} summarises the inputs and outputs of
+each calculator. The table can be used as a quick reference when adding
+new methods to the pipeline.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Calculator inputs and produced features.}
+    \label{tab:calc-dependencies}
+    \begin{tabular}{p{3.6cm}p{5.2cm}p{5.8cm}}
+        \toprule
+        \textbf{Calculator} & \textbf{Required features / services} & \textbf{Produced features / side effects} \\
+        \midrule
+        ScenarioGeo & UI GeoJSON or building footprints & \texttt{scenario\_geo}, optional \texttt{Project\_Scenario} rows \\
+        ScenarioCensusBoundary & \texttt{scenario\_geo} + census API & \texttt{scenario\_census\_boundary}, census boundary persisted to DB \\
+        CensusPopulation & \texttt{scenario\_census\_boundary} & scalar population budget \\
+        BuildingGeo & Scenario boundary or UI features & \texttt{building\_geo}, \texttt{Building} table records \\
+        BuildingProps & \texttt{building\_geo} & \texttt{building\_props}, empty \texttt{BuildingProperties} rows \\
+        BuildingArea & \texttt{building\_geo} & \texttt{building\_area}, \texttt{building\_areas}, DB areas \\
+        BuildingHeight & \texttt{building\_geo}, raster tiles & \texttt{building\_height}, DB heights \\
+        BuildingNFloors & \texttt{building\_height}, \texttt{filter\_res} & \texttt{building\_n\_floors}, DB floor counts \\
+        BuildingVolume & \texttt{building\_height}, \texttt{building\_area}, \texttt{filter\_res} & \texttt{building\_volume}, \texttt{building\_volumes}, DB volumes \\
+        BuildingResidentialFilter & \texttt{building\_geo}, \texttt{building\_area}, \texttt{building\_height} & \texttt{filter\_res} vector \\
+        BuildingType & Census and building GeoDataFrames & Updated GeoDataFrame with \texttt{building\_type} + zone errors \\
+        BuildingConstructionYear & Census and building GeoDataFrames & \texttt{const\_period\_census}, \texttt{const\_year}, \texttt{const\_TABULA} \\
+        BuildingPopulation & \texttt{building\_volume} + census totals or GeoDataFrames & \texttt{building\_population}, \texttt{n\_people} per building \\
+        BuildingNFamilies & \texttt{building\_population} & \texttt{building\_n\_families}, \texttt{n\_family} \\
+        BuildingGeoLoD12 & \texttt{building\_geo}, \texttt{building\_height} & \texttt{building\_geo\_lod12} surfaces \\
+        BuildingDemographic & All of the above GeoDataFrame-based features & \texttt{building\_demographic}, DB updates with demographic fields \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Collectively, these calculators demonstrate how CIM Wizard exposes an
+extensible, object-oriented API for urban feature computation: each
+module documents its expectations through the feature names and can be
+replaced or expanded without touching the rest of the pipeline. This
+appendix serves as the authoritative reference when integrating new
+calculators or when tracing data provenance within the platform.
+

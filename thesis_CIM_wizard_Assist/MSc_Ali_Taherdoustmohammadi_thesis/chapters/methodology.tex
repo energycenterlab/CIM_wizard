@@ -1,0 +1,1520 @@
+\chapter{Methodology}
+\label{ch:methodology}
+
+This chapter presents the comprehensive methodology for building an LLM-powered natural language interface to spatial SQL databases, structured around two integrated systems: CIM Wizard Integrated (the object-oriented platform) and CIM Assist (the natural language interface with three-stage dataset generation, fine-tuning, and agent integration).
+
+\section{System Overview}
+
+The complete framework integrates five interconnected components that together enable natural language access to spatial databases for urban energy modeling. The foundation is provided by CIM Wizard Integrated, an object-oriented FastAPI platform implementing a calculator-based architecture that enables flexible city information modeling through extensible feature computation methods. This platform serves as both the data source and the target database for the natural language interface, providing the spatial SQL queries that the system must learn to generate.
+
+The dataset generation pipeline, designated as AI4DB, employs a two-stage approach that transforms structured SQL templates into diverse training samples through systematic template expansion followed by multi-strategy LLM augmentation. This process generates high-quality question-SQL pairs with frequency-based distribution matching actual CIM Wizard usage patterns, ensuring that the training data reflects real-world query characteristics rather than artificial balance.
+
+The fine-tuning pipeline, labeled TXT2SSQL, trains specialized models using a direct question-to-SQL (Q2SQL) architecture that learns to generate PostGIS spatial queries directly from natural language questions. This single-stage training approach balances performance with computational efficiency, enabling domain adaptation on consumer-grade hardware through parameter-efficient fine-tuning techniques.
+
+The evaluation framework provides comprehensive multi-metric assessment through seven complementary metrics (NoErr, EM, Deep EM, EX, SC, EA, plus robustness metrics) that measure different aspects of model performance from dataset quality validation to production readiness. This systematic evaluation approach enables detailed understanding of model behavior across different query types, complexity levels, and domain patterns.
+
+Finally, the agent integration component, CIM Assist, deploys the fine-tuned models through a LangGraph-based agent architecture with database introspection tools, enabling iterative self-correction through execution feedback. This production-ready service transforms the fine-tuned models into an accessible natural language interface that bridges the gap between non-technical energy researchers and complex spatial database queries.
+
+Figure~\ref{fig:system_overview} illustrates the complete architecture.
+\begin{figure}%[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{Figures/system-overview.jpg}
+\caption{CIM Wizard and CIM Assist position in COESI system architecture}
+\label{fig:system_overview}
+\end{figure}
+
+Figure~\ref{fig:system_overview} illustrates the complete architecture, showing how these five components integrate to form a cohesive system that transforms expert-oriented database access into an accessible research tool for urban energy modeling.
+
+
+
+\section{CIM Wizard: Object-Oriented Platform}
+\label{sec:cimwizard}
+
+CIM Wizard Integrated provides the foundational platform enabling flexible city information modeling through an object-oriented calculator-based architecture. The framework generates GIS-based city information models from sparse and heterogeneous urban datasets, producing outputs compliant with CityJSON extended with Energy and Utility ADEs. The system is designed for maximum flexibility and extensibility, implementing a microservice architecture~\cite{de2019monolithic} that enables modular development and deployment.
+
+\subsection{Design Principles and Motivation}
+
+The platform adheres to four core principles addressing key limitations identified in existing urban energy modeling frameworks. First, extensibility enables researchers to add new calculators and methods without modifying core code, facilitating custom building feature implementation. Second, modularity ensures each calculator encapsulates independent feature computation with well-defined interfaces. Third, flexibility supports multiple calculation methods per feature with automatic fallback strategies to handle sparse data conditions. Fourth, seamless integration provides multi-schema database access through a unified API, enabling vector-census-raster data fusion.
+
+The architecture enables dynamic and highly customizable pipeline orchestration for CIM generation. A pipeline is defined as a sequence of feature calculators, which may execute synchronously or asynchronously depending on their input dependencies. Users can construct pipelines manually, chaining feature-method pairs to reflect specific project needs, or rely on predefined milestones that encapsulate common processing stages. Independent calculators execute in parallel, while dependent calculators are scheduled sequentially based on automatic dependency resolution.
+
+\subsection{Calculator Architecture}
+
+\subsubsection{Calculator Base Class}
+
+All calculators inherit from a base class defining the interface:
+
+\begin{lstlisting}[style=pythonstyle, caption=Calculator base class structure]
+class BaseCalculator:
+    def __init__(self, building_id, db_session):
+        self.building_id = building_id
+        self.db = db_session
+        self.methods = self._discover_methods()
+    
+    def _discover_methods(self):
+        """Automatically discover calculate_method* functions"""
+        return [m for m in dir(self) 
+                if m.startswith('calculate_method')]
+    
+    def execute(self, method_name=None):
+        """Execute specified method or try all in priority order"""
+        if method_name:
+            return self._call_method(method_name)
+        
+        # Try all methods until one succeeds
+        for method in self.methods:
+            try:
+                result = self._call_method(method)
+                if result is not None:
+                    return result
+            except Exception as e:
+                continue  # Try next method
+        
+        return None  # All methods failed
+\end{lstlisting}
+
+\subsubsection{Example Calculator: Building Height}
+
+A concrete calculator implementing multiple calculation methods:
+
+\begin{lstlisting}[style=pythonstyle, caption=Building height calculator with multiple methods]
+class BuildingHeightCalculator(BaseCalculator):
+    
+    def calculate_method1_raster(self):
+        """Primary: Calculate from DSM - DTM raster difference"""
+        # Get building geometry
+        building = self.db.query(Building)\
+            .filter_by(id=self.building_id).first()
+        
+        # Sample DSM (Digital Surface Model)
+        dsm_value = RasterService.get_value(
+            'cim_raster.dsm', 
+            building.building_geometry
+        )
+        
+        # Sample DTM (Digital Terrain Model)
+        dtm_value = RasterService.get_value(
+            'cim_raster.dtm', 
+            building.building_geometry
+        )
+        
+        return dsm_value - dtm_value if both else None
+    
+    def calculate_method2_census(self):
+        """Fallback: Estimate from census building age"""
+        building = self.db.query(Building)\
+            .filter_by(id=self.building_id).first()
+        
+        # Find intersecting census tract
+        census = self.db.query(CensusTract)\
+            .filter(
+                ST_Intersects(
+                    CensusTract.tract_geometry,
+                    building.building_geometry
+                )
+            ).first()
+        
+        # Estimate height from building age
+        if census and census.avg_building_age:
+            # Older buildings typically lower
+            return estimate_height_from_age(census.avg_building_age)
+        
+        return None
+    
+    def calculate_method3_default(self):
+        """Last resort: Use default value"""
+        return 10.0  # meters (typical residential)
+\end{lstlisting}
+
+\subsection{Pipeline Orchestration and Execution}
+\label{subsec:pipeline_orchestration}
+
+The methodology enables dynamic and highly customizable pipeline orchestration for CIM generation through a sophisticated execution framework. At the core lies a robust fallback mechanism: if a method fails because it cannot compute a feature for all buildings or its inputs are unavailable, the orchestrator automatically invokes lower-priority methods as specified in the configuration catalog. This adaptive strategy enhances resilience to missing data and enables modular, incremental data enrichment.
+
+The system supports three execution modes to accommodate different use cases: (1) \textbf{Automatic Mode} where the executor selects the best method based on data availability, (2) \textbf{Explicit Mode} where users specify exact method chains for reproducible research, and (3) \textbf{Predefined Pipelines} offering named workflows for common analyses. Advanced users may define explicit chains using dedicated syntax (\texttt{feature.method | feature.method | ...}), granting fine-grained control over execution logic for algorithm comparison and research prototyping.
+
+\subsection{Context-Aware Data Management}
+
+The core of a pipeline is the context manager that dynamically manages input data, dependencies, and intermediate results across all feature calculators. This context object acts as a shared memory space, receiving and distributing inputs from multiple sources, including user uploads, database records, external services, and default assumptions. Each feature calculator interacts with the context manager to retrieve required inputs and store outputs without explicit coupling to other modules.
+
+If a method requires a feature that has not yet been computed, the orchestrator automatically resolves this by invoking the appropriate upstream calculators in the correct order. This context-based execution facilitates robustness and traceability while allowing runtime introspection, where users can inspect and debug intermediate states, validate assumptions, or inject custom values---particularly useful in urban data environments characterized by heterogeneity, partial completeness, and evolving data availability.
+
+\subsection{Flexible Data Input Options}
+
+The framework accommodates both richly detailed and minimally specified input datasets. Users may upload building footprints, census data, energy attributes, or utility network layouts using standard formats such as GeoJSON, Shapefiles, pandapower, or tabular CSV with configuration metadata. In cases where only minimal input is available, such as a boundary polygon defining the study area, the system invokes external data services to retrieve necessary information. OpenStreetMap (OSM) is queried to obtain building geometries, census APIs provide demographic attributes, and elevation services support height estimation. If no data is found, fallback mechanisms populate fields using national defaults or statistical estimates, such as the TABULA archetypes for building stock. This flexible input strategy ensures operation under a wide range of data conditions, making it suitable for both research and operational planning across varied urban contexts.
+
+\subsection{Multi-Schema Database Design}
+
+CIM Wizard integrates three PostGIS schemas optimized for urban energy analysis:
+
+\subsubsection{Vector Schema (cim\_vector)}
+
+The vector schema contains geometric entities essential for spatial urban analysis. Building footprints are stored as polygon geometries with associated properties and project/scenario linkages. Research projects are defined with their spatial extents and metadata. Energy scenarios (baseline, optimized, and future configurations) enable comparative analysis. Electrical infrastructure is represented through grid buses marking connection points and grid lines defining distribution networks.
+
+\subsubsection{Census Schema (cim\_census)}
+
+The census schema integrates Italian ISTAT demographic data through census tract boundaries with over 100 attributes. Key fields include population counts, housing units, building age distributions, and household size statistics. Spatial representation uses MultiPolygon geometries to capture complex tract boundaries. A notable technical challenge involves case-sensitive column naming conventions requiring lowercase unquoted identifiers for PostgreSQL compatibility.
+
+\subsubsection{Raster Schema (cim\_raster)}
+
+The raster schema stores elevation and surface models essential for height calculations. Digital Terrain Models (DTM) represent ground elevation, while Digital Surface Models (DSM) capture building and vegetation tops. These rasters are stored at 1-5 meter cell resolution, supporting operations including value sampling at specific locations, spatial clipping to study areas, and statistical aggregation.
+
+\subsection{Pipeline Execution System}
+
+\subsubsection{Dependency Resolution}
+
+The executor automatically determines calculator dependencies:
+
+\begin{lstlisting}[style=pythonstyle, caption=Automatic dependency resolution]
+class PipelineExecutor:
+    def __init__(self, calculators: List[BaseCalculator]):
+        self.calculators = calculators
+        self.dependency_graph = self._build_dependency_graph()
+    
+    def _build_dependency_graph(self):
+        """Build directed acyclic graph of calculator dependencies"""
+        graph = {}
+        for calc in self.calculators:
+            # Check which other calculators this one requires
+            dependencies = calc.get_dependencies()
+            graph[calc.name] = dependencies
+        return graph
+    
+    def execute_pipeline(self, building_id):
+        """Execute calculators in topologically sorted order"""
+        sorted_calcs = topological_sort(self.dependency_graph)
+        results = {}
+        
+        for calc_name in sorted_calcs:
+            calculator = self._get_calculator(calc_name)
+            result = calculator.execute()
+            results[calc_name] = result
+        
+        return results
+\end{lstlisting}
+
+\subsubsection{Execution Modes}
+
+Three modes accommodate different use cases:
+
+\begin{enumerate}[leftmargin=1.2em]
+  \item \textbf{Automatic Mode}: Executor selects best method based on data availability
+  
+  \begin{lstlisting}[style=pythonstyle]
+results = executor.execute_pipeline(building_id)
+  \end{lstlisting}
+  
+  \item \textbf{Explicit Mode}: User specifies exact method chain
+  
+  \begin{lstlisting}[style=pythonstyle]
+results = executor.execute_pipeline(
+    building_id,
+    methods={'height': 'calculate_method1_raster',
+             'area': 'calculate_method1_postgis'}
+)
+  \end{lstlisting}
+  
+  \item \textbf{Predefined Pipelines}: Named workflows for common analyses
+  
+  \begin{lstlisting}[style=pythonstyle]
+results = executor.execute_predefined(
+    building_id,
+    pipeline_name='energy_assessment'
+)
+  \end{lstlisting}
+\end{enumerate}
+
+\subsection{Framework Architecture and Components}
+
+The CIM Wizard architecture is organized into four interconnected component layers that together enable the transformation of sparse urban datasets into standardized City Information Models, as illustrated in Figure~\ref{fig:cim_wizard_arch}.
+
+\begin{figure}%[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{COMET (1).jpg}
+\caption{CIM Wizard high-level architecture with four interconnected layers: Data Source Layer, Core CIM Wizard, Feature Calculator Modules, and Representation Layer}
+\label{fig:cim_wizard_arch}
+\end{figure}
+
+\subsubsection{Data Source Layer}
+
+The Data Source Layer comprises four key components: (1) \textit{PostGIS (CIM Wizard)} serves as the central operational database storing both spatial geometries and semantic attributes with normalized structure enabling scenario-based analysis; (2) \textit{External Data Sources} including OpenStreetMap accessed through \texttt{osmnx} and Overpass API, regional cadastral databases via WFS, census APIs, DSM elevation services, and TABULA archetype datasets; (3) \textit{User Input} allowing uploads in GeoJSON, Shapefile, or tabular formats with configuration-based schema mapping; and (4) \textit{PostGIS (3DCityDB)} acting as long-term storage extended with Energy ADE and Utility Network ADE for CityJSON-compliant exports.
+
+The database schema follows a normalized structure where geometric entities are maintained separately from their associated descriptive data, organized into modular feature sets. Each enriched record is indexed using a composite key linking it to the geometric object and classification schema consisting of project and scenario identifiers, as shown in Figure~\ref{fig:cim_db_schema}. This enables the same geometric entity to have different feature data across multiple scenarios, supporting efficient memory usage, rapid scenario switching, and comparative simulation workflows.
+
+\begin{figure}%[htbp]
+\centering
+\includegraphics[width=0.7\textwidth]{COMET-2.pdf}
+\caption{Generic entity-relations diagram of CIM Wizard PostGIS database schema enabling project and scenario-based organization}
+\label{fig:cim_db_schema}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{Figures/cimwizard_data_structure.jpg}
+\caption{CIM Wizard integrated data structure: Multi-schema PostGIS database architecture with vector geometries (cim\_vector), census demographics (cim\_census), and raster elevation models (cim\_raster) supporting comprehensive urban energy analysis}
+\label{fig:cimwizard_data_structure}
+\end{figure}
+
+\subsubsection{Core CIM Wizard Layer}
+
+The Core CIM Wizard layer governs execution logic and data flow through modular components: (1) \textit{Pipeline Orchestrator} dynamically constructs and executes processing workflows based on user-defined objectives and configuration rules, handling dependencies and implementing fallback strategies; (2) \textit{Context Manager} abstracts all database interactions, acting as the central interface for reading inputs and persisting outputs during pipeline execution while enforcing schema consistency; (3) \textit{Configuration Catalog} harmonizes all microservices, storing their endpoints, data source locations, and method prioritization for all integrated feature calculators; and (4) \textit{Utility Block} containing consistency checking, service status monitoring, and format converters including GeoJSON provider, GeoServer publisher, and CityJSON mapper.
+
+\subsubsection{Feature Calculator Modules Layer}
+
+The Features Calculator Modules layer comprises two complementary categories: \textit{Integrated Feature Calculators} embedded directly within CIM Wizard core and invoked by the pipeline orchestrator, implementing specific building or scenario-level features as independent Python classes; and \textit{External Feature Services} operating as independent web services due to computational complexity, including the Network Generator/Integrator for power grid and district heating networks, and PV Estimator based on~\cite{bottaccioli2017gis}. External services operate outside the pipeline orchestrator but link to the CIM Wizard database via HTTP/REST interfaces, acting autonomously and mapping results back into the schema.
+
+\subsubsection{Representation Layer}
+
+The representation layer consists of GeoServer for serving geospatial data over OGC-compliant protocols (WMS, WFS) and a React-based graphical user interface for end-user interaction. CIM Wizard publishes vector data to GeoServer and provides standardized web services for visualization and data access.
+
+\subsection{Bridging GeoJSON to CityJSON via TABULA Integration}
+
+CIM Wizard's calculator-based architecture enables systematic assignment of TABULA archetypes to buildings through a multi-step process. The complete schema mapping between CIM Wizard data structures and 3DCityDB with Energy ADE is illustrated in Appendix~\ref{app:citygml_schema} (Figure~\ref{fig:citygml_schema}), showing how each scenario maps to a CityModel, each building maps to a CityObject, and TABULA-derived attributes populate the Energy ADE thermal and system properties.
+
+\paragraph{Step 1: Feature Calculation}
+
+CIM Wizard calculates essential building features across four categories: geometric features (height, floor count, footprint area, volume), demographic features (usage type, family count), temporal features (construction period from census or OSM data), and contextual features (location, urban density, surrounding typologies).
+
+\paragraph{Step 2: Archetype Assignment}
+
+The TABULA Building Type Calculator classifies each building by matching calculated features against archetype criteria including usage pattern (residential/commercial), size characteristics (floors, families, volume), construction period (temporal classification), and geographic context (country-specific tables).
+
+\paragraph{Step 3: U-Value Assignment}
+
+CIM Wizard retrieves standardized parameters from TABULA databases including building envelope U-values (wall, roof, floor, window thermal transmittance), construction details (material layers, insulation thickness, glazing properties), energy system parameters (typical heating/cooling systems with efficiency ratings and fuel types), and renewable energy potential (solar orientation, roof area, typical PV/thermal installations).
+
+\paragraph{Step 4: CityGML Energy ADE Storage}
+
+Retrieved parameters are stored in CityGML Energy ADE format with thermal boundary properties applied to semantic surfaces (\texttt{RoofSurface}, \texttt{WallSurface}, \texttt{GroundSurface}), construction elements stored in the Energy ADE construction module, energy systems linked to building objects, and energy performance indicators (certificates, consumption estimates) enabling simulation tool integration. The detailed schema structure and attribute mapping are documented in Appendix~\ref{app:citygml_schema}.
+
+\subsubsection{TABULA Italy Building Archetypes}
+
+The TABULA (Typology Approach for Building Stock Energy Assessment) project provides standardized building archetypes for European countries, enabling consistent thermal characterization of building stocks. For Italy, TABULA defines four primary residential building types across eight construction periods, each with characteristic envelope properties and energy systems that can be directly mapped to 3DCityDB Energy ADE attributes.
+
+Table~\ref{tab:tabula_italy} presents the complete TABULA Italy residential building archetypes with thermal properties. The U-values decrease significantly after 1976 following Italy's first energy regulation (Law 373/1976) and again after 2006 with the implementation of the Energy Performance of Buildings Directive (D.Lgs. 192/2005). Modern buildings (2006--present) achieve U-values below 0.35 W/(m²·K) for walls and roofs, representing a 7--10x improvement over pre-1900 construction.
+
+\begin{table}[htbp]
+\centering
+\caption{TABULA Italy residential building archetypes with thermal properties and energy systems mappable to 3DCityDB Energy ADE}
+\label{tab:tabula_italy}
+\scriptsize
+\begin{tabular}{l|cccc|cccc}
+\toprule
+\textbf{Construction} & \multicolumn{4}{c|}{\textbf{U-Values [W/(m²·K)]}} & \multicolumn{4}{c}{\textbf{Energy Systems \& Parameters}} \\
+\textbf{Period} & \textbf{Wall} & \textbf{Roof} & \textbf{Floor} & \textbf{Window} & \textbf{Heating} & \textbf{DHW} & \textbf{WWR} & \textbf{$\eta$} \\
+\midrule
+\multicolumn{9}{l}{\textbf{SFH -- Single-Family House}} \\
+\midrule
+Before 1900 & 2.58 & 2.50 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.10 & 0.65 \\
+1901--1920 & 2.40 & 2.50 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.12 & 0.65 \\
+1921--1945 & 1.80 & 2.50 & 1.88 & 4.90 & Oil boiler & Gas boiler & 0.12 & 0.72 \\
+1946--1960 & 1.48 & 2.20 & 2.00 & 4.90 & Gas boiler & Gas boiler & 0.15 & 0.78 \\
+1961--1975 & 1.30 & 1.80 & 1.60 & 4.90 & Gas boiler & Gas boiler & 0.18 & 0.80 \\
+1976--1990 & 0.76 & 1.14 & 0.76 & 2.80 & Gas boiler & Gas boiler & 0.20 & 0.85 \\
+1991--2005 & 0.50 & 0.50 & 0.60 & 2.40 & Cond. boiler & Cond. boiler & 0.22 & 0.92 \\
+2006--Present & 0.34 & 0.28 & 0.33 & 2.20 & Heat pump & Heat pump & 0.25 & 3.50 \\
+\midrule
+\multicolumn{9}{l}{\textbf{TH -- Terraced House (Townhouse)}} \\
+\midrule
+Before 1900 & 2.40 & 2.50 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.10 & 0.65 \\
+1901--1920 & 2.20 & 2.50 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.12 & 0.65 \\
+1921--1945 & 1.60 & 2.30 & 1.88 & 4.90 & Oil boiler & Gas boiler & 0.12 & 0.72 \\
+1946--1960 & 1.35 & 1.80 & 1.70 & 4.90 & Gas boiler & Gas boiler & 0.15 & 0.78 \\
+1961--1975 & 1.15 & 1.50 & 1.50 & 4.90 & Gas boiler & Gas boiler & 0.18 & 0.80 \\
+1976--1990 & 0.70 & 1.00 & 0.70 & 2.80 & Gas boiler & Gas boiler & 0.20 & 0.85 \\
+1991--2005 & 0.45 & 0.45 & 0.55 & 2.40 & Cond. boiler & Cond. boiler & 0.22 & 0.92 \\
+2006--Present & 0.32 & 0.26 & 0.30 & 2.00 & Heat pump & Heat pump & 0.25 & 3.50 \\
+\midrule
+\multicolumn{9}{l}{\textbf{MFH -- Multi-Family House}} \\
+\midrule
+Before 1900 & 2.30 & 2.50 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.12 & 0.65 \\
+1901--1920 & 2.00 & 2.30 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.14 & 0.65 \\
+1921--1945 & 1.50 & 2.00 & 1.88 & 4.90 & Oil boiler & Gas boiler & 0.15 & 0.72 \\
+1946--1960 & 1.20 & 1.47 & 1.88 & 4.90 & Gas boiler & Gas boiler & 0.18 & 0.78 \\
+1961--1975 & 1.05 & 1.42 & 1.30 & 4.90 & Gas boiler & Gas boiler & 0.20 & 0.80 \\
+1976--1990 & 0.65 & 0.90 & 0.65 & 2.80 & Gas boiler & Gas boiler & 0.22 & 0.85 \\
+1991--2005 & 0.42 & 0.40 & 0.50 & 2.40 & Cond. boiler & Cond. boiler & 0.24 & 0.92 \\
+2006--Present & 0.30 & 0.25 & 0.28 & 1.80 & Heat pump & Heat pump & 0.28 & 3.50 \\
+\midrule
+\multicolumn{9}{l}{\textbf{AB -- Apartment Block}} \\
+\midrule
+Before 1900 & 2.20 & 2.50 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.14 & 0.65 \\
+1901--1920 & 1.90 & 2.20 & 1.88 & 5.00 & Coal stove & Elec. boiler & 0.16 & 0.65 \\
+1921--1945 & 1.40 & 1.80 & 1.88 & 4.90 & Oil boiler & Centr. gas & 0.18 & 0.72 \\
+1946--1960 & 1.15 & 1.45 & 1.88 & 4.90 & Centr. gas & Centr. gas & 0.20 & 0.78 \\
+1961--1975 & 1.10 & 1.42 & 1.30 & 4.90 & Centr. gas & Centr. gas & 0.22 & 0.80 \\
+1976--1990 & 0.80 & 1.00 & 0.70 & 2.80 & Centr. gas & Centr. gas & 0.24 & 0.85 \\
+1991--2005 & 0.40 & 0.30 & 0.45 & 2.40 & Cond. boiler & Cond. boiler & 0.26 & 0.92 \\
+2006--Present & 0.28 & 0.22 & 0.26 & 1.60 & Heat pump & Heat pump & 0.30 & 3.50 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.2cm}
+\footnotesize
+\textbf{Legend:} DHW = Domestic Hot Water; WWR = Window-to-Wall Ratio; $\eta$ = System Efficiency (COP for heat pumps).\\
+Cond. = Condensing; Centr. = Centralized. Values derived from TABULA WebTool~\cite{tabula-webtool} and EPISCOPE project.
+\end{table}
+
+The building type classification follows Italian residential building conventions: Single-Family Houses (SFH) are detached buildings with 1--2 floors typically housing one family; Terraced Houses (TH) share walls with adjacent units in row configurations; Multi-Family Houses (MFH) contain 3--6 units across 2--4 floors; and Apartment Blocks (AB) are larger structures with more than 6 units and typically 4+ floors, often featuring centralized heating systems.
+
+\subsubsection{TABULA to Energy ADE Attribute Mapping}
+
+Table~\ref{tab:tabula_energy_ade_mapping} defines the systematic mapping between TABULA archetype parameters and 3DCityDB Energy ADE schema elements. This mapping enables automated population of Energy ADE attributes when CIM Wizard assigns TABULA archetypes to buildings, ensuring semantic interoperability with CityGML-compliant tools and simulation platforms.
+
+\begin{table}[htbp]
+\centering
+\caption{TABULA parameter to 3DCityDB Energy ADE attribute mapping}
+\label{tab:tabula_energy_ade_mapping}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{TABULA Parameter} & \textbf{Energy ADE Class} & \textbf{Energy ADE Attribute} \\
+\midrule
+\multicolumn{3}{l}{\textit{Thermal Envelope Properties}} \\
+Wall U-Value & ThermalComponent & uValue \\
+Roof U-Value & ThermalComponent & uValue \\
+Floor U-Value & ThermalComponent & uValue \\
+Window U-Value & ThermalOpening & uValue \\
+Window-to-Wall Ratio & ThermalOpening & openableRatio \\
+Wall/Roof/Floor Area & ThermalBoundary & area \\
+\midrule
+\multicolumn{3}{l}{\textit{Construction Properties}} \\
+Construction Materials & Construction & constructionWeight \\
+Insulation Thickness & Layer & thickness \\
+Material Conductivity & Material & conductivity \\
+\midrule
+\multicolumn{3}{l}{\textit{Energy System Properties}} \\
+Heating System Type & EnergyConversionSystem & conversionSystemType \\
+Heating Efficiency & EnergyConversionSystem & efficiencyIndicator \\
+DHW System Type & EnergyConversionSystem & conversionSystemType \\
+Fuel Type & EnergyConversionSystem & energyCarrier \\
+Nominal Power & EnergyConversionSystem & nominalPower \\
+Distribution Losses & EnergyDistributionSystem & distributionPerimeter \\
+\midrule
+\multicolumn{3}{l}{\textit{Building Properties}} \\
+Building Age Class & Building & yearOfConstruction \\
+Refurbishment State & Building & refurbishmentClass \\
+Building Type & Building & buildingType \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The integration enables CIM Wizard to transform sparse GeoJSON building footprints into semantically rich CityJSON models with complete thermal characterization. When a building's construction period and type are determined (from census data or OSM tags), the corresponding TABULA archetype provides all necessary parameters for Energy ADE population, enabling downstream energy simulation without manual data entry.
+
+\subsection{Detailed Calculator Implementations}
+
+The framework implements comprehensive calculators covering geometric, demographic, and energy features, each with multiple fallback methods ensuring robustness to sparse data:
+
+\subsubsection{Geometric Feature Calculators}
+
+\paragraph{Scenario Geometry Calculator} initiates each project by defining the spatial context. If a user-defined project boundary is provided, the system processes it to extract a unique project boundary, determine its centroid, and set metadata including coordinate reference system (CRS), zoom level, and assign unique project and scenario identifiers. In the absence of input, the system derives the project boundary algorithmically by applying a convex hull operation to available building footprints, ensuring a minimal and accurate spatial boundary.
+
+\paragraph{Building Geometry Calculator} validates or acquires building footprint layers. When no initial building data is supplied, the system queries OpenStreetMap using both \texttt{osmnx} library and Overpass API to retrieve buildings within the project boundary. It integrates an intelligent classification layer that preserves European mixed-use patterns (e.g., residential units above retail shops) while filtering out buildings not meeting geometric criteria (e.g., height $<$ 8 m or area $<$ 100 m\textsuperscript{2}). User-uploaded GeoJSON layers are normalized, assigned unique identifiers, and geometry-validated.
+
+\paragraph{Building Height Calculator} implements a three-tiered fallback system: (1) Primary method queries raster elevation services to compute height as DSM minus DTM difference, batching requests in groups of 100 with coordinate transformation and error management; (2) Fallback extracts height values from OSM tags using regex-based parsing to handle inconsistent formats (meters, feet, free-text); (3) Default assumes 12 meters reflecting a typical 4-floor building with 3.0 m/floor heuristic.
+
+\paragraph{Building Area Calculator} projects geometries from geographic coordinates (WGS84) to local projected CRS for accurate area computation, handling both Polygon and MultiPolygon types with fallback approximations if projections are infeasible.
+
+\paragraph{Building Volume Calculator} computes volumetric space via height $\times$ area product with atomic transaction handling. Number of floors is estimated applying height-based heuristic (1 floor per 3 meters), rounded to nearest integer---an approximate but rapid method suitable for energy simulation archetype assignment.
+
+\subsubsection{Demographic Feature Calculators}
+
+\paragraph{Scenario Census Boundary Calculator} queries remote census APIs using the project's spatial extent, retrieves all intersecting census zones, applies geometric union with buffered boundaries to avoid over-dilution, and stores relevant demographic variables including total population, family count per type, and residential building construction epochs.
+
+\paragraph{Building Usage Type Calculator} filters buildings through two-step process: (1) removes explicitly non-residential types using OSM tags (schools, hospitals) but retains mixed-use buildings when residential use is inferred; (2) applies geometric filters to exclude structures unlikely to house residents based on size and height.
+
+\paragraph{Building Population Calculator} allocates population across residential buildings proportionally to their volume, approximating population density per building. Family counts are inferred using division by average family size (e.g., 3 people), producing realistic integer values.
+
+\paragraph{Building Demographic Calculator} orchestrates census acquisition, building geometry queries, height and volume computation, usage classification, and demographic allocation. It includes zone-level accuracy reporting and random assignment of construction year using weighted distributions from census periods, enabling buildings to be tagged with plausible construction epochs.
+
+\subsubsection{Energy Feature Calculators}
+
+\paragraph{Building Geo LoD 1.2 Calculator} constructs semantic surfaces including \texttt{RoofSurface}, \texttt{WallSurface}, and \texttt{GroundSurface} by extruding 2D building footprints according to calculated heights. Each surface is enriched with geometric metadata (orientation, area, azimuth angle), resulting in LoD 1.2-compliant CityJSON geometry structure.
+
+\paragraph{TABULA Building Type Calculator} classifies each building into representative typology based on number of floors, family count, and usage pattern. Classification is mapped to city-specific construction table derived from TABULA and local building physics references, providing U-values, R-values, construction materials, and refurbishment class identifiers.
+
+\paragraph{Thermal Boundary Calculator} applies construction parameters to respective building surfaces through Energy ADE construction module. At this point, all required parameters are available to utilize TABULA archetypes for calculating U-values of the building envelope components, resulting in a thermally enriched geometric model with wall transmittance, roof insulation, and ground coupling characteristics.
+
+\paragraph{Energy System Calculator} assigns representative heating and renewable systems (gas boilers, heat pumps, photovoltaic arrays) based on typological and temporal indicators derived from TABULA archetypes. Each system is characterized by fuel type, nominal efficiency, installed capacity, and age class through rule-based logic supporting batch processing across entire scenarios.
+
+\subsubsection{Additional Calculators}
+
+Beyond the core geometric, demographic, and energy calculators, the framework includes specialized calculators for solar potential through raster solar irradiance sampling, grid distance determination via network analysis to the nearest electrical bus, proximity analysis measuring distances to urban amenities, and census integration enabling demographic attribute extraction and allocation.
+
+Figure~\ref{fig:cim_pipelines} illustrates how methods from different calculators can be chained across execution paths with green and red arrows representing different user-defined workflows and fallback mechanisms.
+
+\begin{figure}%[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{COMET-1.pdf}
+\caption{Possible workflow pipelines showing feature calculators with multiple methods chained across execution paths. Green dashed lines illustrate fallback mechanisms with defined priority, while red lines show alternative execution paths users can configure.}
+\label{fig:cim_pipelines}
+\end{figure}
+
+\subsection{Extensibility for Researchers}
+
+A core strength of the methodology is its extensibility: it allows developers to introduce new computational logic for existing features as well as adding new features without altering the internal orchestration engine. This is achieved through modular design where each feature calculator is defined as a standalone class in object-oriented programming. These classes adhere to a common interface and are structured to encapsulate one or more estimation methods.
+
+To register a new calculator, the developer simply declares the class in the configuration catalog, defining available methods, input dependencies, execution priorities, and expected outputs. This configuration is dynamically loaded at runtime and serves as the central decision-making layer for pipeline execution. Importantly, no changes are required in the core logic or orchestration engine; the new class becomes automatically available once the configuration is updated. This decoupled approach accelerates prototyping, encourages experimentation, and enables parallel development without compromising system stability.
+
+\subsubsection{Method Resolution and Fallback Logic}
+
+When the pipeline is triggered for a specific feature, the orchestrator follows a multi-step resolution procedure. It begins by consulting the configuration catalog to identify all registered methods associated with the target feature, ranked by developer-defined priority. For each method in descending order, the system evaluates availability of required inputs (spatial geometries, demographic attributes, previously computed features). If all dependencies are satisfied, the method is executed. If the result is valid and non-null, it is stored; otherwise, the system proceeds to the next method. This fallback-driven mechanism ensures resilience to missing data and supports integration of multi-tiered estimation logic.
+
+\subsubsection{Runtime Priority Overrides}
+
+The methodology provides runtime override mechanism for method prioritization, particularly useful during sensitivity analysis, calibration studies, or comparative assessments of different estimation strategies. Through dedicated API endpoints, users or developers can inject temporary priority settings for selected features without altering the underlying configuration file. These overrides are interpreted at runtime and take precedence over default priority hierarchy, enhancing usability in both research and operational scenarios.
+
+\paragraph{Example: Adding Rooftop Area Calculator}
+
+\begin{lstlisting}[style=pythonstyle, caption=Extending platform with new calculator]
+class RooftopAreaCalculator(BaseCalculator):
+    """Calculate usable rooftop area for solar panels"""
+    
+    def calculate_method1_3d_model(self):
+        """Use 3D building model if available"""
+        # Implementation using 3D geometry
+        pass
+    
+    def calculate_method2_footprint_ratio(self):
+        """Estimate as percentage of footprint area"""
+        footprint_area = BuildingAreaCalculator(
+            self.building_id, self.db
+        ).execute()
+        
+        # Assume 80% of footprint is usable
+        return footprint_area * 0.8 if footprint_area else None
+
+# Register new calculator
+CALCULATOR_REGISTRY['rooftop_area'] = RooftopAreaCalculator
+\end{lstlisting}
+
+\subsection{API Endpoints}
+
+CIM Wizard exposes RESTful API endpoints enabling programmatic access to all platform capabilities. The \texttt{POST /calculate} endpoint executes a single calculator for a specified building, while \texttt{POST /pipeline} runs complete calculator pipelines. Batch processing is supported through \texttt{POST /batch} for multiple buildings. Discovery endpoints include \texttt{GET /calculators} to list available calculators and their methods, and \texttt{GET /schemas} to retrieve database schema information for query construction.
+\section{CIM Assist}
+
+CIM Assist represents the natural language interface layer that bridges the gap between non-technical energy researchers and the complex CIM Wizard spatial database. While CIM Wizard provides the extensible platform for defining building calculators and managing multi-schema data, the inherent complexity of PostGIS spatial SQL queries remains a significant barrier for domain experts who lack database programming expertise. CIM Assist addresses this accessibility challenge through an autonomous LLM-powered agent that translates natural language questions into correct PostGIS queries, executes them against the CIM Wizard database, and presents results in an interpretable format.
+
+\begin{figure}%[htbp]
+\centering
+\includegraphics[width=1\textwidth]{Figures/txt2ssql.jpg}
+\caption{CIM Assist complete pipeline: Dataset Generation (AI4DB) → Fine-Tuning (TXT2SSQL) → Agent Integration, enabling natural language access to CIM Wizard spatial database}
+\label{fig:assist_overview}
+\end{figure}
+
+The system operates through an integrated three-phase pipeline that combines cost-effective dataset generation, parameter-efficient fine-tuning, and intelligent agent orchestration. The complete pipeline, illustrated in Figure~\ref{fig:assist_overview}, encompasses: (1) \textbf{Dataset Generation (AI4DB)}: A two-stage pipeline generating high-quality training data through rule-based template generation and multi-strategy LLM augmentation, producing over 10,800 samples with frequency-based distribution matching actual CIM Wizard usage patterns; (2) \textbf{Fine-Tuning (TXT2SSQL)}: Two-stage fine-tuning using QLoRA trains specialized 8-32B parameter models on consumer hardware, learning to first generate reasoning instructions (Question→Instruction) and then produce SQL queries (Question+Instruction→SQL); and (3) \textbf{Agent Integration}: The fine-tuned models deploy through a LangGraph-based agent with database introspection tools, enabling self-correction through execution feedback and achieving 75-92\% first-shot accuracy and 90-96\% eventual accuracy after iteration.
+
+
+
+This integrated approach transforms CIM Wizard from an expert-oriented database system into an accessible research tool where energy domain specialists can pose questions like "Show buildings with solar potential above 150 kWh/m² within 500 meters of subway stations" and receive accurate PostGIS query results without writing SQL code. The methodology first establishes the evaluation framework defining quality standards and taxonomy, then details the dataset generation pipeline, fine-tuning architecture, and agent integration demonstrating production-ready performance.
+
+
+
+\section{Evaluation Framework}
+\label{sec:evaluation}
+
+The evaluation framework underwent significant evolution after the second iteration, when it became clear that the initial metrics (NoErr, EM, EX, EA) were insufficient to fully understand model behavior. The framework was expanded to include additional metrics (Deep EM, SC) and a comprehensive taxonomy-based analysis system, implemented in \texttt{evaluator\_v2.py}, which provides detailed insights into model performance across different query types, complexity levels, and domain patterns.
+
+This section presents the comprehensive evaluation framework that guides both dataset generation quality control and model performance assessment, establishing the foundation for understanding system behavior throughout development.
+
+
+
+
+\subsection{Taxonomy-Driven Evaluation Framework for Comprehensive Performance Analysis}
+
+The evaluation framework provides comprehensive assessment through \texttt{evaluator\_v2.py}, a unified evaluation system that consolidates all assessment logic to ensure consistent evaluation across models while enabling detailed insights into model behavior patterns. This taxonomy-driven approach transforms raw performance metrics into actionable insights by automatically classifying queries across multiple dimensions and generating detailed breakdowns that reveal where models excel and where they struggle. Critically, the taxonomy system is not limited to evaluation alone but is integrated throughout the entire dataset generation pipeline, ensuring that both positive and negative training samples are systematically classified and that evaluation metrics can be aggregated along the same dimensions used during training data creation.
+
+\subsubsection{System Architecture}
+
+\texttt{evaluator\_v2.py} implements a comprehensive evaluation system integrating five core components that work together to provide multi-dimensional performance analysis. The system employs multi-metric evaluation measuring six complementary metrics (NoErr, EM, EX, EA, Deep EM, SC) that capture different aspects of model performance from dataset quality to production readiness. Automatic taxonomy classification analyzes each query across multiple dimensions including task type, domain complexity, and usage frequency, enabling granular performance breakdowns that reveal model strengths and weaknesses. The framework integrates with LangGraph agents to support iterative self-correction workflows with error feedback, measuring how models improve through multiple attempts. Comprehensive reporting generates detailed breakdowns organized by taxonomy categories, transforming raw metrics into interpretable insights. Finally, artifact logging captures per-sample execution history including generated SQL at each iteration, execution results, errors, and correction patterns, enabling detailed debugging and analysis of failure modes.
+
+\subsubsection{Taxonomy System for Multi-Dimensional Classification}
+\label{subsec:taxonomy}
+
+The evaluator employs a dual-taxonomy classification system that categorizes each query along complementary dimensions, enabling comprehensive performance analysis that reveals how model behavior varies across different query characteristics. This taxonomy-driven approach addresses the fundamental limitation of aggregate metrics by providing granular insights into performance patterns that would remain hidden in overall accuracy scores. The taxonomy system is consistently applied throughout the dataset generation pipeline, ensuring that training samples (both positive and negative) are classified using the same taxonomy dimensions as evaluation samples, enabling meaningful performance analysis that directly reflects training data distribution.
+
+\paragraph{Task Taxonomy: SQL Operation Classification}
+
+The task taxonomy classifies SQL queries by operation type and spatial function usage, organizing queries into hierarchical categories that reflect both syntactic structure and semantic complexity. Non-spatial operations encompass the fundamental SQL patterns including SIMPLE\_SELECT for basic retrieval, SQL\_AGGREGATION for analytical queries,  MULTI\_SQL\_JOIN for relational operations, and NESTED\_QUERY for complex subquery structures. Spatial predicates capture queries using spatial relationship functions, distinguishing between SPATIAL\_PREDICATE for basic containment and intersection operations and SPATIAL\_PREDICATE\_DISTANCE for proximity-based queries. Spatial operations represent the diverse PostGIS function categories including SPATIAL\_MEASUREMENT for distance and area calculations, SPATIAL\_PROCESSING for geometric transformations, SPATIAL\_ACCESSOR for coordinate and boundary extraction, SPATIAL\_ CONSTRUCTOR for geometry creation, SPATIAL\_TRANSFORM for coordinate system conversions, and SPATIAL\_VALIDATION for geometry integrity checks. Spatial joins capture multi-table spatial operations through SPATIAL\_JOIN for single spatial relationships and MULTI\_SPATIAL\_JOIN for complex multi-table spatial queries. Advanced categories encompass sophisticated analytical patterns including SPATIAL\_ CLUSTERING for grouping operations, RASTER\_ANALYSIS for raster data processing, and RASTER\_ VECTOR for cross-model integration queries.
+
+Each task type classification includes two complementary attributes that enable nuanced analysis: complexity ratings (1=Easy, 2=Medium, 3=Hard) reflect the cognitive and computational difficulty of the operation, while frequency classifications (1=Very Frequent, 2=Frequent, 3=Rare) indicate how commonly such queries occur in actual CIM Wizard usage patterns. This dual-attribute classification enables analysis of performance degradation as complexity increases and identification of whether models struggle more with rare patterns versus common operations.
+
+\paragraph{Domain Taxonomy: Schema Usage Pattern Classification}
+
+The domain taxonomy classifies queries by CIM Wizard schema usage patterns, revealing how model performance varies with database complexity and cross-schema integration requirements. The classification system recognizes five distinct patterns that reflect increasing complexity: SINGLE\_SCHEMA\_CIM\_VECTOR represents queries operating solely within the cim\_vector schema (complexity: 1, frequency: 1), representing the dominant use case where most building queries occur. MULTI\_SCHEMA\_WITH\_CIM\_VECTOR captures queries combining cim\_vector with one additional schema such as census or raster data (complexity: 2, frequency: 2), representing occasional cross-domain analysis. SINGLE\_SCHEMA\_OTHER identifies queries operating within non-vector schemas alone (complexity: 1, frequency: 2), representing specialized queries that may be less common but simpler in structure. MULTI\_SCHEMA\_WITHOUT\_CIM\_VECTOR encompasses queries combining multiple schemas without the primary vector schema (complexity: 2, frequency: 3), representing rare but complex analytical patterns. Finally, MULTI\_SCHEMA\_COMPLEX captures queries integrating three or more schemas simultaneously (complexity: 3, frequency: 3), representing the most sophisticated cross-domain integration scenarios.
+
+This domain classification enables identification of whether performance degradation stems from schema complexity, cross-schema integration challenges, or specific schema-specific knowledge gaps. The frequency attributes reveal whether models struggle more with rare but complex patterns versus common simpler operations, informing decisions about training data distribution and model architecture selection.
+
+\paragraph{Question Tone Classification}
+
+The question tone taxonomy classifies natural language queries by their linguistic structure, recognizing three primary patterns that reflect how users phrase database questions: INTERROGATIVE questions (70\% distribution) use question words such as "What", "Which", "How many", representing the most natural and common query formulation style. DIRECT commands (20\% distribution) employ imperative verbs such as "Find", "Show", "Get", representing explicit instruction-based queries. DESCRIPTIVE requests (10\% distribution) use narrative formulations such as "I need" or "We want to analyze", representing contextual query framing. Additionally, the taxonomy recognizes two negative sample tones: AMBIGUOUS queries that lack sufficient context for unambiguous SQL generation, and OUT\_OF\_SCOPE queries that are completely irrelevant to the CIM database domain. This classification enables analysis of whether model performance varies with question phrasing style, revealing whether certain linguistic patterns prove more challenging for SQL generation.
+
+\paragraph{Sample Quality Classification}
+
+The sample dirtiness taxonomy distinguishes between positive and negative training samples, enabling evaluation of model robustness across different data quality categories: CLEAN samples represent valid positive samples with correct SQL that execute successfully against the database. AMBIGUOUS samples are negative training examples with missing context or invalid schema references that should trigger clarification requests rather than SQL generation. OUT\_OF\_SCOPE samples are negative examples completely irrelevant to the CIM database that should be rejected with appropriate error messages. This classification enables evaluation of model robustness metrics including out-of-scope detection (OOS), ambiguity detection (AD), and schema trust (ST), measuring whether models correctly handle edge cases and invalid inputs rather than hallucinating SQL.
+
+\paragraph{Taxonomy Integration in Dataset Generation}
+
+The taxonomy system is not limited to evaluation but is systematically applied throughout the dataset generation pipeline, ensuring consistency between training data classification and evaluation metrics. During Stage 1 (rule-based template generation), each generated sample is automatically classified using the taxonomy system, enabling distribution validation and stratification. During Stage 2 (LLM augmentation), the taxonomy fields are preserved when creating augmented samples, ensuring that question paraphrases, SQL variations, and parameter changes maintain their original classification while generating diverse training data. During negative sample generation, samples are explicitly tagged with appropriate taxonomy values including AMBIGUOUS or OUT\_OF\_SCOPE for sample\_dirtiness, enabling models to learn robust rejection patterns. This end-to-end taxonomy integration ensures that evaluation metrics can be meaningfully aggregated along the same dimensions used during training, enabling direct correlation between training data distribution and model performance patterns.
+
+\subsubsection{Taxonomy-Based Comprehensive Reporting}
+
+The evaluator generates comprehensive reports organized around the taxonomy system, transforming raw performance metrics into actionable insights through multi-dimensional analysis. The reporting structure comprises four complementary sections that together provide complete understanding of model behavior.
+
+The overall metrics section presents aggregate performance across all samples, providing high-level indicators including EX (First-shot Execution Accuracy) measuring immediate correctness, EA (Eventual Accuracy) capturing self-correction capability, Deep EM (Structural Match) validating SQL structure independent of exact syntax, SC (Semantic Correctness) combining execution and structural validation, and self-correction statistics including correction rate and average iterations needed. These aggregate metrics serve as primary performance indicators while taxonomy breakdowns reveal the underlying patterns.
+
+The taxonomy-based breakdowns section provides detailed performance analysis organized by classification categories, enabling identification of specific strengths and weaknesses. Performance analysis by task type reveals how models handle different SQL operation patterns, showing whether spatial operations prove more challenging than non-spatial queries or whether aggregation queries perform differently than simple selections. Domain type breakdowns expose schema complexity effects, revealing whether multi-schema queries degrade performance and identifying which schema combinations prove most challenging. Complexity analysis examines performance degradation patterns, comparing Easy (1) versus Medium (2) versus Hard (3) queries across both task and domain dimensions to understand how difficulty impacts accuracy. Frequency analysis distinguishes performance on Very Frequent (1) versus Frequent (2) versus Rare (3) patterns, revealing whether models excel on common queries at the expense of rare but important operations. Question tone breakdowns compare INTERROGATIVE, DIRECT, and DESCRIPTIVE formulations, identifying whether natural language style affects model understanding. Sample quality analysis distinguishes CLEAN, AMBIGUOUS, and OUT\_OF\_SCOPE samples, revealing model robustness in handling edge cases and invalid inputs.
+
+The key insights section provides automated analysis that synthesizes taxonomy breakdowns into actionable findings, automatically identifying best and worst performing task types to highlight model strengths and critical failure modes, best and worst performing domain types to reveal schema-specific capabilities and limitations, and complexity analysis showing performance degradation patterns that quantify how accuracy decreases as query difficulty increases.
+
+The per-sample artifacts section provides detailed execution history for each sample, enabling granular debugging and analysis. This includes generated SQL at each iteration showing the evolution of query generation through self-correction cycles, execution results and errors capturing database responses and failure modes, classification metadata recording taxonomy assignments for each sample, and iteration-by-iteration correction history documenting how models adapt based on error feedback.
+
+\subsubsection{Usage and Configuration}
+
+The evaluator supports multiple model backends and evaluation modes through flexible configuration options, enabling consistent evaluation across diverse deployment scenarios. The system accepts various model types including HuggingFace models specified as \texttt{hf:model\_name} for local or remote HuggingFace models, Ollama models specified as \texttt{ollama:model\_name} for local Ollama deployments, and OpenRouter models specified as \texttt{openrouter:provider/model} for API-based model access. This multi-backend support ensures that evaluation remains consistent regardless of model deployment architecture.
+
+Schema context options enable evaluation under different information availability scenarios, supporting three distinct modes: no schema mode where models rely entirely on fine-tuned knowledge without external schema information, full schema mode activated with \texttt{--include\_schema} that provides complete database schema in prompts for fair comparison with baseline models, and mini schema mode enabled with \texttt{--use\_finetuned\_schema} that includes minimal schema summary matching what was available during fine-tuning, representing the production deployment scenario.
+
+The evaluation workflow is invoked through command-line interface as illustrated in the following example, which demonstrates typical usage for comprehensive model assessment:
+
+\begin{lstlisting}[style=pythonstyle, caption=Evaluator v2 usage example]
+python evaluator_v2.py \
+    --benchmark ftv2_evaluation_benchmark_100.jsonl \
+    --model hf:defog/sqlcoder-7b-2 \
+    --mode Q2SQL \
+    --max_iterations 5 \
+    --use_finetuned_schema \
+    --artifacts_dir ea_model_artifacts_v2
+\end{lstlisting}
+
+This taxonomy-driven evaluation framework transforms model assessment from simple accuracy reporting into comprehensive performance analysis, enabling researchers and practitioners to understand not just how well models perform, but where they excel, where they struggle, and how performance varies across different query characteristics and complexity levels. By applying the same taxonomy system during both dataset generation and evaluation, the framework ensures that performance insights directly reflect training data characteristics, enabling data-driven improvements to training distribution and model architecture.
+
+\subsection{Distribution Strategy and Taxonomy-Based Sampling}
+\label{subsec:distribution_strategy}
+
+The quality and effectiveness of text-to-SQL models critically depends on the distribution of training samples across taxonomy dimensions, as imbalanced distributions lead to biased models that overfit to frequent patterns while failing on rare but important query types. This section presents the frequency-based distribution strategy that optimizes for domain-specific performance by aligning training data distribution with actual CIM Wizard usage patterns, ensuring that models excel at the queries users actually ask rather than achieving uniform but mediocre performance across all possible query types.
+
+\subsubsection{Distribution Dimensions}
+
+The distribution strategy operates across multiple complementary dimensions that together ensure comprehensive coverage while prioritizing domain-specific performance. Each dimension reflects actual CIM Wizard usage patterns observed through analysis of query logs and user interactions, ensuring that training data distribution matches real-world query characteristics rather than artificial balance.
+
+\paragraph{SQL Type Distribution (Task Taxonomy)}
+
+Training samples are distributed according to actual CIM Wizard usage frequency, with the most common query patterns receiving proportionally more training examples. Simple selection queries (SIMPLE\_SELECT) represent 45\% of the training distribution, reflecting their status as the most common query pattern where users retrieve building or demographic information with basic filtering conditions. Aggregation queries (SQL\_AGGREGATION) account for 25\% of samples, capturing the frequent analytical queries that compute statistics, counts, and summaries across building populations or spatial regions. Spatial join operations (SPATIAL\_JOIN) comprise 15\% of the distribution, representing regular spatial analysis where users combine building data with census zones, network infrastructure, or other spatial entities through geometric relationships. Spatial measurement queries (SPATIAL\_MEASUREMENT) represent 8\% of samples, covering occasional distance, area, and perimeter calculations that support urban energy analysis. Multi-table joins (MULTI\_JOIN) account for 4\% of the distribution, representing rare but important complex join operations that integrate data across multiple tables. Nested queries (NESTED\_QUERY) comprise 2\% of samples, capturing rare nested patterns including CTEs and subqueries that enable sophisticated analytical workflows. Advanced spatial operations including spatial clustering (SPATIAL\_CLUSTERING) and raster-vector integration (RASTER\_VECTOR) each represent 0.5\% of the distribution, ensuring minimal coverage of very rare advanced analytics patterns without compromising the model's performance on common queries.
+
+This frequency-based distribution ensures that the model receives extensive training on the query patterns that constitute 70\% of actual usage (SIMPLE\_SELECT and AGGREGATION combined), while maintaining sufficient coverage of rare patterns to avoid complete failure on advanced queries. The distribution directly reflects the taxonomy system's frequency classifications, where Very Frequent (1) patterns receive the highest allocation, Frequent (2) patterns receive moderate allocation, and Rare (3) patterns receive minimal but sufficient allocation.
+
+\paragraph{Domain Distribution (Schema Complexity)}
+
+The domain distribution reflects schema usage patterns observed in actual CIM Wizard deployments, ensuring that training data matches the complexity distribution of real-world queries. Single-schema queries operating solely within the cim\_vector schema (SINGLE\_SCHEMA\_CIM\_VECTOR) represent 70\% of the training distribution, reflecting the dominant use case where most building queries operate within the primary vector schema without requiring cross-schema integration. Multi-schema queries combining cim\_vector with one additional schema such as census or raster data (MULTI\_SCHEMA\_WITH\_CIM\_VECTOR) account for 20\% of samples, representing occasional cross-domain analysis where users integrate building data with demographic or elevation information. Single-schema queries operating within non-vector schemas alone (SINGLE\_SCHEMA\_OTHER) comprise 8\% of the distribution, representing rare specialized queries that focus exclusively on census, network, or raster data without building context. Multi-schema queries combining multiple schemas without the primary vector schema (MULTI\_SCHEMA\_WITHOUT\_CIM\_VECTOR) represent 2\% of samples, ensuring minimal coverage of very rare advanced analytical patterns that integrate census, network, and raster data directly.
+
+This schema complexity distribution ensures that the model receives extensive training on single-schema building queries that constitute the majority of actual usage, while maintaining sufficient coverage of cross-schema integration patterns to enable occasional complex analytical workflows. The distribution aligns with the domain taxonomy's frequency classifications, where Very Frequent (1) single-schema patterns receive dominant allocation, Frequent (2) multi-schema patterns receive moderate allocation, and Rare (3) complex multi-schema patterns receive minimal allocation.
+
+\paragraph{Sample Quality Distribution}
+
+The sample quality distribution balances positive training examples with negative samples that teach robust rejection patterns, ensuring that models learn to handle both valid queries and edge cases appropriately. Positive samples representing valid spatial SQL queries that execute successfully against the database comprise 80\% of the training distribution, providing extensive examples of correct query generation patterns across all taxonomy dimensions. Negative samples including out-of-scope queries, ambiguous requests with missing context, and invalid schema references account for 20\% of the distribution, teaching models to recognize and appropriately reject invalid inputs rather than hallucinating SQL. This 80/20 positive/negative split enables models to learn robust rejection patterns while maintaining focus on correct query generation, with negative samples systematically distributed across taxonomy dimensions to ensure comprehensive robustness training.
+
+Quality gates implemented through NoErr validation at each dataset generation stage ensure that only executable queries proceed to subsequent stages, preventing error propagation and maintaining high training data quality. Stage 1 (rule-based templates) achieves 98-100\% NoErr rates through systematic schema validation, while Stage 2 (LLM augmentation) maintains 85\%+ NoErr rates through database execution validation before samples enter the training dataset. This validation-first approach ensures that taxonomy-based distribution targets are achieved with high-quality samples rather than error-prone queries that would degrade model performance.
+
+\subsubsection{Frequency-Based vs Balanced Distribution}
+
+The choice between frequency-based and balanced distribution strategies fundamentally depends on the model's intended purpose and deployment context, with each approach offering distinct advantages and trade-offs that must be carefully evaluated based on application requirements.
+
+\paragraph{Frequency-Based Distribution: Domain-Specific Optimization}
+
+The frequency-based distribution approach, employed in this work, prioritizes excellent performance on actual usage patterns over uniform competence across all possible query types. This strategy targets domain-specific models where the primary objective is to excel at the queries users actually ask in the CIM Wizard context, rather than achieving general SQL competence across diverse database domains. The philosophical foundation of this approach recognizes that it is better to excel at what users need than to be mediocre at everything, accepting that lower performance on rare patterns is an acceptable trade-off when those patterns constitute less than 5\% of actual usage.
+
+The primary benefit of frequency-based distribution lies in achieving higher weighted accuracy by prioritizing common queries, where a 10 percentage point improvement on queries that occur 70\% of the time provides substantially more value than equivalent improvement on queries that occur 2\% of the time. This approach recognizes that real-world model performance is measured not by uniform accuracy across all query types, but by weighted accuracy that reflects actual usage patterns. The trade-off involves accepting lower performance on rare patterns such as spatial clustering or complex multi-schema queries, where achieving 45\% accuracy on patterns that occur 0.5\% of the time is acceptable when the model achieves 92\% accuracy on patterns that occur 45\% of the time.
+
+This frequency-based approach directly aligns with the taxonomy system's frequency classifications, where Very Frequent (1) patterns receive dominant training allocation, Frequent (2) patterns receive moderate allocation, and Rare (3) patterns receive minimal but sufficient allocation to avoid complete failure. The distribution strategy ensures that training data reflects actual CIM Wizard usage patterns, enabling models to learn the specific spatial SQL patterns needed for urban energy analysis rather than general SQL competence that may not transfer effectively to the domain-specific requirements of PostGIS spatial queries.
+
+\paragraph{Balanced Distribution: General-Purpose Competence}
+
+The balanced distribution approach targets uniform performance across all SQL patterns, allocating equal training samples to each query type regardless of actual usage frequency. This strategy is appropriate for general-purpose SQL assistants, database education platforms, or benchmark evaluation where the objective is to demonstrate competence across diverse query types rather than optimizing for specific usage patterns. The approach ensures that models achieve reasonable performance on rare patterns such as spatial clustering or complex nested queries, but at the cost of mediocre performance on common queries that constitute the majority of actual usage.
+
+The trade-off inherent in balanced distribution involves accepting lower accuracy on frequent patterns to achieve better coverage of rare patterns, where a model might achieve 65\% accuracy uniformly across all query types rather than 92\% on common patterns and 45\% on rare patterns. This uniform performance profile may be desirable for educational or benchmarking contexts where demonstrating broad competence is more valuable than optimizing for specific usage patterns, but proves suboptimal for production deployment where weighted accuracy reflecting actual usage provides the true measure of model value.
+
+\paragraph{Distribution Strategy Rationale}
+
+The frequency-based approach prioritizes domain optimization over general SQL competence, ensuring the model excels at the specific spatial SQL patterns needed for urban energy analysis in CIM Wizard. This strategy recognizes that production deployment success depends on performance on queries users actually ask, not on uniform competence across all theoretically possible query types. By aligning training distribution with actual usage patterns observed through query log analysis and user interaction studies, the approach ensures that model development efforts focus on the patterns that provide maximum value to end users.
+
+The taxonomy system's frequency classifications directly inform distribution targets, where patterns classified as Very Frequent (1) receive proportionally more training samples, patterns classified as Frequent (2) receive moderate allocation, and patterns classified as Rare (3) receive minimal but sufficient allocation. This systematic approach ensures that distribution decisions are data-driven rather than arbitrary, with taxonomy classifications providing the quantitative foundation for training data allocation decisions. The end result is a model that achieves production-ready performance on the queries that matter most for CIM Wizard users, while maintaining sufficient coverage of rare patterns to avoid complete failure on advanced analytical workflows.
+
+
+\subsection{Dataset Quality Metrics}
+\label{subsec:dataset_quality_metrics}
+
+\subsubsection{NoErr (No Error) -- Dataset Quality Metric}
+\label{subsubsec:noerr}
+
+\begin{equation}
+\text{NoErr} = \frac{\text{Executable Queries}}{\text{Total Samples}} \times 100\%
+\end{equation}
+
+\textbf{Purpose:} Validate dataset generation quality at each stage
+
+\textbf{Target Thresholds:}
+\begin{itemize}[leftmargin=1.2em]
+  \item Stage 1 (Template-based): $\geq$ 98\% for rule-based generation
+  \item Stage 2 (Augmented): $\geq$ 85\% for LLM-augmented samples
+\end{itemize}
+
+NoErr serves as the primary quality gate throughout the dataset generation pipeline. Each stage validates SQL executability against the CIM Wizard database before passing samples to subsequent stages, preventing error propagation and ensuring training data quality. Achieved quality metrics are presented in Chapter~\ref{ch:results}.
+
+\textbf{Mode:} Standard evaluation (first-shot only, no agent iteration)
+
+\subsection{Model Performance Metrics}
+\label{subsec:model_performance_metrics}
+
+\subsubsection{EM (Exact Match) -- First-Shot Metric}
+
+\begin{equation}
+\text{EM} = \frac{\text{Exact Matches}}{\text{Total Samples}} \times 100\%
+\end{equation}
+
+\textbf{Purpose:} Strict validation of model memorization
+
+\textbf{Implementation:}
+\begin{lstlisting}[style=pythonstyle]
+def exact_match(predicted_sql: str, ground_truth_sql: str) -> bool:
+    # Normalize SQL (remove whitespace, lowercase keywords)
+    pred_normalized = normalize_sql(predicted_sql)
+    truth_normalized = normalize_sql(ground_truth_sql)
+    
+    return pred_normalized == truth_normalized
+\end{lstlisting}
+
+\textbf{Limitation:} Different but semantically equivalent SQL queries score as incorrect
+
+
+
+\subsubsection{Deep EM (Structural Exact Match) -- First-Shot Metric}
+
+\begin{equation}
+\text{Deep EM} = \frac{1}{4}\left(\mathbb{1}_{\text{spatial\_funcs}} + \mathbb{1}_{\text{func\_count}} + \mathbb{1}_{\text{join\_count}} + \mathbb{1}_{\text{table\_count}}\right)
+\end{equation}
+
+\textbf{Purpose:} Evaluate SQL structural correctness independent of exact string matching
+
+\textbf{Implementation:}
+\begin{lstlisting}[style=pythonstyle]
+def deep_exact_match(predicted_sql: str, benchmark_item: dict) -> dict:
+    # Extract structural features from generated SQL
+    gen_spatial_funcs = extract_spatial_functions(predicted_sql)
+    gen_table_count = count_tables(predicted_sql)
+    gen_join_count = count_joins(predicted_sql)
+    
+    # Compare with ground truth metadata
+    scores = {
+        'spatial_functions_match': set(gen_spatial_funcs) == set(benchmark_item['spatial_functions']),
+        'spatial_func_count_match': abs(len(gen_spatial_funcs) - benchmark_item['spatial_function_count']) <= 1,
+        'join_count_match': abs(gen_join_count - int(benchmark_item['join_count'])) <= 1,
+        'table_count_match': abs(gen_table_count - benchmark_item['table_count']) <= 1
+    }
+    
+    # Overall score: pass if 75% of features match
+    overall_score = sum(scores.values()) / len(scores)
+    return {'deep_em_score': overall_score, 'deep_em_pass': overall_score >= 0.75}
+\end{lstlisting}
+
+\textbf{Advantages:} Deep EM tolerates different SQL formulations including CTEs, subqueries, and aliases while focusing on structural correctness through validation of the right tables, joins, and functions. The metric provides more leniency than string-based EM but maintains stricter requirements than EX. For debugging purposes, it identifies precisely which structural elements are incorrect.
+
+\textbf{Scoring:} A query passes when at least 75\% of structural features match, requiring 3 out of 4 components to align.
+
+
+
+\subsubsection{EX (Execution Accuracy) -- First-Shot Metric}
+
+\begin{equation}
+\text{EX} = \frac{\text{Correct Results}}{\text{Total Samples}} \times 100\%
+\end{equation}
+
+\textbf{Purpose:} Practical validation of query correctness through result matching
+
+\textbf{Implementation:}
+\begin{lstlisting}[style=pythonstyle]
+def execution_accuracy(predicted_sql: str, ground_truth_results) -> bool:
+    try:
+        # Execute predicted SQL
+        predicted_results = db.execute(predicted_sql)
+        
+        # Compare results using flexible value-based matching
+        return is_subset_match(predicted_results, ground_truth_results)
+    except Exception as e:
+        return False  # Execution error counts as incorrect
+
+def is_subset_match(generated_result, ground_truth_result) -> bool:
+    """
+    Flexible result matching focusing on data values, not structure.
+    Handles column order, row order, and floating point differences.
+    """
+    if not generated_result:
+        return not ground_truth_result or len(ground_truth_result) <= 1
+    
+    if not ground_truth_result:
+        return False
+    
+    def normalize_value(val):
+        """Normalize single value for comparison."""
+        if val is None:
+            return 'NULL'
+        if isinstance(val, float):
+            return round(val, 6)  # Handle floating point precision
+        if isinstance(val, str):
+            return val.strip().lower()
+        return val
+    
+    def normalize_row(row):
+        """Normalize row by sorting values (order-agnostic)."""
+        normalized = tuple(sorted([normalize_value(v) for v in row], key=str))
+        return normalized
+    
+    # Normalize and compare
+    gt_set = set(normalize_row(row) for row in ground_truth_result)
+    gen_set = set(normalize_row(row) for row in generated_result)
+    
+    # Check subset or 80% overlap
+    if gen_set.issubset(gt_set):
+        return True
+    
+    intersection = len(gen_set.intersection(gt_set))
+    if intersection > 0:
+        overlap_ratio = intersection / len(gen_set)
+        return overlap_ratio >= 0.8
+    
+    return False
+\end{lstlisting}
+
+\textbf{Flexible Matching Logic:} The implementation employs value-based comparison focusing on data content rather than structure. Column order becomes irrelevant through value sorting within rows, while row order independence is achieved through set-based comparison. Floating point tolerance handles precision differences by rounding to 6 decimal places. The metric accepts results with 80\% overlap threshold and gracefully handles different LIMIT/ORDER BY clauses.
+
+\textbf{Strength:} The metric accepts semantically equivalent SQL variations while remaining strict on correctness.
+
+
+
+\textbf{Threshold:} Accuracy exceeding 70\% indicates production readiness.
+
+\subsubsection{SC (Semantic Correctness) -- Practical Metric}
+
+\begin{equation}
+\text{SC} = \frac{1}{N}\sum_{i=1}^{N} \mathbb{1}_{\text{exec}_i} \cdot \mathbb{1}_{\text{deep\_em}_i} \cdot \mathbb{1}_{\text{results}_i}
+\end{equation}
+
+\textbf{Purpose:} Realistic evaluation for non-deterministic SQL (without ORDER BY)
+
+\textbf{Implementation:}
+\begin{lstlisting}[style=pythonstyle]
+def semantic_correctness(sample: dict) -> bool:
+    """
+    Check if SQL is semantically correct:
+    1. Executes successfully (no errors)
+    2. Deep EM passes (correct structure)
+    3. Returns non-empty results (if expected)
+    """
+    exec_success = sample['final_execution']['success']
+    deep_em_pass = sample['deep_em']['deep_em_pass']
+    has_results = sample['final_execution']['rowcount'] > 0
+    
+    return exec_success and deep_em_pass and has_results
+\end{lstlisting}
+
+\textbf{Rationale:} The SC metric addresses limitations where EX fails when models use different LIMIT/ORDER BY clauses than ground truth. SC accepts structurally correct SQL that produces valid results, providing a more realistic evaluation for production environments where exact result matching is not required. The metric combines three components: execution success without errors, structural correctness validated through Deep EM, and non-empty output when results are expected.
+
+\textbf{Use Cases:} SC proves valuable for benchmarks with ambiguous questions lacking specific project\_id filters, non-deterministic SQL without ORDER BY clauses, queries where LIMIT is reasonable but not explicitly specified, and situations evaluating model understanding versus exact output matching.
+
+
+
+\textbf{Comparison with EX:} EX employs value-based result matching that is strict yet flexible on structure, while SC validates structural and execution correctness accepting valid variations. SC always equals or exceeds EX by definition. Small gaps of 10-15 percentage points indicate good benchmark quality, whereas large gaps exceeding 30 percentage points suggest benchmark issues such as ambiguous questions or non-deterministic SQL specifications.
+
+\subsubsection{EA (Eventual Accuracy) -- Agent Mode Metric}
+
+\begin{equation}
+\text{EA}_{\text{score}} = \begin{cases}
+1.0 & \text{if correct on first attempt} \\
+1.0 - 0.15 \times (n-1) & \text{if correct after } n \text{ iterations} \\
+0.0 & \text{if never correct}
+\end{cases}
+\end{equation}
+
+\textbf{Purpose:} Evaluate self-correction ability and production readiness
+
+\textbf{Components:} The metric comprises five complementary measurements. First-shot accuracy measures success on the initial attempt without iteration. Eventual accuracy captures final success after retries up to 5 attempts. Self-correction rate quantifies the percentage of queries that succeeded after initial failure. Average iterations tracks the mean number of attempts needed across all queries. The EA score provides a weighted score considering both correctness and efficiency through iteration penalties.
+
+\textbf{Implementation:}
+\begin{lstlisting}[style=pythonstyle]
+def eventual_accuracy_evaluation(question, ground_truth_results, agent, max_iter=5):
+    first_shot_correct = False
+    eventually_correct = False
+    iterations = 0
+    
+    for i in range(1, max_iter + 1):
+        iterations = i
+        
+        # Agent generates SQL (with error feedback from previous attempt)
+        sql = agent.generate_sql(question)
+        
+        # Execute and check
+        try:
+            results = db.execute(sql)
+            correct = results_equal(results, ground_truth_results)
+            
+            if i == 1 and correct:
+                first_shot_correct = True
+            
+            if correct:
+                eventually_correct = True
+                break
+        except Exception as e:
+            # Provide error feedback to agent
+            agent.update_error_feedback(str(e))
+    
+    # Calculate EA score
+    if first_shot_correct:
+        ea_score = 1.0
+    elif eventually_correct:
+        ea_score = 1.0 - 0.15 * (iterations - 1)
+    else:
+        ea_score = 0.0
+    
+    return {
+        'first_shot': first_shot_correct,
+        'eventual': eventually_correct,
+        'iterations': iterations,
+        'ea_score': ea_score
+    }
+\end{lstlisting}
+
+
+
+\textbf{Iteration Penalty:} The metric applies a 15\% score reduction per additional attempt to encourage efficiency.
+
+\subsubsection{Negative Samples Detection Metrics}
+
+These metrics evaluate model robustness on negative samples:
+
+\paragraph{Out-of-Scope Detection (OOS)}
+
+\begin{equation}
+\text{OOS} = \frac{\text{Correctly Rejected Out-of-Scope Queries}}{\text{Total Out-of-Scope Queries}} \times 100\%
+\end{equation}
+
+\textbf{Purpose:} Validate model's ability to reject non-database queries
+
+\textbf{Implementation:}
+\begin{lstlisting}[style=pythonstyle]
+def out_of_scope_detection(response: str, expected_category: str) -> bool:
+    """Check if model correctly identifies out-of-scope query"""
+    response_upper = response.upper()
+    
+    # Model should respond with OUT_OF_SCOPE
+    if 'OUT_OF_SCOPE' in response_upper or 'OUT OF SCOPE' in response_upper:
+        return True
+    
+    # Model should NOT generate SQL for conversational/general queries
+    if 'SELECT' in response_upper:
+        return False  # Incorrectly generated SQL
+    
+    return False
+\end{lstlisting}
+
+
+
+\paragraph{Ambiguity Detection (AD)}
+
+\begin{equation}
+\text{AD} = \frac{\text{Correctly Identified Ambiguous Queries}}{\text{Total Ambiguous Queries}} \times 100\%
+\end{equation}
+
+\textbf{Purpose:} Validate model's ability to request clarification for incomplete queries
+
+\textbf{Test Cases:} The metric is validated using queries like ``What are the building IDs?'' which should elicit \texttt{AMBIGUOUS: Specify project}, ``Which buildings overlap?'' expecting \texttt{AMBIGUOUS: Overlap with what?}, and ``Calculate distances'' prompting \texttt{AMBIGUOUS: Between which entities?}
+
+\textbf{Expected Values:} Phase 4 trained models are expected to achieve 90\%+ detection accuracy.
+
+\paragraph{Schema Trust (ST)}
+
+\begin{equation}
+\text{ST} = \frac{\text{Correct Schema Despite Wrong Instruction}}{\text{Total Adversarial Samples}} \times 100\%
+\end{equation}
+
+\textbf{Purpose:} Validate model trusts learned schema over incorrect instructions
+
+\textbf{Test Cases:}
+\begin{itemize}[leftmargin=1.2em]
+  \item Instruction: ``use 'structures' table'' $\rightarrow$ Model uses \texttt{cim\_wizard\_building}
+  \item Instruction: ``select 'size' column'' $\rightarrow$ Model uses \texttt{area} column
+  \item Instruction: ``join by building\_id'' $\rightarrow$ Model uses \texttt{ST\_Intersects}
+\end{itemize}
+
+
+
+
+\subsection{Evaluation Process}
+
+All evaluations are conducted using \texttt{evaluator\_v2.py}, which provides unified assessment across all models and evaluation modes, ensuring consistent evaluation methodology regardless of model architecture or deployment scenario. The system supports both baseline and fine-tuned model evaluation with comprehensive taxonomy-based analysis, enabling direct performance comparison across different model families and training approaches. The unified framework eliminates methodological inconsistencies that would otherwise complicate model comparison, ensuring that performance differences reflect actual model capabilities rather than evaluation procedure variations.
+
+\subsubsection{Baseline Model Evaluation}
+
+Open-source models are evaluated without fine-tuning to establish baseline performance that quantifies the improvement achieved through domain-specific adaptation. The evaluation encompasses various open-source model families including Llama, Qwen, and other publicly available models, providing comprehensive understanding of general-purpose model capabilities on spatial SQL tasks. Evaluation proceeds through Q2SQL mode with both first-shot and agent mode assessment, measuring immediate accuracy without iteration and eventual accuracy after self-correction cycles. The metric suite includes EX (first-shot execution accuracy) measuring immediate correctness, EA (eventual accuracy) capturing self-correction capability, Deep EM (structural match) validating SQL structure independent of exact syntax, and SC (semantic correctness) combining execution, structure, and result validation. To ensure fair comparison with fine-tuned models, baseline evaluations provide schema context through either full database schema or mini-schema summaries in prompts, enabling models to access necessary table and column information that fine-tuned models have internalized. Taxonomy analysis provides detailed performance breakdowns by task type, domain complexity, and frequency classifications, revealing how general-purpose models handle different query characteristics and identifying specific failure modes that domain adaptation addresses.
+
+\subsubsection{Fine-Tuned Model Evaluation}
+
+Domain-adapted models are evaluated using the same comprehensive framework, enabling direct comparison with baseline performance while providing detailed insights into fine-tuning effectiveness. The evaluation sequence begins with EM (Exact Match) evaluation measuring exact string match rate to understand the level of memorization versus generalization achieved through training. EX evaluation (first-shot) measures single-attempt accuracy as the primary production readiness indicator, representing the model's immediate correctness without iterative refinement. Deep EM evaluation assesses structural correctness by validating that generated SQL uses appropriate spatial functions, joins, and table references regardless of exact syntactic formulation. SC evaluation combines execution success, structural correctness validated through Deep EM, and non-empty result validation, providing realistic assessment for production environments where exact result matching is not required. EA evaluation (agent mode) measures multi-attempt accuracy with self-correction capability, where models receive execution error feedback and iteratively refine their SQL generation, representing production deployment scenarios with error handling mechanisms. Taxonomy breakdown provides detailed performance analysis by query category, enabling identification of specific strengths and weaknesses across different task types, domain complexity levels, and frequency patterns, revealing where fine-tuning provides the greatest improvement and where additional training data may be needed.
+
+\subsubsection{Comprehensive Reporting}
+
+\texttt{evaluator\_v2.py} generates detailed reports that transform raw evaluation metrics into actionable insights through systematic organization and automated analysis. The overall metrics summary presents aggregate performance across all samples, providing high-level indicators including EX, EA, Deep EM, and SC accuracy rates along with self-correction statistics and average iteration counts. Taxonomy-based breakdowns organize performance by task type, domain type, complexity level, and frequency classification, enabling identification of specific query categories where models excel or struggle. Key insights section provides automated analysis identifying best and worst performing categories, complexity degradation patterns, and frequency-based performance variations, synthesizing taxonomy breakdowns into actionable findings. Per-sample artifacts capture complete execution history for each benchmark item, including generated SQL at each iteration, execution results and errors, classification metadata, and iteration-by-iteration correction history, enabling granular debugging and failure mode analysis. JSON results provide machine-readable detailed results for further statistical analysis, programmatic comparison across models, and integration with downstream analysis tools. Human-readable report presents formatted text output suitable for quick review, documentation, and presentation, with tables and summaries organized for easy interpretation.
+
+The comprehensive reporting enables detailed understanding of model behavior patterns, identifying strengths and weaknesses across different query types and complexity levels. By organizing metrics according to the same taxonomy system used during dataset generation, the reports enable direct correlation between training data distribution and model performance, revealing how frequency-based training allocation translates into performance patterns and identifying areas where distribution adjustments may improve model capabilities.
+
+\section{Dataset Generation Pipeline (AI4DB)}
+
+The dataset generation pipeline underwent three iterative refinement cycles to achieve the current high-quality distribution. This section describes the final two-stage approach that generates training data optimized for CIM Wizard's actual usage patterns through frequency-based distribution and multi-strategy augmentation.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{Figures/dataset_structure.jpg}
+\caption{AI4DB dataset generation pipeline structure: Two-stage approach combining rule-based template generation (Stage 1) with multi-strategy LLM augmentation (Stage 2), followed by negative sample integration and stratified curation}
+\label{fig:dataset_structure}
+\end{figure}
+
+
+
+\subsection{Stage 1: Rule-Based Sample Generation by Templates}
+
+Stage 1 generates SQL queries through handcrafted templates with systematic parameter substitution, producing 10,800 samples distributed according to actual CIM Wizard usage frequency.
+
+\subsubsection{Template Organization and Distribution}
+
+Templates are organized by SQL operation type and distributed according to frequency-based usage patterns observed in CIM Wizard:
+
+\begin{table}%[htbp]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{SQL Type} & \textbf{Templates} & \textbf{Distribution} \\
+\midrule
+SIMPLE\_SELECT & 18 & 45\% \\
+AGGREGATION & 10 & 25\% \\
+SPATIAL\_JOIN & 8 & 15\% \\
+SPATIAL\_MEASUREMENT & 4 & 8\% \\
+MULTI\_JOIN & 2 & 4\% \\
+NESTED\_QUERY & 1 & 2\% \\
+SPATIAL\_CLUSTERING & 1 & 0.5\% \\
+RASTER\_VECTOR & 1 & 0.5\% \\
+\bottomrule
+\end{tabular}
+\caption{Template distribution by SQL type matching CIM Wizard usage frequency}
+\end{table}
+
+The frequency-based distribution ensures that common query patterns (SIMPLE\_SELECT, AGGREGATION) receive proportionally more training samples, maximizing real-world accuracy on queries users actually ask.
+
+\subsubsection{Parameter Substitution}
+
+Templates are systematically expanded through parameter variation:
+
+\begin{lstlisting}[style=pythonstyle, caption=Template parameter substitution]
+template = """
+SELECT building_id, building_name, ST_Area(building_geometry) as area
+FROM cim_vector.buildings
+WHERE project_id = '{project_id}'
+  AND ST_Area(building_geometry) > {area_threshold}
+ORDER BY area DESC
+LIMIT {limit};
+"""
+
+parameters = {
+    'project_id': ['milan_smart_district', 'sansalva', 'torino_pilot'],
+    'area_threshold': [100, 500, 1000, 5000],
+    'limit': [10, 50, 100]
+}
+
+# Generate all combinations
+samples = []
+for proj in parameters['project_id']:
+    for area in parameters['area_threshold']:
+        for lim in parameters['limit']:
+            sql = template.format(
+                project_id=proj, 
+                area_threshold=area, 
+                limit=lim
+            )
+            samples.append(sql)
+
+# Result: 3 × 4 × 3 = 36 samples per template
+\end{lstlisting}
+
+Through systematic parameter variation, Stage 1 generates \textbf{10,800 samples} distributed across all SQL types according to the frequency-based template distribution. Each template produces multiple variations through parameter substitution, ensuring comprehensive coverage while maintaining the target distribution.
+
+\subsubsection{Metadata Extraction}
+
+Each sample includes comprehensive metadata:
+
+\begin{lstlisting}[style=pythonstyle, caption=Metadata extraction for generated SQL]
+def extract_metadata(sql: str, schema_info: dict) -> dict:
+    return {
+        # SQL Taxonomy
+        'sql_type': classify_sql_type(sql),
+        'has_cte': 'WITH' in sql.upper(),
+        'subquery_count': count_subqueries(sql),
+        'join_count': count_joins(sql),
+        
+        # Difficulty Dimensions
+        'query_complexity': calculate_query_complexity(sql),
+        'spatial_complexity': calculate_spatial_complexity(sql),
+        'schema_complexity': calculate_schema_complexity(sql),
+        
+        # Spatial Function Usage
+        'spatial_functions': extract_spatial_functions(sql),
+        'function_importance': classify_function_importance(sql),
+        
+        # Database Context
+        'tables': extract_tables(sql, schema_info),
+        'columns': extract_columns(sql, schema_info),
+        'schemas': extract_schemas(sql),
+        
+        # Question Tone (for LLM generation guidance)
+        'suggested_tone': suggest_question_tone(sql)
+    }
+\end{lstlisting}
+
+\subsubsection{Quality Validation by NoErr (for stage1)}
+
+Stage 1 quality is evaluated using the NoErr metric (defined in Section~\ref{subsubsec:noerr}). After comprehensive schema validation, Stage 1 achieves a \textbf{98-100\% NoErr rate}, demonstrating exceptional query correctness through systematic schema alignment. This high-quality baseline resulted from addressing several critical PostgreSQL and PostGIS-specific requirements: (1) census column references requiring strict case sensitivity with lowercase unquoted identifiers; (2) type casting for mathematical functions like \texttt{ROUND()} necessitating explicit \texttt{::numeric} conversion; (3) correct ID column usage across different entity types (\texttt{building\_id}, \texttt{bus\_id}, \texttt{scenario\_id}); and (4) \texttt{project\_id} column scope awareness, as this attribute exists in only two tables within the multi-schema database.
+
+All Stage 1 samples are validated using the NoErr metric before proceeding to Stage 2, ensuring that only executable queries are augmented with natural language. This validation-first approach prevents propagation of errors through the pipeline and dramatically improves final dataset quality.
+
+\subsection{Stage 2: Data Augmentation}
+
+Stage 2 augments Stage 1 SQL queries with natural language questions and reasoning instructions using multiple strategies and LLM models, each selected based on cost-performance trade-offs. The augmentation process generates diverse, high-quality training samples while maintaining cost efficiency through strategic model selection.
+
+\subsubsection{Multi-Strategy Augmentation Approach}
+
+Stage 2 employs five distinct augmentation strategies, each using different LLM models selected based on task complexity and cost-performance trade-offs. The strategies generate diverse question-SQL pairs through different transformation approaches, ensuring comprehensive coverage of natural language variations and SQL equivalent formulations.
+
+\paragraph{Strategy 1: Question Paraphrase (25\% of samples)}
+
+Rephrases natural language questions while preserving exact SQL intent and all specific values:
+
+\begin{lstlisting}[style=pythonstyle, caption=Question paraphrase strategy]
+system_prompt = """
+You are a CIM Wizard database expert.
+TASK: Rephrase the given question naturally while preserving 
+ALL specific values, IDs, thresholds, and the exact SQL intent.
+
+GUIDELINES:
+- Use different wording and sentence structure
+- Preserve all numbers, IDs, and specific values EXACTLY
+- Maintain the same query intent
+- Vary between interrogative, direct, and descriptive styles
+- Return ONLY the rephrased question, nothing else
+"""
+
+user_prompt = f"""
+Rephrase this database question naturally:
+
+Original: {question}
+
+Rephrased question:
+"""
+\end{lstlisting}
+
+\textbf{Model}: GPT-4o-mini (cost-effective for language tasks)
+\textbf{Input}: Original question + SQL
+\textbf{Output}: Rephrased question (SQL unchanged)
+\textbf{Rationale}: Generates natural language diversity while maintaining SQL correctness
+
+\paragraph{Strategy 2: SQL-to-Question (20\% of samples)}
+
+Generates natural language questions from SQL queries, creating reverse mappings:
+
+\begin{lstlisting}[style=pythonstyle, caption=SQL-to-question generation strategy]
+system_prompt = """
+You are a CIM Wizard database expert.
+TASK: Generate a natural language question that would 
+produce this SQL query.
+
+GUIDELINES:
+- Question should match the SQL's intent EXACTLY
+- Include all specific values, IDs, and thresholds from the SQL
+- Use natural, conversational language
+- Vary the question style (interrogative, direct command, descriptive)
+- Return ONLY the question, nothing else
+"""
+
+user_prompt = f"""
+Generate a natural language question for this SQL query:
+
+SQL: {sql}
+
+Question:
+"""
+\end{lstlisting}
+
+\textbf{Model}: GPT-4o-mini (cost-effective for language tasks)
+\textbf{Input}: SQL query
+\textbf{Output}: Natural language question (SQL unchanged)
+\textbf{Rationale}: Creates alternative question formulations for the same SQL pattern
+
+\paragraph{Strategy 3: Question-to-SQL (20\% of samples)}
+
+Generates equivalent SQL queries using different approaches while maintaining the same result:
+
+\begin{lstlisting}[style=pythonstyle, caption=Question-to-SQL equivalent generation]
+system_prompt = """
+You are a CIM Wizard database expert.
+TASK: Generate an equivalent PostGIS SQL query that answers 
+this question. You may use a different approach (different join 
+order, different spatial functions, subqueries vs CTEs) while 
+maintaining the SAME result.
+
+GUIDELINES:
+- SQL must be syntactically correct PostGIS
+- Must produce EQUIVALENT results to the original intent
+- Use different approaches when possible:
+  * Different join order
+  * ST_Within vs ST_Contains (where semantically equivalent)
+  * Subquery vs CTE
+  * Different aggregation approach
+- Preserve all specific values and IDs EXACTLY
+- Return ONLY the SQL query, nothing else
+"""
+
+user_prompt = f"""
+Generate an equivalent SQL query for this question:
+
+Question: {question}
+
+Reference SQL (for understanding intent):
+{sql}
+
+Equivalent SQL:
+"""
+\end{lstlisting}
+
+\textbf{Model}: GPT-4.1 (powerful model for SQL reasoning tasks)
+\textbf{Input}: Question + reference SQL
+\textbf{Output}: Equivalent SQL (question unchanged)
+\textbf{Rationale}: Generates SQL diversity by exploring alternative query formulations
+
+\paragraph{Strategy 4: SQL Rewrite (15\% of samples)}
+
+Rewrites SQL queries using different syntax or structure while producing identical results:
+
+\begin{lstlisting}[style=pythonstyle, caption=SQL rewrite strategy]
+system_prompt = """
+You are a CIM Wizard database expert.
+TASK: Rewrite this SQL query using different syntax or 
+structure while producing the SAME results.
+
+GUIDELINES:
+- Use different join syntax (explicit JOIN vs implicit WHERE)
+- Reorder joins when possible
+- Use equivalent spatial functions where appropriate
+- Convert between subquery and CTE styles
+- Preserve ALL specific values and conditions
+- Must produce IDENTICAL results
+- Return ONLY the rewritten SQL, nothing else
+"""
+
+user_prompt = f"""
+Rewrite this SQL query using different syntax while 
+keeping identical results:
+
+Original SQL: {sql}
+
+Rewritten SQL:
+"""
+\end{lstlisting}
+
+\textbf{Model}: GPT-4.1 (powerful model for SQL reasoning tasks)
+\textbf{Input}: Original SQL
+\textbf{Output}: Rewritten SQL (question unchanged)
+\textbf{Rationale}: Creates SQL syntactic diversity while maintaining semantic equivalence
+
+\paragraph{Strategy 5: Parameter Variation (20\% of samples)}
+
+Creates new question-SQL pairs with different but realistic parameter values:
+
+\begin{lstlisting}[style=pythonstyle, caption=Parameter variation strategy]
+system_prompt = """
+You are a CIM Wizard database expert.
+TASK: Create a new question and SQL pair with different but 
+REALISTIC parameter values while maintaining the SAME query structure.
+
+GUIDELINES:
+- Change numeric values to different but realistic values:
+  * Heights: 5-50 meters
+  * Areas: 50-5000 square meters
+  * Distances: 10-1000 meters
+  * Population: 100-10000
+- Change IDs to different valid values (project_id, scenario_id, building_id)
+- Building types: residential, commercial, industrial, mixed
+- Keep the EXACT same query structure and logic
+- Return in this EXACT format:
+QUESTION: [your new question]
+SQL: [your new SQL]
+"""
+
+user_prompt = f"""
+Create a variation with different parameter values:
+
+Original Question: {question}
+Original SQL: {sql}
+
+New question and SQL (format: QUESTION: ... SQL: ...):
+"""
+\end{lstlisting}
+
+\textbf{Model}: GPT-4o-mini (cost-effective for parameter substitution)
+\textbf{Input}: Question + SQL
+\textbf{Output}: New question + new SQL with different parameters
+\textbf{Rationale}: Expands dataset with realistic parameter variations
+
+\subsubsection{Model Selection Rationale}
+
+The multi-model strategy optimizes cost-performance trade-offs by assigning powerful models to SQL reasoning tasks and cost-effective models to language tasks:
+
+\begin{table}%[htbp]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Strategy} & \textbf{Model} & \textbf{Task Type} & \textbf{Usage} & \textbf{Cost Tier} \\
+\midrule
+Question Paraphrase & GPT-4o-mini & Language & 25\% & Low \\
+SQL-to-Question & GPT-4o-mini & Language & 20\% & Low \\
+Question-to-SQL & GPT-4.1 & SQL Reasoning & 20\% & High \\
+SQL Rewrite & GPT-4.1 & SQL Reasoning & 15\% & High \\
+Parameter Variation & GPT-4o-mini & Language & 20\% & Low \\
+\bottomrule
+\end{tabular}
+\caption{Augmentation strategy model assignment and distribution}
+\end{table}
+
+\textbf{Key Principles}:
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Task-Specific Model Selection}: SQL reasoning tasks (question-to-SQL, SQL rewrite) use powerful models for superior SQL generation quality, while language tasks (paraphrasing, question generation) use cost-effective models for efficiency
+  \item \textbf{Balanced Distribution}: Majority of samples use cost-effective models, with premium models reserved for complex SQL reasoning tasks
+  \item \textbf{Diverse Augmentation}: Five strategies cover question variation, SQL variation, and parameter variation, ensuring comprehensive dataset diversity
+  \item \textbf{Cost-Effectiveness}: The multi-model strategy optimizes cost-performance trade-offs while maintaining high quality (detailed costs in Chapter~\ref{ch:results})
+\end{itemize}
+
+\subsubsection{Quality Validation by NoErr (for stage2)}
+
+Generated samples undergo rigorous quality evaluation and filtering before curation to ensure that only executable, high-quality SQL queries enter the training dataset. The quality control process uses \texttt{evaluate\_generation\_quality.py} to validate SQL executability against the CIM Wizard database, implementing a validation-first approach that prevents error propagation through the pipeline and maintains training data quality standards.
+
+\paragraph{Quality Evaluation Process}
+
+The evaluation pipeline processes all augmented samples through systematic database execution validation, ensuring that LLM-generated SQL queries are syntactically correct and semantically valid before inclusion in training data. The evaluation workflow is invoked through command-line interface as illustrated in the following example:
+
+\begin{lstlisting}[style=pythonstyle, caption=Stage 2 quality evaluation]
+python evaluate_generation_quality.py \
+    --input stage3_augmented_dataset.jsonl \
+    --output stage3_quality_report.json \
+    --output_annotated stage3_augmented_dataset_annotated.jsonl \
+    --output_filtered stage3_augmented_dataset_filtered.jsonl \
+    --stage 3 \
+    --db_uri "postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated"
+\end{lstlisting}
+
+The evaluation process begins with database execution where each generated SQL query is executed against the CIM Wizard database with a 30-second timeout, providing immediate feedback on query correctness through actual database execution rather than static syntax validation. Execution errors are systematically categorized into four distinct error types: SCHEMA\_ERROR for incorrect table or column references, SYNTAX\_ERROR for malformed SQL syntax, TIMEOUT\_ERROR for queries exceeding execution time limits, and OTHER\_ERROR for unexpected database or connection failures. This error classification enables targeted analysis of failure modes, revealing whether errors stem from schema misunderstanding, syntax generation issues, or query complexity problems. NoErr calculation marks samples with successful execution as passing, providing the primary quality metric that quantifies the proportion of generated queries that execute without errors. All samples receive annotation with execution status and detailed error information, creating a comprehensive quality record that enables analysis of error patterns and identification of systematic issues in LLM generation. Finally, a filtered dataset containing only passing samples (NoErr) is generated, ensuring that subsequent training stages receive only executable queries that will contribute positively to model learning rather than teaching incorrect patterns.
+
+\paragraph{Quality Validation Approach}
+
+After augmentation, samples undergo rigorous quality evaluation and filtering to ensure training readiness through a multi-stage validation process that combines database execution validation with semantic and structural quality checks. The quality control process validates SQL executability against the CIM Wizard database as the primary quality gate, ensuring that only successfully executable queries are retained through NoErr filtering. This database execution validation provides definitive correctness assessment that cannot be achieved through static analysis alone, as it validates not only syntax but also semantic correctness including proper schema references, valid spatial function usage, and appropriate data type handling.
+
+Beyond execution validation, the quality control process implements additional filtering steps that ensure training data quality across multiple dimensions. Semantic deduplication employs Sentence-BERT~\cite{reimers2019sentence} embeddings with a 0.95 similarity threshold to remove near-duplicate questions, preventing the training dataset from being dominated by minor variations of the same query that would provide redundant learning signal. Length filtering enforces a 20-300 character range for questions, ensuring appropriate complexity where questions are neither too brief to lack context nor excessively verbose to introduce noise. Terminology validation requires that questions contain spatial terms or table references, ensuring domain relevance and preventing inclusion of generic queries that lack CIM Wizard-specific context.
+
+The filtered dataset resulting from this multi-stage quality validation is then merged with Stage 1 samples and negative samples for final curation and stratification. This validation-first approach ensures that quality issues are identified and resolved early in the pipeline, preventing error propagation to subsequent stages and maintaining high training data quality throughout the dataset generation process. Detailed quality evaluation results including NoErr rates, error breakdowns, and filtering statistics are presented in Chapter~\ref{ch:results}, providing quantitative validation of the quality control process effectiveness.
+
+\subsection{Rule-Based Negative Sample Generation}
+
+Production deployment requires robust handling of out-of-scope queries, ambiguous requests, and invalid schema references that would otherwise cause models to hallucinate SQL or generate inappropriate responses. Rule-based negative samples are systematically generated to teach models to respond appropriately rather than attempting SQL generation for invalid inputs, addressing critical production requirements identified during iteration 2 evaluation where models demonstrated insufficient robustness in handling edge cases and invalid queries.
+
+\paragraph{Negative Sample Categories}
+
+The negative sample generation encompasses four distinct categories that together teach comprehensive robustness patterns, each addressing specific failure modes observed in production deployment scenarios. Out-of-scope samples represent 35\% of negative examples, targeting the problem where models attempt SQL generation for any input regardless of relevance, such as responding to conversational queries like "hi" with hallucinated SQL. The solution includes conversational queries ("hi", "how are you", "thanks"), general knowledge questions ("what is machine learning"), and wrong domain queries ("SELECT * FROM customers") that are completely irrelevant to the CIM Wizard database. The training goal teaches models to respond with \texttt{OUT\_OF\_SCOPE: I can only help with CIM Wizard spatial queries}, preventing inappropriate SQL generation for non-database queries and ensuring that models recognize their domain boundaries.
+
+Ambiguous samples also represent 35\% of negative examples, addressing the problem where models generate SQL for queries lacking critical parameters, such as "find buildings" without project context that would return unintended results across all projects. The solution includes queries with missing project filters ("What are the building IDs?"), missing spatial context ("Which buildings overlap?"), and logically incomplete queries ("Calculate distances") that require clarification before SQL generation is possible. The training goal teaches models to respond with \texttt{AMBIGUOUS: Please specify project and scenario context}, preventing over-broad queries that would return unintended results and ensuring that models request necessary information before generating SQL.
+
+Invalid schema samples comprise 20\% of negative examples, targeting the problem where models may hallucinate non-existent tables or columns when users reference incorrect database structures. The solution includes wrong table references ("find buildings in 'structures' table"), wrong column names ("get building 'size' column"), and wrong schema prefixes ("select from 'spatial\_data.buildings'") that do not match the actual CIM Wizard database schema. The training goal teaches models to respond with \texttt{AMBIGUOUS: Invalid table name. Use cim\_vector.cim\_wizard\_building}, reducing schema hallucination errors and ensuring that models trust their learned schema knowledge rather than accepting incorrect user references.
+
+Adversarial samples represent 10\% of negative examples, implementing schema authority training where models learn to trust their internalized schema knowledge over incorrect user instructions. The problem addressed involves models that trust incorrect instructions such as "use 'structures' table" when the actual schema uses \texttt{cim\_wizard\_building}. The solution employs adversarial samples with wrong instructions but correct expected SQL, where the instruction explicitly provides incorrect schema information but the model should generate SQL using the correct schema learned during fine-tuning. The training goal teaches models to trust their learned schema knowledge over incorrect guidance, improving schema trust and reducing hallucination from incorrect instructions while maintaining the ability to accept valid user clarifications.
+
+\paragraph{LIMIT/ORDER BY Distribution Correction}
+
+During iteration 2 evaluation, it was identified that models trained on datasets where all templates included LIMIT clauses developed the problematic behavior of always adding LIMIT clauses inappropriately, even when users requested complete result sets. The dataset curation addresses this through realistic distribution matching actual CIM Wizard usage patterns, where the majority of queries (85\%) contain neither LIMIT nor ORDER BY clauses, reflecting that users typically want complete results rather than truncated subsets. A smaller proportion (7\%) includes ORDER BY only, representing queries where users want sorted complete results, while the remaining 8\% includes both LIMIT and ORDER BY, representing explicit requests for "top N" results. This realistic distribution ensures that models learn to add LIMIT clauses only when questions contain explicit requests such as "top N" or "first N", preventing inappropriate result truncation while maintaining the ability to handle explicit pagination requests appropriately.
+
+\subsection{Merging and Curation Dataset and Final Composition}
+
+The final dataset curation process integrates positive samples from Stage 1 and Stage 2 with rule-based negative samples, followed by stratification and shuffling to address unbalanced distributions.
+
+
+
+\subsubsection{Stratification and Shuffling}
+
+After merging positive samples (Stage 1 + Stage 2) with negative samples, the dataset undergoes stratification and shuffling to address unbalanced distributions and ensure proper train/validation/test splits.
+
+\paragraph{Multi-Dimensional Stratification}
+
+Samples are stratified across multiple dimensions to ensure balanced representation:
+
+\begin{lstlisting}[style=pythonstyle, caption=Multi-dimensional stratification]
+def stratify_dataset(samples):
+    """Stratify samples across multiple dimensions"""
+    
+    # Define stratification keys combining multiple dimensions
+    stratify_keys = [
+        f"{s['sql_type']}_{s['difficulty_level']}_{s['schema_complexity']}_{s['sample_type']}"
+        for s in samples
+    ]
+    
+    # Stratified train/val/test split (70%/15%/15%)
+    train, temp = train_test_split(
+        samples, 
+        test_size=0.3, 
+        stratify=stratify_keys, 
+        random_state=42
+    )
+    
+    val, test = train_test_split(
+        temp, 
+        test_size=0.5,
+        stratify=[f"{s['sql_type']}_{s['difficulty_level']}_{s['schema_complexity']}_{s['sample_type']}" 
+                  for s in temp],
+        random_state=42
+    )
+    
+    return train, val, test
+\end{lstlisting}
+
+\paragraph{Stratification Dimensions}
+
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{SQL Type}: Ensures all query types represented in train/val/test
+  \item \textbf{Difficulty Level}: EASY, MEDIUM, HARD, VERY\_HARD balanced across splits
+  \item \textbf{Schema Complexity}: SINGLE\_SCHEMA, MULTI\_SCHEMA distribution maintained
+  \item \textbf{Sample Type}: POSITIVE vs NEGATIVE samples proportionally distributed
+\end{itemize}
+
+
+
+\section{Fine-Tuning Pipeline (TXT2SSQL)}
+
+The fine-tuning pipeline underwent iterative refinement across three dataset generation cycles, with architecture and model selection decisions based on empirical evaluation of performance, cost, and deployment feasibility. This section describes the final approach selected after comprehensive comparison.
+
+
+
+\subsection{Selected Model: SQLCoder 7B}
+
+Based on iteration 2 evaluation, SQLCoder 7B was selected as the optimal model for fine-tuning, providing the best performance-to-cost ratio.
+
+\subsubsection{Model Selection Rationale}
+
+SQLCoder 7B was selected based on four key advantages. First, its pre-training on the BIRD benchmark~\cite{bird-bench} provides a strong SQL generation foundation that transfers effectively to spatial SQL through domain fine-tuning. Second, the model achieves best-in-class execution accuracy after domain adaptation, matching or exceeding significantly larger models including Qwen 14B and Llama 8B. Third, SQLCoder demonstrates superior cost efficiency across all operational dimensions: training completes in 8-12 hours compared to 20-40 hours for larger models, lower GPU memory requirements enable training on consumer hardware, inference latency remains at 1-2 seconds on RTX 6000 24GB VRAM, and power consumption stays minimal due to smaller model size and faster training cycles. Fourth, the 7B parameter size enables efficient production deployment on consumer GPUs with acceptable latency for interactive applications.
+
+\subsection{QLoRA Fine-Tuning Approach}
+
+The fine-tuning strategy employs QLoRA (Quantized Low-Rank Adaptation) to enable parameter-efficient training on consumer hardware. QLoRA combines 4-bit quantization of the base model with low-rank adapter training, dramatically reducing memory requirements while maintaining model performance. This approach trains only a small fraction of parameters (typically $<$1\%) through low-rank decomposition matrices, while keeping the quantized base model frozen.
+
+The technical configuration includes quantization through BitsAndBytes (4-bit NF4 quantization with double quantization), LoRA adapter configuration targeting attention projection layers (q\_proj, k\_proj, v\_proj, o\_proj) and feed-forward layers (gate\_proj, up\_proj, down\_proj), and training hyperparameters optimized for stable convergence including cosine learning rate scheduling with warmup, gradient accumulation for effective larger batch sizes, and mixed-precision training (BF16) for computational efficiency.
+
+The training infrastructure utilizes professional-grade GPUs with sufficient VRAM to accommodate quantized models plus adapter parameters, HuggingFace Transformers with PEFT library for adapter management, and Weights \& Biases for experiment tracking and monitoring. Detailed technical specifications, code implementations, and infrastructure configurations are presented in Chapter~\ref{ch:results}.
+
+\subsection{Final Fine-Tuning Configuration}
+
+Based on iterative refinement findings, the final fine-tuning configuration employs SQLCoder 7B with direct Q2SQL architecture, selected through empirical evaluation across multiple models and architectural variants.
+
+\subsubsection{Model Selection Rationale}
+
+SQLCoder's pre-training on SQL benchmarks (BIRD) provides a strong foundation for domain adaptation through parameter-efficient fine-tuning. The direct Q2SQL architecture (Question $\rightarrow$ SQL) offers optimal balance between simplicity and performance, while QLoRA quantization enables efficient training on consumer hardware. The training process uses curated samples with systematic optimization strategies, achieving production-ready performance through parameter-efficient adaptation (detailed training results and performance analysis in Chapter~\ref{ch:results}).
+
+\section{Iterative Refinement Process}
+
+The development methodology employed an iterative refinement approach where each complete pipeline execution revealed specific limitations that informed systematic improvements in subsequent iterations. This section describes the three-iteration evolution that transformed an initial prototype into a production-ready system, highlighting key methodological insights and architectural decisions that emerged through empirical evaluation.
+
+\subsection{Dataset Evolution}
+
+The dataset generation pipeline underwent three complete iterations to achieve the current high-quality distribution, with each iteration involving full pipeline execution from template generation through fine-tuning and evaluation, followed by systematic improvements based on empirical findings. The iterative approach enabled data-driven refinement where evaluation results directly informed subsequent improvements, ensuring that each iteration addressed specific identified limitations rather than implementing arbitrary changes.
+
+The first iteration revealed that initial templates were overly complex, covering advanced SQL patterns including complex nested queries, multi-schema joins, and sophisticated spatial operations that rarely occurred in actual CIM Wizard usage. This complexity mismatch led to models that performed well on rare advanced queries but struggled with common simple queries that constituted the majority of actual usage. This iteration produced the key methodological insight of stage-wise validation: evaluating each dataset generation stage with the NoErr metric ensures samples are executable before passing to the next stage, filtering incorrect samples early in the pipeline and preventing error propagation that would degrade final dataset quality.
+
+The second iteration achieved acceptable performance through simplified templates focusing on common SQL patterns that matched actual CIM Wizard usage frequency. However, evaluation revealed a critical LIMIT clause bias where all training templates included LIMIT statements, causing models to inappropriately add LIMIT clauses to all generated queries even when users requested complete result sets. This revealed the importance of realistic distribution matching actual usage patterns, where the majority of queries (85\%) contain neither LIMIT nor ORDER BY clauses, reflecting that users typically want complete results rather than truncated subsets. The iteration also identified the need for more sophisticated template organization that avoids polluting templates with unnecessary clauses, ensuring that training data reflects realistic query patterns rather than artificial template artifacts.
+
+The third and final iteration implemented comprehensive improvements addressing all identified limitations from previous iterations. Template quality was enhanced through more accurate coverage across all taxonomy dimensions, with templates systematically organized to avoid LIMIT clause pollution and ensure realistic query patterns matching actual CIM Wizard usage. The taxonomy system was refined and expanded to provide better classification granularity, enabling more precise distribution control and performance analysis. The evaluation framework was enhanced with additional metrics including Deep EM and SC, providing deeper insights into model behavior beyond the initial four metrics (NoErr, EM, EX, EA). Multi-strategy augmentation was implemented optimizing cost-performance trade-offs through strategic model selection for different augmentation tasks. Rule-based negative samples were systematically generated and integrated, teaching models robust rejection patterns for out-of-scope queries, ambiguous requests, and invalid schema references. Finally, stratified curation addressed distribution balance through multi-dimensional stratification ensuring proper representation across all taxonomy categories. This comprehensive refinement produced the final training dataset with frequency-based distribution matching actual CIM Wizard usage patterns, achieving production-ready model performance.
+
+\subsection{Architecture Selection Process}
+
+The architecture selection involved systematic comparison of two fundamental approaches: direct single-stage fine-tuning (Question $\rightarrow$ SQL) versus two-stage decomposition (Question $\rightarrow$ Instruction $\rightarrow$ SQL). The direct approach offers simpler deployment and lower computational cost, while the two-stage approach was hypothesized to improve reasoning through explicit intermediate instruction generation that would decompose complex queries into reasoning steps before SQL generation.
+
+Empirical evaluation revealed that the two-stage approach provided only marginal improvement of 0-3.5\% accuracy gain, far below the expected 3-5\% improvement that would justify the significant cost increase. The two-stage architecture incurred 2-3x increases in training time, inference latency, and computational resources, with instruction generation requiring approximately 200 tokens per sample that dramatically increased both training and inference costs. Additionally, synthetic instructions lacked realistic schema linking and evidence patterns that would require actual user interaction data from CIM Wizard/CIM Assist, limiting the effectiveness of the intermediate reasoning step. The deployment complexity of maintaining two models further reduced the approach's attractiveness. The direct Q2SQL architecture was consequently selected as the final approach, providing sufficient accuracy for production deployment while offering simpler deployment, lower latency of 1-2 seconds, and reduced computational cost.
+
+\subsection{Model Selection}
+
+The model selection process evaluated multiple candidates including Qwen 2.5 14B, Llama 3.1 8B, and SQLCoder 7B, with selection based on comprehensive assessment of performance, training efficiency, and deployment feasibility. SQLCoder 7B was ultimately selected as the optimal model, providing the best performance-to-cost ratio among evaluated candidates.
+
+SQLCoder's pre-training on the BIRD benchmark provided a strong SQL generation foundation that transferred effectively to spatial SQL through domain fine-tuning, enabling superior performance compared to general-purpose models without SQL-specific pre-training. The model achieved best-in-class execution accuracy after domain adaptation, matching or exceeding significantly larger models including Qwen 14B while requiring substantially less computational resources. Training efficiency proved exceptional, with SQLCoder completing fine-tuning in 8-12 hours compared to 30-40 hours for Qwen 14B and 20-25 hours for Llama 8B, representing a 50-70\% reduction in training time. The smaller model size enabled practical deployment on consumer hardware with RTX 6000 24GB VRAM, providing acceptable inference latency of 1-2 seconds suitable for interactive applications. The cost-effectiveness across all operational dimensions, combined with superior or equivalent performance compared to larger models, established SQLCoder as the optimal choice for production deployment.
+
+Qwen 14B was evaluated as an alternative candidate, offering larger model capacity that could potentially achieve higher accuracy through increased parameter count. However, evaluation revealed that the performance improvement did not justify the substantial training time increase (30-40 hours versus 8-12 hours), and the larger model size created deployment challenges on consumer hardware. The absence of SQL-specific pre-training further limited Qwen's effectiveness compared to SQLCoder's BIRD benchmark foundation, resulting in lower accuracy despite larger model size. The evaluation concluded that SQLCoder's combination of SQL pre-training, training efficiency, and deployment feasibility provided superior value for the CIM Wizard domain-specific application.
+
+\section{Agent Integration (CIM Assist)}
+
+CIM Assist represents the natural language interface layer that bridges the gap between non-technical energy researchers and the complex CIM Wizard spatial database. While CIM Wizard provides the extensible platform for defining building calculators and managing multi-schema data, the inherent complexity of PostGIS spatial SQL queries remains a significant barrier for domain experts who lack database programming expertise. CIM Assist addresses this accessibility challenge through a production-ready service that translates natural language questions into correct PostGIS queries, executes them against the CIM Wizard database, and presents results in an interpretable format.
+
+The system operates through an integrated three-phase pipeline that combines cost-effective dataset generation, parameter-efficient fine-tuning, and intelligent agent orchestration. The two-stage dataset generation approach creates training samples through rule-based templates and multi-strategy LLM augmentation, producing samples with frequency-based distribution matching actual CIM Wizard usage patterns. Direct Q2SQL fine-tuning using QLoRA trains specialized SQLCoder 7B models on consumer hardware, learning to generate SQL queries directly from natural language questions. The fine-tuned model deploys through a production-ready FastAPI service with LangChain/LangGraph agent orchestration, LangSmith observability, and comprehensive interaction logging, enabling self-correction through execution feedback and achieving production-ready performance (detailed results in Chapter~\ref{ch:results}).
+
+This integrated approach transforms CIM Wizard from an expert-oriented database system into an accessible research tool where energy domain specialists can pose questions like "Show buildings with solar potential above 150 kWh/m² within 500 meters of subway stations" and receive accurate PostGIS query results without writing SQL code.
+
+\subsection{Service Architecture}
+
+The CIM Assistant service is implemented as a production-ready dockerized REST API service combining FastAPI, LangChain/LangGraph, and LangSmith for comprehensive observability. The architecture follows a microservices pattern with clear separation of concerns: API layer, agent orchestration, model management, and database integration.
+
+The service integrates five core components: FastAPI REST API providing RESTful endpoints for query processing and feedback collection, LangChain/LangGraph agent implementing stateful orchestration with iterative self-correction, model loader managing fine-tuned SQLCoder 7B with 4-bit quantization support, database integration handling CIM database connections and interaction logging, and LangSmith integration providing automatic tracing and observability for all LLM calls. The service exposes three REST endpoints: \texttt{POST /api/v1/query} for processing natural language questions and returning SQL results with interaction tracking, \texttt{POST /api/v1/feedback} for submitting user feedback on interaction quality, and \texttt{GET /health} for health monitoring and service orchestration.
+
+\subsection{Agent Workflow}
+
+The agent implements a direct Q2SQL approach using LangGraph for stateful orchestration with iterative self-correction. The workflow generates SQL directly from natural language questions using the fine-tuned SQLCoder 7B model, executes queries against the CIM database, and automatically retries with error feedback when execution fails. The LangGraph implementation manages stateful workflow with conditional branching, where the agent state tracks question, current SQL, execution results, iteration count, and error messages. The workflow employs conditional edges that route to correction nodes when errors occur, enabling iterative refinement up to a maximum of 5 attempts, with each iteration receiving detailed error feedback from database execution to guide SQL correction.
+
+The SQL generation prompt includes CIM database schema context when needed, ensuring that models have access to necessary table and column information. The prompt emphasizes proper schema prefix usage (cim\_vector., cim\_census., cim\_raster.), correct PostGIS spatial function usage, and avoidance of unnecessary LIMIT clauses unless explicitly requested.
+
+\subsection{Error Handling and Self-Correction}
+
+When SQL execution fails, the agent receives detailed error feedback and automatically retries with correction, implementing an error feedback loop where database execution errors are passed back to the model to guide subsequent generation attempts. The error feedback includes specific error messages such as column not found errors, invalid spatial operation errors, missing schema errors, join ambiguity errors, and timeout errors, each providing targeted information that enables the model to correct specific issues. Common error patterns include column references requiring table prefixes or case sensitivity corrections, spatial operations requiring geometry type casting, missing schema prefixes requiring explicit schema.table notation, join ambiguity requiring table aliases, and query timeouts requiring spatial index hints or query simplification.
+
+All interactions are logged to the database for analysis and continuous improvement, with interaction logs capturing question, generated SQL, execution results, error messages, execution time, iteration count, and user feedback. Users can provide feedback on interaction quality through the feedback endpoint, enabling continuous model improvement and quality monitoring through rating systems and optional comments.
+
+\subsection{Deployment Architecture}
+
+The service is fully containerized using Docker and Docker Compose, with the CIM database and CIM Assistant API deployed as separate containers that communicate through defined network interfaces. The deployment configuration includes environment variable management for model selection, device configuration, and API keys, with health check dependencies ensuring proper service startup sequencing.
+
+All LLM calls are automatically traced to LangSmith for comprehensive observability, providing automatic tracing of all agent queries, performance monitoring of latency and token usage, debugging capabilities through full prompt/response history, and project organization for trace analysis. The integration requires only setting the \texttt{LANGSMITH\_API\_KEY} environment variable, providing zero-code observability integration.
+
+The service includes production-ready features including health check endpoints for monitoring and load balancing, comprehensive error handling with user-friendly messages, configurable query timeouts (default 120 seconds), interaction logging for analysis, feedback collection for continuous improvement, auto-generated API documentation, and CORS support for web application integration.
+
+\subsection{Deployment Modes and Characteristics}
+
+CIM Assist supports two deployment modes with distinct operational characteristics. Direct Inference Mode executes a single forward pass through the fine-tuned model, generating SQL from the natural language question without iteration, offering minimal latency suitable for time-critical applications. Agent Mode employs iterative refinement with execution feedback, where generated SQL is executed against the database and error messages guide subsequent generation attempts, enabling self-correction at the cost of increased latency.
+
+The trade-off between modes depends on application requirements: direct inference prioritizes speed with single-pass generation, while agent mode prioritizes correctness through iterative refinement with execution feedback. Detailed performance measurements, accuracy comparisons, and latency analysis for both modes are presented in Chapter~\ref{ch:results}.
+
+\section{Summary}
+
+This chapter presented the complete methodology comprising:
+
+\begin{enumerate}[leftmargin=1.2em]
+  \item \textbf{CIM Wizard}: Object-oriented calculator-based platform with 17 extensible calculators, multi-schema PostGIS integration, and automatic pipeline orchestration
+  
+  \item \textbf{Dataset Generation (AI4DB)}: Two-stage pipeline (templates $\rightarrow$ LLM augmentation) with frequency-based distribution matching actual CIM Wizard usage patterns, employing validation-first approach for high-quality sample generation
+  
+  \item \textbf{Negative Sample Integration}: Realistic LIMIT/ORDER BY distribution, negative sample training for robustness, out-of-scope detection, ambiguity handling, and schema trust validation
+  
+  \item \textbf{Fine-Tuning (TXT2SSQL)}: Direct Q2SQL architecture using QLoRA on SQLCoder 7B model, selected for optimal balance of performance, efficiency, and deployment feasibility
+  
+  \item \textbf{Agent Integration (CIM Assist)}: Production-ready dockerized FastAPI service with LangChain/LangGraph agent orchestration, LangSmith observability, interaction logging, and feedback collection, enabling self-correction through execution feedback
+  
+  \item \textbf{Evaluation Framework}: Seven complementary metrics (NoErr, EM, Deep EM, EX, SC, EA, plus robustness metrics: OOS, AD, ST) with weighted stratified benchmarks enabling comprehensive quality control and model comparison
+\end{enumerate}
+
+The methodology emphasizes reproducibility (open-source implementation), cost-effectiveness, production readiness, and robustness through comprehensive evaluation. Chapter~\ref{ch:results} presents detailed experimental results, performance measurements, and validation of this approach.
+

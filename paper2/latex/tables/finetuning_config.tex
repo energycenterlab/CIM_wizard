@@ -1,0 +1,20 @@
+\begin{table}[t]
+  \centering
+  \caption{QLoRA fine-tuning configuration (CIM Assist thesis; reused in O4/O5).}
+  \label{tab:finetuning}
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    Parameter & Value \\
+    \midrule
+    Base model & SQLCoder-7B (\texttt{defog/sqlcoder-7b-2}) \\
+    Method & QLoRA 4-bit; rank 16; $\alpha$ 32 \\
+    Training samples & 34,993 (90\% positive; 10\% negative) \\
+    Effective batch size & 16 (batch 4 $\times$ grad.\ accum.\ 4) \\
+    Learning rate & $2.0 \times 10^{-4}$ (cosine; 5\% warmup) \\
+    Hardware & NVIDIA RTX 6000 24\,GB (IPAZIA, PoliTo) \\
+    Training time & 51\,h; 2,187 steps; eval.\ loss 0.036 \\
+    GPU memory & 18\,GB (75\% VRAM) \\
+    \bottomrule
+  \end{tabular}
+\end{table}

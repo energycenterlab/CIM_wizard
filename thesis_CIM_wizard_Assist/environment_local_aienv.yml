@@ -1,0 +1,50 @@
+name: aienv
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Python
+  - python=3.10
+
+  # Core dependencies for local evaluation
+  - pip
+  - numpy
+  - pandas
+  
+  # Database and SQL
+  - sqlalchemy>=2.0
+  - psycopg2
+  
+  # LLM and evaluation (local)
+  - pytorch::pytorch
+  - pytorch::cpuonly
+  
+  # Pip packages
+  - pip:
+    # LangChain for agent evaluation
+    - langchain>=0.1.0
+    - langchain-core>=0.1.0
+    - langchain-community>=0.0.10
+    - langchain-ollama>=0.0.1
+    - langgraph>=0.0.20
+    
+    # Database connectivity
+    - psycopg2-binary
+    
+    # Transformers for HuggingFace model evaluation
+    - transformers>=4.44.0
+    - accelerate>=0.33.0
+    - sentencepiece
+    - protobuf
+    
+    # Utilities
+    - python-dotenv
+    - tqdm
+    - colorama
+    
+    # Optional: Jupyter for interactive work
+    - jupyter
+    - ipykernel
+

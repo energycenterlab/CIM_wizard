@@ -32,11 +32,8 @@ A multi-agent pipeline (O5) drafts new mapping blocks using fine-tuned text-to-S
 
 \begin{figure}[t]
   \centering
-  \fbox{\parbox{0.92\linewidth}{\centering\vspace{1.8em}
-    \textbf{Figure placeholder:} Layered architecture (datasources $\rightarrow$ warehouse $\rightarrow$ DB + calculators $\rightarrow$ VKG).\\
-    Replace with TikZ diagram for camera-ready version.
-  \vspace{1.8em}}}
-  \caption{CIM Wizard 2.0 architecture mapped to objectives O1--O6.}
+  \includegraphics[width=0.92\linewidth]{figures/overall_schema}
+  \caption{Overall CIM Wizard 2.0 schema: objectives O1--O6 and their dependencies. O3 feeds O4 (fine-tuning); O2 and O4 feed O5 (VKG automation); O1, O2, and O5 converge on O6 (integration and confidence).}
   \label{fig:architecture}
 \end{figure}
 

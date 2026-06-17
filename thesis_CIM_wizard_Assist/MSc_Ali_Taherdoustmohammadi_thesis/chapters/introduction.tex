@@ -1,0 +1,81 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Context and Motivation}
+
+Urban energy planning faces an increasingly critical challenge: First create an standard information model of the buildings from sparse data and second ease of use with the complexity of spatial data.
+
+analyzing and optimizing energy consumption across complex city infrastructures requires sophisticated spatial database queries that remain largely inaccessible to domain experts. Energy researchers, urban planners, and policymakers possess deep domain knowledge but often lack the technical expertise to formulate complex PostGIS spatial SQL queries needed to extract insights from urban databases.
+
+This accessibility gap has significant practical implications. Questions such as ``Show me all buildings within 500 meters of a subway station with annual energy consumption above 100 kWh/m$^2$'' or ``Calculate the average solar potential for buildings in districts with population density exceeding 5000 people per km$^2$'' require intricate spatial joins, aggregations, and domain-specific calculations that are beyond the reach of non-technical users.
+
+Traditional approaches to this problem have relied on either pre-built dashboards with limited flexibility or requiring users to learn SQL---neither solution adequately addresses the need for ad-hoc exploratory analysis in urban energy research.
+
+A fundamental insight underlying this work is that any truly intelligent built environment requires not only sensors and data collection infrastructure, but crucially an \textbf{information model generator that maintains structured representations of spatial objects}. Buildings, infrastructure elements, census regions, and environmental features must exist as first-class objects with well-defined properties, relationships, and computational methods. Without such an information model generator holding the place of objects---their geometries, attributes, dependencies, and calculation strategies---intelligent environments lack the semantic foundation necessary for sophisticated reasoning and analysis. This thesis demonstrates that combining CIM Wizard's object-oriented calculator architecture (providing the information model generator) with CIM Assist's natural language interface (enabling accessible interaction) creates an integrated intelligent environment where complex spatial-temporal queries become accessible to domain experts without sacrificing analytical rigor.
+
+\section{Research Problem}
+
+This thesis addresses the challenge of building a flexible platform to create standard information models of buildings from sparse data and a production-ready natural language interface for spatial SQL generation, specifically targeting the City Information Modeling (CIM) domain. The problem encompasses three interrelated challenges that span platform architecture, data generation, and model optimization.
+
+The \textbf{platform challenge} arises from the need for an extensible object-oriented framework enabling researchers to define custom building property calculators without modifying core infrastructure. Existing solutions either lack flexibility through fixed dashboard interfaces or demand extensive programming knowledge for custom script development, creating a significant accessibility barrier for domain experts in urban energy research.
+
+The \textbf{data challenge} stems from the requirement for large-scale, high-quality datasets combining natural language questions with correct PostGIS spatial queries. Manual annotation proves prohibitively expensive at \$0.50-1.00 per sample, while existing Text-to-SQL benchmarks like Spider and BIRD focus predominantly on standard relational SQL with minimal coverage of spatial database operations essential for urban analytics.
+
+The \textbf{model challenge} involves achieving production-ready accuracy for domain-specific spatial SQL generation, where general-purpose language models demonstrate insufficient performance (35-65\% accuracy baseline). The architectural decision between multi-agent RAG systems leveraging frontier models (1T+ parameters) with external knowledge retrieval versus fine-tuning local models (7-32B parameters) to internalize domain-specific knowledge presents critical trade-offs across multiple dimensions including data privacy, initial and ongoing costs, environmental impact (CO\textsubscript{2} footprint), and sustained performance quality.
+
+\section{Proposed Solution}
+
+This thesis presents an integrated framework comprising two complementary systems:
+
+\subsection{CIM Wizard: Object-Oriented Platform}
+
+CIM Wizard Integrated provides an extensible FastAPI framework addressing the platform challenge through a calculator-based architecture comprising 17 modular calculators for building properties including height, area, energetic characteristics, and census information, with each calculator supporting multiple calculation methods per feature. The framework enables seamless multi-schema integration providing unified access to vector geometries, census demographics, and raster elevation models through PostGIS spatial database operations. Automatic orchestration handles dependency resolution, fallback strategies, and flexible pipeline execution modes, while the modular design ensures research extensibility allowing energy researchers to add new calculators and methods without modifying core infrastructure code.
+
+\subsection{CIM Assist: LLM-Powered Interface}
+
+CIM Assist addresses the interaction complexity through a three-steps approach:
+
+\paragraph{Step 1: Dataset Generation}
+
+A novel two-stage pipeline generates high-quality training data cost-effectively. Stage 1 employs rule-based templates with 52 handcrafted patterns covering 11 SQL operation types through systematic parameter variation, producing 10,800 samples at 98-100\% NoErr rate with zero computational cost. Stage 2 applies multi-strategy LLM augmentation where GPT-4o-mini generates diverse natural language questions through five complementary strategies (question paraphrase, SQL-to-question, question-to-SQL, SQL rewrite, and parameter variation), producing 50,000 augmented samples at \$50 total cost with 97.34\% NoErr rate, which are then curated into 34,993 training samples through validation-first methodology achieving high retention rate.
+
+\paragraph{Step 2: Fine-Tuning}
+
+Direct Q2SQL fine-tuning using parameter-efficient QLoRA enables domain adaptation on consumer hardware. The primary approach employs single-stage Question $\rightarrow$ SQL architecture providing optimal balance between accuracy, simplicity, and inference speed. SQLCoder 7B was selected as the base model due to its SQL-specific pre-training on BIRD benchmark, achieving superior performance-to-cost ratio compared to larger general-purpose models. QLoRA quantization enables 7-14B parameter model training on single 24GB GPUs through 4-bit quantization with low-rank adaptation, requiring 8-12 hours training time for 7B models. An alternative two-stage architecture (Question $\rightarrow$ Instruction $\rightarrow$ SQL) was systematically evaluated but showed only marginal accuracy improvement (+3-5\%) with 2-3x latency increase, making direct Q2SQL the pragmatic choice for production deployment.
+
+\paragraph{Step 3: Agent Integration for Evaluation}
+
+LangGraph-based agent orchestration enables comprehensive evaluation through tool-augmented iterative refinement. The agent framework integrates database introspection tools for schema exploration and table inspection, query validation tools for syntax checking before execution, execution feedback mechanisms enabling self-correction through error message analysis, and iterative refinement allowing up to 5 correction attempts with automatic geometry column detection. This agent mode evaluation reveals that fine-tuned models achieve minimal self-correction improvement (0-7 percentage points), indicating high first-shot quality where iterative refinement provides diminishing returns, validating the effectiveness of direct Q2SQL fine-tuning for production deployment.
+
+\section{Main Contributions}
+
+This work makes the following contributions to the fields of urban energy informatics and natural language interfaces for databases:
+
+\begin{enumerate}[leftmargin=1.2em]
+  \item \textbf{Integrated CIM Platform}: Object-oriented calculator-based architecture enabling extensible urban energy modeling with multi-schema PostGIS integration (vector, census, raster), allowing researchers to extend functionality without core infrastructure modifications.
+  
+  \item \textbf{Cost-Effective Dataset Generation}: Two-stage pipeline (templates $\rightarrow$ multi-strategy LLM augmentation) producing 50,000 augmented samples at \$50 total cost with 97.34\% Stage 2 NoErr rate, demonstrating 3,600x cost reduction versus human annotation.
+  
+  \item \textbf{Validation-First Methodology}: Stage-wise quality validation achieving 71.5\% curation retention (14-18x improvement over sequential validation approaches) through inherited SQL correctness, preventing error propagation across pipeline stages.
+  
+  \item \textbf{Production-Ready Fine-Tuned Models}: SQLCoder 7B achieving 84.58\% execution accuracy (exceeding 70\% production threshold), outperforming frontier API models by 54 percentage points through domain-specific fine-tuning with QLoRA on single 24GB GPU.
+  
+  \item \textbf{Comprehensive Evaluation Framework}: Seven complementary metrics (NoErr, EM, Deep EM, EX, SC, EA, plus robustness metrics OOS/AD/ST) with taxonomy-based analysis enabling systematic assessment across query complexity, spatial operations, and schema patterns.
+  
+  \item \textbf{Open-Source Implementation}: Complete framework including CIM Wizard platform (13,522 LOC), AI4DB dataset generation pipeline, fine-tuning scripts, agent integration, and HuggingFace dataset (taherdoust/ai4cimdb) enabling reproducible research and community extension.
+\end{enumerate}
+
+\section{Methodology Overview}
+
+The research methodology follows a systematic pipeline progressing from platform development through evaluation and comparative analysis. Initial platform development designs and implements CIM Wizard Integrated with calculator-based architecture, providing the foundational spatial database infrastructure. Dataset generation executes a two-stage pipeline with validation-first quality control at each stage, ensuring high-quality training data. Fine-tuning trains specialized models using QLoRA parameter-efficient adaptation on the curated dataset, enabling 7-14B parameter model training on single consumer GPUs. Agent integration deploys fine-tuned models through LangGraph-based orchestration with database introspection tools, enabling systematic evaluation through both standard first-shot and iterative self-correction modes. Systematic evaluation creates taxonomy-based benchmarks and applies seven complementary metrics (NoErr, EM, Deep EM, EX, SC, EA, OOS/AD/ST) to assess model performance across complexity dimensions. Comparative analysis evaluates fine-tuned models against baseline open-source models and frontier API services, validating architecture choices through empirical performance measurements. The methodology emphasizes reproducibility through open-source implementation, cost-effectiveness through academic infrastructure utilization, and production readiness through comprehensive quality validation.
+
+\section{Key Results}
+
+The implemented framework demonstrates production-ready performance across all evaluation dimensions. Dataset generation achieves 98-100\% Stage 1 NoErr rate through rule-based templates and 97.34\% Stage 2 NoErr rate through LLM augmentation, producing 50,000 augmented samples at \$50 total cost representing 3,600x cost reduction versus human annotation. Training efficiency enables SQLCoder 7B fine-tuning in 51 hours on single 24GB GPU through QLoRA parameter-efficient adaptation, demonstrating accessibility of large model fine-tuning on consumer hardware. Model performance results show SQLCoder 7B achieving 84.58\% execution accuracy (EX), 81.59\% Deep EM structural correctness, and 63.18\% semantic correctness (SC), substantially exceeding the 70\% production readiness threshold. Domain-specific fine-tuning provides substantial improvement over baselines, with the fine-tuned SQLCoder outperforming GPT-4o by 54 percentage points despite smaller model size. Agent-based self-correction reveals minimal improvement (EA matching EX at 84.58\%), indicating high first-shot quality where iterative refinement provides diminishing returns. The complete framework required substantial expert time and computation, with total monetary cost of \$50 for dataset generation plus \$0 for training using academic GPU infrastructure, demonstrating feasibility of cost-effective production-ready spatial SQL interfaces.
+
+\section{Thesis Organization}
+
+The remainder of this thesis proceeds through four complementary chapters. Chapter~\ref{ch:sota} reviews the state of the art in urban informatics platforms, Text-to-SQL research, and spatial database interfaces, identifying the research gaps this work addresses. Chapter~\ref{ch:background} presents foundational technologies including PostGIS spatial databases, large language models, parameter-efficient fine-tuning techniques (QLoRA), and AI agent frameworks (LangGraph), providing the technical background necessary to understand the implementation. Chapter~\ref{ch:methodology} describes the complete methodology including CIM Wizard calculator-based architecture, two-stage dataset generation pipeline with validation-first quality control, direct Q2SQL fine-tuning approach with alternative two-stage evaluation, agent integration for iterative evaluation, and comprehensive seven-metric evaluation framework with taxonomy-based analysis. Chapter~\ref{ch:results} presents experimental validation across all methodology phases including dataset generation quality (NoErr rates, curation retention), fine-tuning efficiency (training times, convergence analysis), model performance evaluation (EX, Deep EM, SC, EA metrics with taxonomy breakdowns), comparative analysis against baseline and frontier models, and resource analysis (development effort, computational costs, environmental impact). Chapter~\ref{ch:conclusion} synthesizes contributions, key findings, and technical insights while proposing future research directions including multi-database evaluation, parallel Stage 3 generation, and cross-domain applications.
+
+This structure enables readers with different backgrounds to navigate effectively: domain experts in urban energy modeling may focus on Chapters~\ref{ch:sota}, \ref{ch:methodology}, and~\ref{ch:results} for platform capabilities and performance validation, while technical readers interested in NLP and LLM engineering may emphasize Chapters~\ref{ch:background}, \ref{ch:methodology}, and~\ref{ch:results} for implementation details and systematic evaluation methodology.
+
