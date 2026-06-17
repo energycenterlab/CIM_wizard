@@ -1,0 +1,33 @@
+\section{Quantitative Evaluation Framework}
+\label{sec:evaluation}
+
+Each objective is paired with a testable hypothesis (Table~\ref{tab:hypotheses}).
+Results are grouped into three pillars:
+\textbf{P1 AI accuracy} (O3--O5),
+\textbf{P2 Semantic fidelity} (O2, O5),
+\textbf{P3 Trustworthiness} (O1, O6).
+
+\input{tables/hypotheses}
+
+\subsection{Metrics by objective}
+
+\textbf{O1.} Provenance link rate, metadata completeness, ingest success rate, ingest overhead per 1k features.
+
+\textbf{O2.} Schema coverage (\% mapped columns), SPARQL answer preservation F1, query success rate, p95 latency.
+
+\textbf{O3.} Dataset size, taxonomy balance, gold SQL executability (\%).
+
+\textbf{O4.} EM, EX, Deep EM, SC, EA; $\Delta$EX vs.\ GPT-4o-mini and SQLCoder-7B zero-shot; ablations (architecture, schema prompt, model size).
+
+\textbf{O5.} Mapping F1 vs.\ gold \texttt{.obda}, source SQL EX, SPARQL preservation F1, automation rate (\% mappings accepted without edit).
+
+\textbf{O6.} Method coverage, provenance coverage, agreement rate at tolerance $\tau$ (Table~\ref{tab:tolerances}), median absolute deviation (MAD), conflict rate, Spearman $\rho$ between confidence and cross-method spread, calibration error on truth subset, UBEM stock demand sensitivity.
+
+\input{tables/tolerances}
+
+\subsection{Ground-truth subsets for calibration}
+
+Where full city-scale labels are unavailable, we use partial truth subsets:
+(1)~buildings with both raster and OSM height;
+(2)~a LiDAR or field reference sample ($n \geq 50$);
+(3)~metered or EPC-labelled buildings when available.

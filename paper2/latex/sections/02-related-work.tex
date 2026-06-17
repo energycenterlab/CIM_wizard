@@ -1,0 +1,46 @@
+\section{Related Work}
+\label{sec:related}
+
+We organise related work by research objective.
+
+\subsection{Semi data warehouse and STAC (O1)}
+
+Data \emph{lakes} store raw heterogeneous payloads with schema-on-read flexibility, whereas data \emph{warehouses} enforce integrated schemas optimised for analytics.
+We adopt a \textbf{semi data warehouse}: catalogue discipline and metadata completeness of a warehouse, while retaining heterogeneous ingest formats suited to UBEM (vectors, rasters, APIs, uploads).
+The SpatioTemporal Asset Catalog (STAC)~\cite{stacspec} provides a JSON metadata model for geospatial assets that we extend with a custom \texttt{dl4r:} namespace in our ingest API.
+Comparable catalogue approaches include Planetary Computer STAC, ISO~19115, and DCAT, but UBEM pipelines rarely expose stable \texttt{datasource\_id} values back-linked from feature calculators.
+
+\subsection{UBEM ontology stacks (O2)}
+
+Ontology-centric urban energy pipelines increasingly integrate BIM, GIS, and IoT.
+Shi et al.~\cite{shi2023cim} propose OntoCIM with a five-step BIM--GIS--IoT integration workflow and SPARQL applications.
+Wu et al.~\cite{wu2023bem} combine Brick and BOT for building energy modeling with rule-based thermal zoning.
+Ma et al.~\cite{ma2024ubem} introduce Building Template Ontology (BTO) and Urban Building Ontology (UBO) for city-scale EnergyPlus workflows with GeoSPARQL.
+Standards such as CityGML, 3DCityDB, BOT, SOSA/SSN, and GeoSPARQL provide domain vocabularies, yet prior work does not integrate operational CityDB schemas, calculator provenance, and LLM-maintained OBDA in one stack.
+
+\subsection{Text-to-SQL benchmarks (O3)}
+
+General benchmarks (Spider~\cite{yu2018spider}, BIRD~\cite{li2023bird}) lack PostGIS spatial functions and multi-schema CIM layouts (\texttt{cim\_vector}, \texttt{cim\_census}, \texttt{cim\_network}, \texttt{cim\_raster}).
+Our \texttt{ai4db} pipeline generates taxonomy-labelled pairs covering 18 task types (spatial predicates, raster--vector joins, nested queries) and five domain types.
+
+\subsection{Fine-tuned spatial-SQL LLMs (O4)}
+
+Domain fine-tuning improves execution accuracy (EX) over frontier models on specialised SQL.
+We adopt LoRA fine-tuning of Qwen~2.5 and Llama~3.1 code models and evaluate with EM, EX, Deep EM, semantic correctness (SC), and eventual accuracy (EA) after agentic repair~\cite{xiao2025llm4vkg}.
+
+\subsection{VKG automation and OBDA (O5)}
+
+Virtual Knowledge Graphs (VKGs) expose RDF interfaces over relational data without full materialisation.
+Bereta and Koubarakis~\cite{bereta2016ontop} extend Ontop for geospatial databases with GeoSPARQL-to-SQL translation.
+LLM4VKG~\cite{xiao2025llm4vkg} automates VKG bootstrap using mapping patterns (SE, SR, SRm, SH) but targets generic schemas without domain-trained PostGIS SQL or provenance extensions.
+GeoTriples~\cite{kyzirakos2018geotriples} emphasises practical geospatial mapping with user revision loops.
+
+\subsection{Provenance and confidence in UBEM (O6)}
+
+W3C PROV-O~\cite{prov-o} standardises provenance records.
+UBEM uncertainty studies often report stock-level sensitivity but not per-building lineage tied to registered datasources.
+Our contribution assigns confidence from source tier, cross-method agreement, input completeness, and datasource freshness---enabling auditability when ground truth is partial.
+
+Table~\ref{tab:gap} synthesises gaps addressed by CIM Wizard 2.0.
+
+\input{tables/gap_summary}

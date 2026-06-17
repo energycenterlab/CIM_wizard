@@ -1,0 +1,20 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented CIM Wizard 2.0, an architecture for \emph{auditable} urban building energy modeling when exhaustive ground truth is unavailable.
+Six engineering objectives---semi data warehouse (O1), UBEM ontology stack (O2), CIM text-to-SQL benchmark (O3), fine-tuned spatial-SQL LLMs (O4), multi-agent VKG automation (O5), and provenance-aware multi-method integration (O6)---are evaluated through six quantitative hypotheses (H1--H6).
+
+Key findings:
+\begin{itemize}[leftmargin=*]
+  \item A taxonomy-structured CIM benchmark with 88K pairs and 99\%+ gold executability supports reproducible text-to-SQL evaluation (H3).
+  \item Fine-tuned SQLCoder-7B reaches 84.6\% EX/EA, outperforming frontier models by $>$50 percentage points (H4).
+  \item Seed OBDA mappings achieve 94\% SPARQL answer preservation on smoke queries (H2).
+  \item Multi-method execution with ordinal confidence correlates with method disagreement and moderates UBEM stock sensitivity (H6).
+\end{itemize}
+
+Paper~2 does not claim city-wide accuracy where none exists; instead it enables \textbf{trustworthy} modeling through structured provenance, semantic lineage querying, and confidence scoring---a practical substitute for validation until better measurements arrive.
+
+\section*{Data Availability}
+
+Dataset: Hugging Face \texttt{taherdoust/txt2ssql\_20july2025}.
+Code: \texttt{datalake/}, \texttt{ai4db/}, \texttt{txt2ssql/}, \texttt{assist\_cim/}, \texttt{semantic/}, \texttt{cim\_wizard\_integrated\_2026/}.

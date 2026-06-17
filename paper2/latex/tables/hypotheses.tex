@@ -1,0 +1,18 @@
+\begin{table*}[t]
+  \centering
+  \caption{Research hypotheses H1--H6 with baselines and target metrics.}
+  \label{tab:hypotheses}
+  \small
+  \begin{tabular}{clp{3.5cm}p{2.8cm}p{2.5cm}}
+    \toprule
+    ID & Hypothesis (summary) & Baseline & Primary metrics & Target \\
+    \midrule
+    H1 & Warehouse lineage $\uparrow$ without high ingest cost & Direct \texttt{cim\_*} ingest & Link rate; overhead & Link $\uparrow$; overhead $\leq Y$\% \\
+    H2 & VKG preserves SQL answers & Raw SQL & SPARQL F1; coverage & F1 $\geq Z$ \\
+    H3 & CIM benchmark large \& executable & Spider/BIRD subset & \#pairs; executability & $\geq$88K; $\geq$99\% \\
+    H4 & Fine-tuned LLM beats general models & GPT-4o-mini; SQLCoder & EX; EA; $\Delta$EX & EX$\geq$85\%; EA$\geq$90\% \\
+    H5 & Agents reduce OBDA effort & Manual \texttt{.obda} & Mapping F1; automation \% & F1$\geq$0.7 \\
+    H6 & Confidence is informative & Paper~1 single value & $\rho$; stock $\Delta$ & $\rho \leq -0.5$ \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

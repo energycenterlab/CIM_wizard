@@ -1,0 +1,17 @@
+\begin{table}[t]
+  \centering
+  \caption{CIM text-to-SQL benchmark statistics (H3, T1).}
+  \label{tab:t1}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Statistic & Train & Test \\
+    \midrule
+    Question--SQL pairs & 70,400 & 17,600 \\
+    Task types (18 total) & \multicolumn{2}{c}{balanced $\geq$ 800 each} \\
+    Domain types (5 total) & \multicolumn{2}{c}{balanced $\geq$ 3,500 each} \\
+    Gold SQL executability & \multicolumn{2}{c}{99.2\%} \\
+    Top spatial functions & \multicolumn{2}{c}{ST\_Within, ST\_DWithin, ST\_Buffer} \\
+  \bottomrule
+  \end{tabular}
+\end{table}

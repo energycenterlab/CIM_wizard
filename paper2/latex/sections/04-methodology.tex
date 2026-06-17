@@ -1,0 +1,69 @@
+\section{Methodology}
+\label{sec:methodology}
+
+We organise implementation into five phases (Table~\ref{tab:phases}), each with validation gates G1--G5.
+
+\input{tables/methodology_phases}
+
+\subsection{Phase 1: Data foundation (O1)}
+
+Datasources (OSM extracts, census tiles, DTM/DSM rasters, grid assets, user uploads) are classified as spatial or non-spatial, registered via \texttt{POST /api/v1/datasources}, and ingested with manifests.
+Each feature row carries \texttt{datasource\_id} for provenance back-links.
+We measure ingest success rate, metadata completeness, provenance link rate, and ingest overhead versus direct load (H1).
+
+\subsection{Phase 2: Semantic model (O2)}
+
+The ontology stack has three layers:
+\textbf{L1 Meta} (RDF, RDFS, OWL, SKOS, schema.org, Dublin Core);
+\textbf{L2 Upper} (BFO, SUMO, DOLCE---planned);
+\textbf{L3 Domain} (CityGML, BOT, SOSA/SSN, GeoSPARQL, OWL-Time, \texttt{cim:}).
+File \texttt{alignment.ttl} asserts equivalences (e.g.\ \texttt{citygml:Building} $\equiv$ \texttt{bot:Building}) and subsumptions linking zones and observations.
+Seed mappings in \texttt{cim\_citydb.obda} cover buildings, thermal zones, energy observations, geometries, and time series.
+
+\subsection{Phase 3: LLM capability (O3, O4)}
+
+\textbf{Dataset generation.}
+\texttt{stage1\_cim\_v2.py} produces rule-based question--SQL pairs with task taxonomy (18 types) and domain taxonomy (five schema patterns).
+\texttt{stage3\_v2.py} augments via LLM paraphrase, SQL rewrite, and question-to-SQL strategies.
+Pairs are merged, curated, and split for training.
+
+\textbf{Fine-tuning.}
+We fine-tune Qwen~2.5-14B and Llama~3.1-14B with LoRA in direct (Q2SQL) and two-stage (Q2Inst + QInst2SQL) configurations.
+Evaluation uses \texttt{evaluator\_v2.py} reporting EM, EX, Deep EM, SC, and EA with taxonomy-stratified breakdowns (H4).
+
+\subsection{Phase 4: VKG automation (O5)}
+
+Inspired by LLM4VKG, a multi-agent pipeline performs:
+(1)~schema graph extraction;
+(2)~ontology alignment with mapping-pattern recognition (SE, SR, SRm, SH);
+(3)~source SQL generation via fine-tuned LLM;
+(4)~target RDF assembly from template rules;
+(5)~validation (SQL execution, Ontop load, SPARQL smoke tests);
+(6)~human-approved merge into \texttt{.obda} (H5).
+
+\subsection{Phase 5: Integration and confidence (O6)}
+
+The \texttt{PipelineExecutor} supports \texttt{mode=all\_methods}.
+For each $(\mathit{building}, \mathit{feature}, \mathit{method})$ we persist provenance:
+method name, priority, status, value, input features, \texttt{datasource\_ids}, timestamp, and confidence level $c \in \{1,\ldots,5\}$.
+
+Confidence combines weighted factors:
+\textbf{source tier} (measured $>$ observed $>$ inferred $>$ default),
+\textbf{method agreement} across the multi-method matrix,
+\textbf{input completeness},
+\textbf{datasource freshness},
+and \textbf{execution status}.
+Table~\ref{tab:confidence} defines illustrative ordinal levels.
+
+\input{tables/confidence_levels}
+
+Provenance and confidence are exported to the VKG via \texttt{prov:wasGeneratedBy} and \texttt{cim:confidenceLevel} properties, enabling SPARQL lineage queries (H6).
+
+\begin{figure}[t]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{1.5em}
+    \textbf{Figure placeholder:} Five-phase methodology pipeline (Phases 1--5) with validation gates G1--G5.
+  \vspace{1.5em}}}
+  \caption{High-level methodology schema with validation gates.}
+  \label{fig:methodology}
+\end{figure}

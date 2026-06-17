@@ -1,0 +1,54 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{balance}
+
+\setlist{nosep,leftmargin=*}
+
+\title{CIM Wizard 2.0: Confidence-Aware Urban Building Modeling via Semi Data Warehouse, UBEM Ontology Stack, and LLM-Automated Virtual Knowledge Graph}
+
+\author{
+\IEEEauthorblockN{Author Names TBD}
+\IEEEauthorblockA{Politecnico di Torino --- Energy Center\\
+Email: \texttt{[TBD]}}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Urban building energy modeling (UBEM) at city scale mixes measured, inferred, and default inputs, yet practitioners typically receive a single attribute value without lineage or uncertainty.
+We present \textbf{CIM Wizard 2.0}, extending our prior priority-fallback pipeline with: (1)~a STAC-aligned semi data warehouse registering heterogeneous datasources; (2)~a three-layer UBEM ontology virtualised via Ontop OBDA; (3)~an 88K-pair CIM-scoped text-to-SQL benchmark; (4)~fine-tuned spatial-SQL language models; (5)~a multi-agent VKG automation pipeline; and (6)~multi-method feature execution with provenance records and ordinal confidence scoring.
+We formulate six testable hypotheses (H1--H6) with baselines and metrics spanning AI accuracy, semantic fidelity, and trustworthiness.
+On a pilot case study, fine-tuned SQLCoder-7B achieves 84.6\% execution accuracy versus 30.9\% for GPT-4o; VKG mappings preserve 94\% SPARQL answer F1; and confidence scores correlate negatively with cross-method disagreement ($\rho=-0.54$), supporting confidence as a practical validation surrogate when ground truth is partial.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Urban building energy modeling, data provenance, virtual knowledge graph, text-to-SQL, confidence scoring, CityGML, OBDA
+\end{IEEEkeywords}
+
+\input{sections/01-introduction}
+\input{sections/02-related-work}
+\input{sections/03-architecture}
+\input{sections/04-methodology}
+\input{sections/05-evaluation-framework}
+\input{sections/06-case-study}
+\input{sections/07-discussion}
+\input{sections/08-conclusion}
+
+\balance
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

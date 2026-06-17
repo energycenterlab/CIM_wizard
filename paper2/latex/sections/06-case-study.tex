@@ -1,0 +1,91 @@
+\section{Case Study and Results}
+\label{sec:casestudy}
+
+We evaluate hypotheses H1--H6 on a pilot urban area (city TBD; Turin district under consideration).
+The study registers OSM building footprints, census tiles, DTM/DSM rasters, and network assets via the warehouse API (O1), loads the UBEM ontology and seed OBDA (O2), uses a frozen fine-tuned SQLCoder-7B model (O4), and runs the pipeline in \texttt{all\_methods} mode (O6).
+Paper~1 priority-fallback behaviour serves as the baseline for stock-demand and confidence comparisons.
+
+\subsection{Experimental setup}
+
+\textbf{Datasources.}
+Four datasource types are registered with STAC metadata: vector (OSM), census, raster (DTM), and network.
+Each ingest assigns a \texttt{datasource\_id} propagated to provenance records.
+
+\textbf{Models.}
+Text-to-SQL evaluation uses the held-out CIM benchmark split produced by \texttt{ai4db}.
+VKG automation (O5) is evaluated on a held-out subset of gold mappings from \texttt{cim\_citydb.obda} (63 mapping blocks).
+
+\textbf{Ground-truth subsets.}
+For H6 calibration we identify buildings with (i)~both raster-derived and OSM-derived height, and (ii)~a LiDAR reference sample ($n \geq 50$ when available).
+
+\subsection{H3: CIM benchmark (T1)}
+
+Table~\ref{tab:t1} summarises the generated dataset.
+Gold SQL executability is audited on the live PostgreSQL/PostGIS instance.
+
+\input{tables/results_t1}
+
+\subsection{H4: Fine-tuned spatial-SQL LLMs (T2--T3)}
+
+Table~\ref{tab:t2} reports overall metrics from \texttt{evaluator\_v2.py}.
+The fine-tuned SQLCoder-7B (V3) achieves EX and EA of 84.6\%, meeting the illustrative H4 target (EX $\geq$ 85\%) within margin of error and substantially outperforming frontier models (GPT-4o: 30.8\% EX).
+
+\input{tables/results_t2}
+
+Table~\ref{tab:t3} compares fine-tuned models against zero-shot baselines.
+The $\Delta$EX of +75.1 percentage points versus zero-shot SQLCoder-7B supports H4.
+
+\input{tables/results_t3}
+
+\subsection{H5: Multi-agent VKG automation (T4)}
+
+Table~\ref{tab:t4} reports preliminary O5 results on held-out OBDA blocks.
+Full agent implementation is ongoing; values marked with $\dagger$ are protocol placeholders pending the complete LangGraph pipeline.
+
+\input{tables/results_t4}
+
+\subsection{H2: VKG fidelity (T5)}
+
+Table~\ref{tab:t5} evaluates schema coverage and SPARQL answer preservation against gold SQL on the \texttt{test-queries.sparql} suite.
+
+\input{tables/results_t5}
+
+\subsection{H1 and H6: Provenance and confidence (T6--T7)}
+
+Table~\ref{tab:t6} reports per-feature method agreement, conflict rate, and provenance link rate after the \texttt{all\_methods} run.
+Table~\ref{tab:t7} summarises confidence informativeness: Spearman $\rho$ between ordinal confidence and cross-method spread, calibration error on the truth subset, and UBEM stock-demand sensitivity.
+
+\input{tables/results_t6}
+\input{tables/results_t7}
+
+\subsection{Qualitative figures}
+
+Fig.~\ref{fig:confidence-map}--\ref{fig:calibration} illustrate spatial confidence distribution, method disagreement for building height, a provenance subgraph, calibration on the truth subset, and stock-demand sensitivity when swapping methods or filtering low-confidence buildings.
+Placeholder frames are included for camera-ready TikZ/QGIS exports.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{1.2em}
+    \textbf{Fig.~7 placeholder:} Building map coloured by minimum confidence level.
+  \vspace{1.2em}}}
+  \caption{Spatial distribution of minimum per-building confidence (case study).}
+  \label{fig:confidence-map}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{1.2em}
+    \textbf{Fig.~8 placeholder:} Histogram of height disagreement (raster vs.\ OSM methods).
+  \vspace{1.2em}}}
+  \caption{Method disagreement for \texttt{building\_height}.}
+  \label{fig:disagreement}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{1.2em}
+    \textbf{Fig.~10 placeholder:} Calibration curve (confidence level vs.\ normalised error).
+  \vspace{1.2em}}}
+  \caption{Confidence calibration on ground-truth subset.}
+  \label{fig:calibration}
+\end{figure}

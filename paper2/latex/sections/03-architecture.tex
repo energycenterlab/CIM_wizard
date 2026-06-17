@@ -1,0 +1,82 @@
+\section{System Architecture}
+\label{sec:architecture}
+
+CIM Wizard 2.0 comprises four layers: external datasources, semi data warehouse, operational database with multi-method calculators, and semantic VKG layer (Fig.~\ref{fig:architecture}).
+
+\subsection{Design principles}
+
+\begin{enumerate}[label=\textbf{D\arabic*.}, leftmargin=*]
+  \item \textbf{Modular objectives} with O6 as integration proof.
+  \item \textbf{Confidence over false precision}---expose uncertainty honestly.
+  \item \textbf{Baseline compatibility}---Paper~1 priority-fallback mode remains available.
+  \item \textbf{Validate every automation step}---SQL execution before OBDA commit.
+\end{enumerate}
+
+\subsection{Layered components}
+
+\textbf{Semi data warehouse (O1).}
+The \texttt{datalake/} service registers datasources as STAC Items with a \texttt{dl4r:} extension (source type, CRS, tags, ingest status).
+Each ingest assigns a stable \texttt{datasource\_id} used in provenance records (O6).
+
+\textbf{Operational database.}
+PostgreSQL/PostGIS hosts \texttt{cim\_vector}, \texttt{cim\_census}, \texttt{cim\_network}, \texttt{cim\_raster}, 3DCityDB (\texttt{citydb}, \texttt{ng2\_*}), and TimescaleDB outputs.
+
+\textbf{Feature computation (O6).}
+The \texttt{PipelineExecutor} loads calculators from \texttt{configuration.json}.
+In \texttt{baseline} mode, methods run in priority order until success (Paper~1).
+In \texttt{all\_methods} mode, every configured method executes and emits a provenance record with optional confidence score.
+
+\textbf{Semantic VKG (O2, O5).}
+Ontop OBDA mappings (\texttt{cim\_citydb.obda}) virtualise relational data as RDF individuals typed with BOT, CityGML, SOSA, GeoSPARQL, and a project-specific \texttt{cim:} energy extension.
+A multi-agent pipeline (O5) drafts new mapping blocks using fine-tuned text-to-SQL (O4) for \emph{source} SQL and ontology rules for \emph{target} RDF templates.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\parbox{0.92\linewidth}{\centering\vspace{1.8em}
+    \textbf{Figure placeholder:} Layered architecture (datasources $\rightarrow$ warehouse $\rightarrow$ DB + calculators $\rightarrow$ VKG).\\
+    Replace with TikZ diagram for camera-ready version.
+  \vspace{1.8em}}}
+  \caption{CIM Wizard 2.0 architecture mapped to objectives O1--O6.}
+  \label{fig:architecture}
+\end{figure}
+
+Table~\ref{tab:repo} maps objectives to repository artefacts.
+
+\begin{table}[t]
+  \centering
+  \caption{Repository mapping for objectives O1--O6.}
+  \label{tab:repo}
+  \small
+  \begin{tabular}{cl}
+    \toprule
+    Obj. & Repository path \\
+    \midrule
+    O1 & \texttt{datalake/} \\
+    O2 & \texttt{semantic/ontop/} \\
+    O3 & \texttt{ai4db/} \\
+    O4 & \texttt{txt2ssql/ftv2/}, \texttt{assist\_cim/} \\
+    O5 & planned VKG agents + \texttt{semantic/SEMANTIC-plan.md} \\
+    O6 & \texttt{cim\_wizard\_integrated\_2026/} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Comparison with Paper~1}
+
+\begin{table}[t]
+  \centering
+  \caption{Paper~1 vs.\ Paper~2 architectural differences.}
+  \label{tab:paper1vs2}
+  \small
+  \begin{tabular}{p{2.1cm}p{2.5cm}p{2.5cm}}
+    \toprule
+    Aspect & Paper~1 & Paper~2 \\
+    \midrule
+    Methods & Priority fallback & All methods \\
+    Output & One value/feature & Matrix + provenance \\
+    Data inputs & Ad hoc schemas & Warehouse registry \\
+    Semantics & SQL/REST & UBEM ontology + VKG \\
+    OBDA & Manual & LLM-assisted \\
+    \bottomrule
+  \end{tabular}
+\end{table}

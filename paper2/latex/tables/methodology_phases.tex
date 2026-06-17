@@ -1,0 +1,17 @@
+\begin{table}[t]
+  \centering
+  \caption{Five-phase methodology summary with validation gates.}
+  \label{tab:phases}
+  \scriptsize
+  \begin{tabular}{clp{3.8cm}p{3.2cm}}
+    \toprule
+    Ph. & Name & Primary outputs & Gate \\
+    \midrule
+    1 & Data foundation (O1) & STAC catalogue; \texttt{datasource\_id} & G1: ingest OK \\
+    2 & Semantic model (O2) & TBox; alignment; seed OBDA & G2: ontology valid \\
+    3 & LLM capability (O3--O4) & Dataset; fine-tuned model & G3: EX/EA thresholds \\
+    4 & VKG automation (O5) & Draft \texttt{.obda} patches & G4: SQL+SPARQL pass \\
+    5 & Integration (O6) & Provenance matrix; confidence & G5: case metrics \\
+    \bottomrule
+  \end{tabular}
+\end{table}

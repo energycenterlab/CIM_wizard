@@ -1,0 +1,17 @@
+\begin{table*}[t]
+  \centering
+  \caption{Overall text-to-SQL performance on CIM benchmark (H4, T2).}
+  \label{tab:t2}
+  \small
+  \begin{tabular}{llccccc}
+    \toprule
+    Model & Type & EX (\%) & EA (\%) & Deep EM (\%) & SC (\%) \\
+    \midrule
+    SQLCoder 7B (Fine-tuned V3) & Local & 84.58 & 84.58 & 81.59 & 63.18 \\
+    GPT-4o & Frontier & 30.85 & 34.83 & 56.72 & 41.29 \\
+    GPT-4 turbo & Frontier & 29.35 & 32.84 & 60.20 & 42.29 \\
+    Claude 3.5 Sonnet & Frontier & 27.86 & 31.84 & 66.67 & 47.26 \\
+    SQLCoder 7B (zero-shot) & Local & 9.45 & 9.45 & 69.65 & 14.93 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

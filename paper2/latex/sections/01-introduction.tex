@@ -1,0 +1,43 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Urban building energy modeling (UBEM) and city-scale digital twins require thousands of building attributes---height, footprint area, use type, thermal zoning proxies, and consumption indicators---assembled from heterogeneous sources including OpenStreetMap (OSM), census statistics, LiDAR rasters, utility networks, CityGML databases, and simulation outputs.
+At city scale, \emph{ground-truth validation of every attribute is infeasible}.
+Practitioners therefore operate on blended measured, inferred, and default values, yet most pipelines expose a \emph{single number per feature} without lineage or uncertainty.
+
+In our prior CIM Wizard system (Paper~1), feature calculators expose multiple methods per attribute with priority-ordered fallback: the first successful method wins and only one value is stored for the baseline scenario.
+Provenance is implicit and alternative methods are never computed.
+This design optimises execution speed but hides methodological disagreement and prevents confidence-aware downstream UBEM.
+
+This paper presents \textbf{CIM Wizard 2.0}, an architecture that makes urban modeling outputs \emph{auditable} when full accuracy cannot be established.
+We pursue six engineering objectives (O1--O6) and six testable hypotheses (H1--H6):
+\begin{enumerate}[label=\textbf{O\arabic*:}, leftmargin=*]
+  \item A \textbf{semi data warehouse} registering heterogeneous datasources with STAC-aligned metadata.
+  \item A \textbf{three-layer UBEM ontology stack} virtualised over PostgreSQL via Ontop OBDA.
+  \item A \textbf{CIM-scoped text-to-SQL benchmark} for PostGIS multi-schema queries.
+  \item \textbf{Fine-tuned spatial-SQL LLMs} validated with execution-centric metrics.
+  \item A \textbf{multi-agent pipeline} automating VKG/OBDA mapping generation.
+  \item \textbf{Integration} with multi-method execution, provenance records, and confidence scoring.
+\end{enumerate}
+
+Our central thesis is that \emph{structured provenance, multi-method comparison, and semantic lineage querying} provide a practical substitute for exhaustive ground-truth validation---supporting sensitivity analysis and confidence scoring until better measurements become available.
+
+\subsection{Contributions}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{O1/H1:} CIM semi data warehouse design (\texttt{datalake/}) with STAC registry, ingest API, and datasource versioning for provenance back-links.
+  \item \textbf{O2/H2:} Layered UBEM ontology (meta / upper / domain) with alignment across CityGML, BOT, SOSA, and GeoSPARQL; seed OBDA mappings over CityDB and energy extensions.
+  \item \textbf{O3/H3:} Taxonomy-structured spatial-SQL benchmark (\texttt{ai4db/}: rule-based Stage~1 + LLM-augmented Stage~3).
+  \item \textbf{O4/H4:} Fine-tuned Qwen/Llama models and unified evaluator (\texttt{txt2ssql/}, \texttt{assist\_cim/}) reporting EM, EX, SC, and EA.
+  \item \textbf{O5/H5:} Multi-agent VKG construction combining LLM4VKG mapping patterns, fine-tuned source-SQL generation, and template-based RDF targets.
+  \item \textbf{O6/H6:} Provenance-aware multi-method pipeline with ordinal confidence levels and UBEM stock-sensitivity evaluation.
+\end{itemize}
+
+\subsection{Paper organisation}
+
+Section~\ref{sec:related} reviews prior work per objective.
+Section~\ref{sec:architecture} presents the system architecture.
+Section~\ref{sec:methodology} describes the five-phase methodology.
+Section~\ref{sec:evaluation} formalises hypotheses and metrics.
+Section~\ref{sec:casestudy} reports the case study.
+Section~\ref{sec:conclusion} concludes.

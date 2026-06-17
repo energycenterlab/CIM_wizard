@@ -1,0 +1,34 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Confidence as a validation surrogate}
+
+City-scale UBEM cannot wait for per-building ground truth.
+Our results suggest that exposing multi-method disagreement and datasource lineage lets practitioners prioritise measurement campaigns and interpret stock-level outputs conservatively.
+The negative Spearman correlation between confidence and cross-method spread ($\rho = -0.54$) indicates that ordinal confidence levels carry signal even when absolute accuracy is unknown.
+
+\subsection{Engineering vs.\ research objectives}
+
+Objectives O1--O6 describe \emph{what} we build; hypotheses H1--H6 describe \emph{what} we must prove.
+The five-phase methodology (Table~\ref{tab:phases}) links them through validation gates G1--G5.
+Pillar P1 (AI accuracy) is strongest today: fine-tuned spatial-SQL models substantially outperform frontier LLMs on CIM PostGIS tasks.
+Pillar P2 (semantic fidelity) shows promising VKG coverage with seed OBDA mappings.
+Pillar P3 (trustworthiness) depends on completing O5 agents and calibrating confidence weights on additional cities.
+
+\subsection{Limitations}
+
+\textbf{Calibration.}
+Confidence weights and tolerances $\tau$ require expert review and empirical tuning per city.
+
+\textbf{Incomplete automation.}
+O5 multi-agent VKG generation is not fully implemented; Table~\ref{tab:t4} reports protocol targets.
+
+\textbf{Datasource linkage.}
+Not all calculators yet declare \texttt{datasource\_ids}; provenance link rates below 100\% reflect this gap.
+
+\textbf{Case study scope.}
+A single pilot city limits generalisation; federated STAC catalogues across municipalities are future work.
+
+\subsection{Future work}
+
+Measured validation where smart-meter or EPC data exist; Brick/SERAF extensions for system-level provenance; learned confidence models replacing hand-tuned rules; and RODI-style OBDA benchmarks for O5.
