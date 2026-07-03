@@ -251,6 +251,25 @@
         }
       ]
     },
+    "building_tabula_type": {
+      "constraints": {
+        "datatype": "string",
+        "required": false
+      },
+      "class_path": "app.calculators.building_tabula_type_calculator",
+      "class_name": "BuildingTabulaTypeCalculator",
+      "output": [
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "tabula_type", "type": "String", "length": 50},
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "const_tabula", "type": "String", "length": 15}
+      ],
+      "methods": [
+        {
+          "priority": 1,
+          "input_dependencies": ["building_construction_year", "building_type"],
+          "method_name": "from_year_and_type"
+        }
+      ]
+    },
     "building_n_families": {
       "constraints": {
         "datatype": "float",

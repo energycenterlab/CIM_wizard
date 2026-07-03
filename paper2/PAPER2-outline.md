@@ -103,6 +103,7 @@ Use these phrases in Google Scholar / Scopus to find papers on **method and inpu
 3. Recording **methodology + datasource lineage** for each result.
 4. Assigning a **confidence level** derived from source quality, method agreement, and data availability.
 5. Exposing lineage through an **ontology-backed Virtual Knowledge Graph** (VKG) built with **LLM-assisted OBDA**.
+6. Defining a **cross-platform UBEM benchmark** to compare CIM Wizard with CityBES, CityEL, GeoBEM, and other open tools (O7).
 
 ```mermaid
 flowchart LR
@@ -127,7 +128,7 @@ flowchart LR
 
 ---
 
-## Research objectives (O1–O6)
+## Research objectives (O1–O7)
 
 Each objective has a **definition**, **implementation anchor** in the monorepo, **literature review** (§2), and **evaluation criteria**.
 
@@ -137,14 +138,15 @@ Each objective has a **definition**, **implementation anchor** in the monorepo, 
 | **O1** | Create a **semi data warehouse** for CIM Wizard datasources                                  | `datalake/`                           | Datasources registered with STAC metadata; ingest + discovery API                                    |
 | **O2** | Create an **ontology stack for UBEM**                                                        | `semantic/ontop/`                     | Layered TBox (meta / upper / domain); alignment across CityGML, BOT, SOSA, GeoSPARQL                 |
 | **O3** | Create a **CIM-scoped dataset** to fine-tune text-to-SQL                                     | `ai4db/`                              | 34,993 training pairs + 201-sample benchmark (thesis); task/domain taxonomy                          |
-| **O4** | **Fine-tune and validate** spatial-SQL LLMs                                                  | `txt2ssql/`, `assist_cim/`            | SQLCoder-7B QLoRA; EX 84.58 on benchmark (`evaluator_v2.py`)                                         |
+| **O4** | **Fine-tune and validate** spatial-SQL LLMs                                                  | `txt2ssql/`, `assist_cim/`            | SQLCoder-7B QLoRA; EX 84.58% on benchmark (`evaluator_v2.py`)                                         |
 | **O5** | **Multi-agent system** to automate VKG / OBDA mapping (fine-tuned LLM + literature patterns) | planned + `semantic/SEMANTIC-plan.md` | Draft `.obda` passes SQL execution + Ontop + SPARQL smoke tests                                      |
 | **O6** | **Integrate** warehouse + auto-VKG into CIM Wizard for **provenance & confidence**           | `cim_wizard_integrated_2026/`         | All methods run; provenance + confidence per `(building, feature, method)`; queryable via SQL/SPARQL |
+| **O7** | Create a **UBEM platform benchmark** comparing open tools on shared scenarios                | `paper2/ubem_benchmark/` (planned)    | Benchmark spec + reference city slice; CIM Wizard scored vs CityBES / CityEL / GeoBEM / Buildings.city |
 
 
 **Dependency graph** (overall schema; see `latex/figures/overall_schema.png`):
 
-Overall schema O1–O6
+Overall schema O1–O6 *(O7 extends evaluation; update figure when O7 node added)*
 
 ```mermaid
 flowchart TB
@@ -154,12 +156,14 @@ flowchart TB
   O4[O4 Fine-tune + validate LLM]
   O5[O5 Multi-agent VKG automation]
   O6[O6 Integration + confidence]
+  O7[O7 UBEM platform benchmark]
   O1 --> O6
   O2 --> O5
   O3 --> O4
   O4 --> O5
   O5 --> O6
   O2 --> O6
+  O6 --> O7
 ```
 
 
@@ -214,7 +218,7 @@ flowchart TB
 | **Success threshold** | What counts as supporting the hypothesis? |
 
 
-#### Hypotheses mapped to O1–O6
+#### Hypotheses mapped to O1–O7
 
 
 | ID          | Hypothesis                                                                                      | Baseline                                                                  | Primary metrics                                                                                                                 | Dataset                                           | Target (illustrative)                                                 |
@@ -225,6 +229,7 @@ flowchart TB
 | **H4** (O4) | Fine-tuned CIM spatial-SQL LLM beats general models on PostGIS tasks                            | GPT-4o-mini / SQLCoder-7B zero-shot; optionally Paper-1 manual SQL        | EM, EX, Deep EM, SC, EA (`evaluator_v2.py`); ΔEX vs baseline                                                                    | `benchmark_generator_v2` held-out set             | EX ≥ 85%; EA ≥ 90%; ΔEX ≥ +10 pp                                      |
 | **H5** (O5) | Multi-agent OBDA reduces authoring effort while preserving mapping correctness                  | Manual `cim_citydb.obda`; BootOX/Ontop direct; generic LLM (no fine-tune) | Mapping F1; source SQL EX; SPARQL preservation; automation rate (% accepted w/o edit); time per mapping                         | Gold OBDA subset (N mappings); RODI-style holdout | F1 ≥ 0.7; automation rate ≥ 60%                                       |
 | **H6** (O6) | Confidence scores are informative when ground truth is partial                                  | Paper 1 priority-only single value; random confidence assignment          | Provenance coverage; method agreement rate; Spearman ρ(confidence, spread); calibration on truth subset; UBEM stock sensitivity | Case-study city; optional LiDAR/OSM/meter subset  | ρ ≤ −0.5; low-confidence filter changes stock less than random filter |
+| **H7** (O7) | A structured UBEM platform benchmark enables reproducible cross-tool comparison                 | Ad-hoc platform descriptions (Lyu et al. 2026 Table 1 only)              | Stage coverage; input-module matrix; geometry/EUI MAPE where comparable; reproducibility + provenance dimensions                | Reference city slice + platform matrix            | ≥5 platforms; ≥3 shared metrics; public spec + data package           |
 
 
 #### Per-objective metric detail
@@ -303,6 +308,20 @@ flowchart TB
 | Downstream   | Low-confidence filter utility | demand change excluding confidence ≤ 2 vs excluding random 20%       |
 
 
+**O7 — UBEM platform benchmark** (cross-tool comparison; background: Lyu et al. 2026)
+
+
+| Metric | Formula / definition |
+| ------ | -------------------- |
+| **UBEM stage coverage** | % of four stages supported per Ang et al. (2020): characterization → generation → simulation → visualization |
+| **Input-module matrix** | Binary/categorical coverage of inputs in Lyu et al. Table 1 (geometry, archetypes, weather, measured EUI, materials, occupancy, …) |
+| **Feature enrichment completeness** | % benchmark buildings with height, type, year, GFA, volume populated (CIM Wizard multi-method matrix) |
+| **Simulation comparability** | MAPE / NMBE of EUI or heating intensity vs disclosed benchmark (Buildings.city partial-calibration model) |
+| **Extensibility score** | Custom calculators / plugins / REST API vs monolithic EnergyPlus workflow |
+| **Provenance & trust** | Exposes per-feature method lineage + confidence (CIM Wizard 2.0 differentiator) |
+| **Reproducibility checklist** | Open data + code + pinned archetypes + documented preprocessing steps |
+
+
 **Suggested tolerances τ (case study — calibrate):**
 
 
@@ -329,7 +348,7 @@ Group objectives so Results is not a pipeline tour:
 | -------------------------- | ---------- | --------------------------------------------------------------------------- |
 | **P1 — AI accuracy**       | O3, O4, O5 | Dataset stats; EX/EA tables; mapping F1; ablations                          |
 | **P2 — Semantic fidelity** | O2, O5     | Schema coverage; SPARQL preservation; query latency                         |
-| **P3 — Trustworthiness**   | O1, O6     | Provenance coverage; disagreement; confidence calibration; UBEM sensitivity |
+| **P3 — Trustworthiness**   | O1, O6, O7 | Provenance coverage; disagreement; confidence calibration; UBEM sensitivity; cross-platform benchmark |
 
 
 ```mermaid
@@ -346,6 +365,8 @@ flowchart LR
   subgraph P3["Pillar 3 — Trustworthiness"]
     O1[O1 Provenance links]
     O6[O6 Confidence + UBEM]
+    O7[O7 Platform benchmark]
+    O6 --> O7
   end
   P1 --> P3
   P2 --> P3
@@ -365,6 +386,7 @@ flowchart LR
 | **T5** | VKG schema coverage + SPARQL preservation              | P2     |
 | **T6** | Provenance coverage + method disagreement by feature   | P3     |
 | **T7** | Confidence calibration + UBEM stock sensitivity        | P3     |
+| **T8** | UBEM platform comparison matrix (CityBES, CityEL, GeoBEM, CIM Wizard, …) | P3     |
 
 
 #### What to avoid in the paper
@@ -380,8 +402,8 @@ flowchart LR
 
 - UBEM and city-scale energy twins lack ground-truth validation for most building attributes.
 - CIM Wizard (Paper 1) computes features via priority-based calculator methods but stores only one result and hides alternatives.
-- We define **six objectives**: semi data warehouse (O1), UBEM ontology stack (O2), CIM text-to-SQL dataset (O3), fine-tuned LLM validation (O4), multi-agent VKG automation (O5), integration with **confidence-aware provenance** (O6).
-- Contributions: STAC-aligned warehouse (`datalake/`), three-layer ontology + OBDA (`semantic/`), spatial-SQL benchmark pipeline (`ai4db` → `txt2ssql` → `assist_cim`), LLM-assisted OBDA inspired by LLM4VKG, multi-method execution with confidence scoring.
+- We define **seven objectives**: semi data warehouse (O1), UBEM ontology stack (O2), CIM text-to-SQL dataset (O3), fine-tuned LLM validation (O4), multi-agent VKG automation (O5), integration with **confidence-aware provenance** (O6), **UBEM platform benchmark** (O7).
+- Contributions: STAC-aligned warehouse (`datalake/`), three-layer ontology + OBDA (`semantic/`), spatial-SQL benchmark pipeline (`ai4db` → `txt2ssql` → `assist_cim`), LLM-assisted OBDA inspired by LLM4VKG, multi-method execution with confidence scoring, **cross-platform UBEM benchmark** inspired by Buildings.city (Lyu et al. 2026).
 - Case study: [TBD] — method disagreement maps, provenance subgraphs, SPARQL lineage queries.
 - **Keywords:** urban building energy modeling, data provenance, confidence scoring, semi data warehouse, STAC, ontology, virtual knowledge graph, OBDA, text-to-SQL, PostGIS
 
@@ -419,6 +441,7 @@ flowchart LR
 | RQ4 | Do fine-tuned LLMs outperform general models on CIM spatial SQL?                          | O4        |
 | RQ5 | Can agents automate OBDA mapping using fine-tuned SQL + ontology patterns?                | O5        |
 | RQ6 | Can provenance + confidence improve trust in CIM Wizard without full ground truth?        | O6        |
+| RQ7 | How does CIM Wizard compare to CityBES, CityEL, GeoBEM, and other open UBEM platforms on shared scenarios? | O7        |
 
 
 ### 1.4 Contributions (by objective)
@@ -429,14 +452,15 @@ flowchart LR
 4. **O4** — Fine-tuned Qwen/Llama models + unified evaluator (`txt2ssql/ftv2`, `assist_cim/evaluator_v2.py`).
 5. **O5** — Multi-agent VKG construction pipeline combining LLM4VKG patterns, fine-tuned Q2SQL, and template-based RDF targets.
 6. **O6** — Provenance-aware multi-method CIM Wizard integration with **confidence scoring** model.
+7. **O7** — **UBEM platform benchmark**: structured comparison of CIM Wizard vs CityBES, CityEL, GeoBEM, Buildings.city, and other open tools on reference scenarios (Lyu et al. 2026 background).
 
 ### 1.5 Paper organisation
 
-- §2 Literature review **per objective** (O1–O6)
+- §2 Literature review **per objective** (O1–O7)
 - §3 Overall architecture
 - §4 **High-level methodology schema** (phases, data flow, validation gates)
 - §5–9 Methodology detail (one section group per objective)
-- §10 Case study **with quantitative evaluation** (hypotheses H1–H6, pillars P1–P3, tables T1–T7)
+- §10 Case study **with quantitative evaluation** (hypotheses H1–H7, pillars P1–P3, tables T1–T8)
 - §11 Discussion & §12 Conclusion
 
 ---
@@ -748,7 +772,108 @@ flowchart TB
 
 ---
 
-### 2.7 Cross-objective gap summary (Table — synthesis)
+### 2.7 O7 — UBEM platform benchmark (§2.7)
+
+> **Background paper:** Lyu et al. (2026), *Buildings.city: Scalable urban building energy modeling and carbon emissions mapping using open archetype templates*, *Computers, Environment and Urban Systems* 128, 102453. DOI: [10.1016/j.compenvurbsys.2026.102453](https://doi.org/10.1016/j.compenvurbsys.2026.102453) — local copy: `paper2/1-s2.0-S0198971526000554-main.pdf`.
+
+#### 2.7.1 Problem statement — lack of UBEM benchmarks
+
+Lyu et al. (2026) note that cities struggle to scale building-level energy assessments due to **incomplete data, inconsistent input quality, and a lack of benchmarks**. Their Buildings.city framework addresses reproducibility for one toolchain (OSM → ML archetypes → EnergyPlus → web map), but **no cross-platform benchmark** yet lets researchers compare how different open UBEM tools perform on the **same city slice** with the **same inputs**.
+
+UBEM development typically follows **four stages** (Ang, Berzolla, & Reinhart, 2020; Zhang, Chen, Xu, & Wang, 2025):
+
+1. **Model characterization** — geometry, materials, HVAC, occupancy
+2. **Model generation** — simulation-ready models (e.g. EnergyPlus IDF)
+3. **Energy simulation** — demand, peaks, emissions
+4. **Visualization & benchmarking** — maps, scenario comparison, policy support
+
+**O7** defines a benchmark that scores platforms on stage coverage, input requirements, outputs, extensibility, and—uniquely for CIM Wizard 2.0—**provenance and confidence**.
+
+#### 2.7.2 Prior work — open UBEM platforms (from Lyu et al. Table 1 + extensions)
+
+
+| Platform | Scale | Primary inputs | Core functions | Reference |
+| -------- | ----- | -------------- | -------------- | --------- |
+| **UMI** | Neighborhood | Building energy, daylight, outdoor comfort, walkability | Multi-domain urban metrics | Reinhart et al., 2013 |
+| **CityBES** | Urban | Rhinoceros 3D geometry, urban context, occupancy; weather, GIS, ECM databases | Energy retrofit, benchmarking, rooftop energy, heat resilience, district energy, UHI/HVI mapping | Hong et al., 2016 |
+| **CityEL** | Urban | GIS, use/occupancy, materials, weather, measured energy, built year, type, height | Building benchmarking, retrofit analysis, rooftop solar, comparative analysis | Song et al., 2025 |
+| **GeoBEM** | Urban | Footprint, archetypes, district boundaries, weather, user settings | Spatial distribution of consumption; usage-pattern analysis | Zhang et al., 2025 |
+| **Buildings.city** | Urban | OSM + local authority enrichments (HDB, BCA EUI); 23 archetypes | ML archetype inference, EnergyPlus simulation, carbon web map, partial EUI calibration | Lyu et al., 2026 |
+| **CIM Wizard** | Urban | Multi-schema PostGIS (vector, census, raster, network, CityGML); configurable calculators | Extensible feature enrichment, multi-method per attribute, scenario pipelines, simulator handoff (CESAR-P / EnergyPlus path) | Paper 1; thesis |
+| **CEA / UrbanOpt / UBEM.io** | Urban / district | GeoJSON / custom schemas | Integrated UBEM workflows; scenario analysis | Various |
+
+**Key gaps identified by Lyu et al. (2026) that motivate O7:**
+
+1. **Incompleteness assessment** — most tools emphasise operational energy; embodied carbon and input-gap reporting are weak.
+2. **Limited accessibility** — static outputs vs interactive, transparent platforms (Buildings.city / UBEM.io as exceptions).
+3. **Methodological constraints** — integrating geometry, envelope, systems, and occupancy at city scale remains hard; **open archetype libraries** are scarce outside specific climates.
+4. **No standard comparison protocol** — Table 1 compares features qualitatively but does not define **shared test buildings, metrics, or reproducible scoring**.
+
+#### 2.7.3 CIM Wizard positioning in the benchmark
+
+CIM Wizard differs from CityBES / CityEL / GeoBEM / Buildings.city in **where it sits in the UBEM pipeline**:
+
+| Dimension | CityBES / CityEL / GeoBEM / Buildings.city | CIM Wizard 2.0 |
+| --------- | ------------------------------------------ | -------------- |
+| **Primary role** | End-to-end simulation + mapping | **Data enrichment + method-transparent feature matrix** feeding simulators |
+| **Geometry & attributes** | Archetype libraries + ML inference | Multi-method calculators (raster, census, OSM, defaults) with **provenance** |
+| **Simulation engine** | EnergyPlus-centric | Handoff to CESAR-P / EnergyPlus (see `UBEM_README.md`) |
+| **Validation style** | Output EUI vs disclosed benchmarks (Buildings.city) | **Input + method validation** + confidence when output GT is partial |
+| **Semantics** | Platform-specific schemas | UBEM ontology + VKG (O2, O5) |
+| **Extensibility** | Varies (some monolithic) | **Calculator plugin model** — add features without core changes |
+
+**O7 does not replace** physics-based simulators; it **benchmarks the enrichment layer** and scores how completely and traceably each platform prepares a shared reference building stock for downstream UBEM.
+
+#### 2.7.4 Benchmark design (draft specification)
+
+**Reference scenario package** (publish with benchmark):
+
+- **Geography:** subset of case-study city (e.g. Turin Sansalvario — 552 buildings from thesis; or Singapore slice compatible with Buildings.city data model).
+- **Minimum inputs:** OSM footprints + DTM/DSM + census tile (open-data only tier).
+- **Optional inputs:** disclosed EUI / BCA-style benchmarks for partial calibration (following Lyu et al. Eq. partial-calibration).
+- **Tasks:**
+  1. **T-ENRICH** — populate height, GFA, type, construction year for ≥90% of footprints.
+  2. **T-LINEAGE** — for each attribute, report method + datasource (CIM Wizard only; others: document best available).
+  3. **T-SIM-READY** — export simulator-ready stock (CityGML / GeoJSON / IDF) where platform supports it.
+  4. **T-STOCK** — aggregate heating demand or EUI proxy; compare MAPE vs reference if available.
+
+**Scoring rubric (illustrative):**
+
+| Criterion | Weight | Notes |
+| --------- | ------ | ----- |
+| Stage coverage (4 UBEM stages) | 20% | From Ang et al. workflow |
+| Input-module completeness on reference data | 20% | Lyu et al. Table 1 extended |
+| T-ENRICH accuracy (geometry & typology) | 25% | Height ±2 m, type match, year band |
+| Reproducibility & openness | 15% | Code, data, docs |
+| Provenance / confidence transparency | 20% | **CIM Wizard 2.0 unique axis** |
+
+#### 2.7.5 Gap
+
+- Existing surveys (Lyu et al. 2026; Ali et al. 2021) **describe** platforms but do not provide a **executable, versioned benchmark suite**.
+- No benchmark yet combines **simulation-platform comparison** with **method-level provenance scoring**.
+- CIM Wizard lacks a formal external comparison against CityBES / CityEL / GeoBEM on shared tasks.
+
+#### 2.7.6 Our position (O7)
+
+- Publish **`paper2/ubem_benchmark/`**: spec YAML/JSON, reference GeoJSON/PostGIS dump, scoring scripts, platform capability matrix template.
+- Populate **Table T8** with self-assessment + literature-based scores for CityBES, CityEL, GeoBEM, Buildings.city, CEA, CIM Wizard 1.0, CIM Wizard 2.0.
+- Use **H7** to test whether the benchmark discriminates platforms meaningfully (e.g. CIM Wizard wins on provenance/extensibility; Buildings.city wins on end-to-end EUI calibration where data exists).
+- Link to O6: confidence-aware outputs become a **scored dimension**, not just a CIM-internal feature.
+
+**References (O7):**
+
+- Lyu, P., Wong, H., Soh, R., Wang, T., & Ang, Y. Q. (2026). Buildings.city. *Computers, Environment and Urban Systems*, 128, 102453.
+- Hong, T., Chen, Y., Lee, S. H., & Piette, M. A. (2016). CityBES. *Energy and Buildings*, 114, 12–22.
+- Song, Y., et al. (2025). CityEL. *(see Song et al. 2025 in Lyu et al. references)*.
+- Zhang, Y., Chen, Y., Xu, P., & Wang, T. (2025). GeoBEM. *(see Zhang et al. 2025)*.
+- Ang, Y. Q., Berzolla, R., & Reinhart, C. (2020). UBEM workflow stages.
+- Ali, U., Shamsi, M. H., Hoare, C., Mangina, E., & O'Donnell, J. (2021). UBEM review.
+- Reinhart, C., & Davila, C. C. (2016). Urban building energy modeling — review.
+- Loga et al. (2012) TABULA; Deru et al. (2011) DOE prototype buildings.
+
+---
+
+### 2.8 Cross-objective gap summary (Table — synthesis)
 
 
 | Prior state                    | Limitation              | Addressed by |
@@ -759,6 +884,7 @@ flowchart TB
 | General LLMs on spatial SQL    | Low EX on CIM           | O4           |
 | Manual OBDA / generic LLM4VKG  | No CIM + provenance VKG | O5           |
 | Priority-only execution        | No confidence / audit   | O6           |
+| Qualitative platform surveys   | No executable UBEM benchmark | O7      |
 
 
 ---
@@ -818,6 +944,7 @@ flowchart TB
 | O4        | `txt2ssql/ftv2/`, `assist_cim/evaluator_v2.py`        |
 | O5        | planned `semantic/agents/` or `assist_cim/vkg_agent/` |
 | O6        | `cim_wizard_integrated_2026/`, provenance schema TBD  |
+| O7        | `paper2/ubem_benchmark/` (planned); `paper2/1-s2.0-S0198971526000554-main.pdf` |
 
 
 ---
@@ -1094,17 +1221,71 @@ flowchart LR
 
 ---
 
-## 10. Case study & quantitative evaluation
+## 10. Methodology — O7: UBEM platform benchmark
 
-### 10.1 Setup
+*(Expand from §2.7; background: Lyu et al. 2026 Buildings.city)*
+
+### 10.1 Benchmark artefact structure
+
+```
+paper2/ubem_benchmark/
+├── README.md                 # How to run scoring
+├── spec/
+│   ├── reference_scenario.yaml   # City slice, CRS, building count
+│   ├── tasks.yaml                # T-ENRICH, T-LINEAGE, T-SIM-READY, T-STOCK
+│   └── scoring_rubric.yaml       # Weights, thresholds
+├── data/
+│   └── reference_buildings.geojson   # Shared footprints (+ optional EUI labels)
+├── platforms/
+│   ├── capability_matrix.csv     # CityBES, CityEL, GeoBEM, Buildings.city, CIM Wizard
+│   └── cim_wizard_2_results/     # Populated by case-study run (O6)
+└── scripts/
+    └── score_enrichment.py       # T-ENRICH metrics vs ground-truth subset
+```
+
+### 10.2 Platform capability matrix (Table T8 — draft columns)
+
+| Platform | Char. | Gen. | Sim. | Viz. | Multi-schema GIS | Custom calc. | Provenance | Open source | Partial EUI cal. |
+| -------- | ----- | ---- | ---- | ---- | ---------------- | ------------ | ---------- | ----------- | ---------------- |
+| CityBES | ✓ | ✓ | ✓ | ✓ | ◐ (CityGML) | ◐ | ✗ | ✓ | ✓ |
+| CityEL | ✓ | ✓ | ✓ | ✓ | ✓ | ◐ | ✗ | ✓ | ✓ |
+| GeoBEM | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ |
+| Buildings.city | ✓ | ✓ | ✓ | ✓ | ✓ (OSM+HDB) | ✗ | ◐ | ✓ | ✓ (BCA EUI) |
+| CIM Wizard 1.0 | ✓ | ◐ | ◐ (handoff) | ◐ (QGIS) | ✓ | ✓ | ✗ | ✓ | ◐ |
+| **CIM Wizard 2.0** | ✓ | ◐ | ◐ | ◐ + VKG | ✓ | ✓ | **✓** | ✓ | ◐ + confidence |
+
+*(Char./Gen./Sim./Viz. = four UBEM stages; ◐ = partial / via external tool)*
+
+### 10.3 Execution workflow
+
+1. **Define** reference scenario (reuse Turin Sansalvario 552 buildings or subset).
+2. **Document** CityBES / CityEL / GeoBEM / Buildings.city capabilities from literature + Lyu et al. Table 1 (H7 baseline).
+3. **Run** CIM Wizard 2.0 `all_methods` on reference data (O6 output feeds O7).
+4. **Score** T-ENRICH against thesis validation subset (height, floors, construction year).
+5. **Publish** T8 + reproducibility checklist; invite community platform submissions.
+
+### 10.4 Link to Buildings.city partial-calibration logic
+
+Where disclosed EUI exists (BCA-style), adopt Lyu et al. benchmarking equation for **simulation-comparable** platforms:
+
+$$\text{Difference from benchmark} = \frac{\text{Predicted EUI} - \text{Benchmark EUI}}{\text{Benchmark EUI}}$$
+
+CIM Wizard 2.0 reports this only when enrichment feeds a simulator run; primary O7 score remains **enrichment + lineage** because output validation is often unavailable.
+
+---
+
+## 11. Case study & quantitative evaluation
+
+### 11.1 Setup
 
 - Area: [TBD]
 - Baseline scenario (Paper 1 priority methods) vs full multi-method run (O6)
 - Warehouse datasources registered (O1)
 - Frozen fine-tuned model for O4/O5 (no retrain during case study)
-- Report all hypotheses **H1–H6** with baselines from reframing table above
+- Report all hypotheses **H1–H7** with baselines from reframing table above
+- **O7:** populate platform capability matrix (T8) using Lyu et al. (2026) Table 1 + CIM Wizard 2.0 case-study run
 
-### 10.2 Evaluation protocol (hypothesis → experiment)
+### 11.2 Evaluation protocol (hypothesis → experiment)
 
 
 | Hypothesis | Experiment                                                                                | Baseline                              | Report in             |
@@ -1115,9 +1296,10 @@ flowchart LR
 | H4         | `evaluator_v2.py` on held-out benchmark; compare fine-tuned vs GPT-4o-mini / SQLCoder     | Zero-shot LLMs                        | T2, T3                |
 | H5         | Agent generates N held-out OBDA blocks; score F1 vs gold; measure edit rate               | Manual OBDA; BootOX (optional)        | T4                    |
 | H6         | Run `all_methods`; compute agreement, ρ, calibration subset, UBEM stock Δ                 | Paper 1 priority-only                 | T6, T7                |
+| H7         | Score CIM Wizard 2.0 vs CityBES/CityEL/GeoBEM/Buildings.city on reference scenario tasks   | Lyu et al. qualitative Table 1 only   | T8                    |
 
 
-### 10.3 Results tables (T1–T7)
+### 11.3 Results tables (T1–T8)
 
 
 | Table  | Rows / columns (draft)                                                                              |
@@ -1129,17 +1311,19 @@ flowchart LR
 | **T5** | {schema coverage, query success %, SPARQL F1, p50/p95 latency}                                      |
 | **T6** | per feature: {agreement @τ, MAD, conflict %, provenance coverage %}                                 |
 | **T7** | {ρ(confidence, spread), calibration error, stock demand Δ method swap, Δ low-conf filter vs random} |
+| **T8** | platform × {4-stage coverage, input modules, T-ENRICH score, extensibility, provenance, reproducibility, weighted total} |
 
 
-### 10.4 Figures
+### 11.4 Figures
 
 - Fig. 7 — Confidence map (buildings coloured by min confidence)
 - Fig. 8 — Method disagreement (e.g. height: raster vs OSM)
 - Fig. 9 — Provenance subgraph (one building)
 - Fig. 10 — Calibration plot: confidence level vs normalised error (truth subset)
 - Fig. 11 — UBEM stock sensitivity: method A vs B vs low-confidence filter
+- **Fig. 12** — UBEM platform comparison (T8: CIM Wizard vs CityBES vs CityEL vs GeoBEM vs Buildings.city)
 
-### 10.5 Statistical reporting
+### 11.5 Statistical reporting
 
 - Report mean ± 95% CI or bootstrap intervals for building-level metrics
 - Paired tests where same buildings compared across methods (Wilcoxon / paired t-test)
@@ -1147,30 +1331,32 @@ flowchart LR
 
 ---
 
-## 11. Discussion
+## 12. Discussion
 
-### 11.1 Confidence as validation surrogate
+### 12.1 Confidence as validation surrogate
 
 - Why urban modeling cannot wait for full ground truth
 - How confidence enables **staged improvement** (upgrade sources → re-run → confidence rises)
 
-### 11.2 Limitations
+### 12.2 Limitations
 
 - Confidence weights require calibration
 - Not all calculators declare datasource linkage yet
 - O5 agents not fully implemented
+- **O7** platform scores for CityBES/CityEL/GeoBEM are literature-based until live runs on shared data package
 
-### 11.3 Future work
+### 12.3 Future work
 
 - Measured validation where available (ECDT meters)
 - Brick/SERAF for system-level provenance
 - Federated STAC across cities
+- Community submissions to **UBEM platform benchmark** (O7)
 
 ---
 
-## 12. Conclusion
+## 13. Conclusion
 
-- Restate six objectives and validation-via-confidence thesis
+- Restate **seven objectives** and validation-via-confidence thesis
 - Summarise quantitative results per objective
 - Position Paper 2 as enabling **trustworthy** urban modeling without pretending full accuracy
 
@@ -1191,6 +1377,7 @@ flowchart LR
 **O4:** SQLCoder; Qwen2.5; LoRA; LangGraph agents  
 **O5:** LLM4VKG 2025; BootOX; Bereta 2016; GeoTriples; Lembo 2017  
 **O6:** UBEM uncertainty literature; OSM quality; digital twin maturity  
+**O7:** Lyu et al. 2026 Buildings.city; Hong 2016 CityBES; Song 2025 CityEL; Zhang 2025 GeoBEM; Ali 2021 UBEM review; Ang 2020 UBEM stages
 
 ---
 
@@ -1200,7 +1387,7 @@ flowchart LR
 | ID          | Title                                             | Section              |
 | ----------- | ------------------------------------------------- | -------------------- |
 | Fig. 0      | Validation gap → confidence approach              | Intro                |
-| Fig. 1      | Architecture mapped to O1–O6                      | §3                   |
+| Fig. 1      | Architecture mapped to O1–O7                      | §3                   |
 | **Fig. 2**  | **Five-phase methodology pipeline**               | **§4**               |
 | **Fig. 3**  | **Data-flow entity schema (provenance + VKG)**    | **§4**               |
 | Fig. 4      | O5 multi-agent VKG pipeline                       | §8                   |
@@ -1211,13 +1398,14 @@ flowchart LR
 | Fig. 9      | Provenance subgraph                               | §10                  |
 | Fig. 10     | Confidence calibration plot                       | §10                  |
 | Fig. 11     | UBEM stock sensitivity                            | §10                  |
-| Table 1     | Objectives O1–O6 (engineering)                    | Objectives           |
-| Table 1b    | Hypotheses H1–H6 (quantitative)                   | Objectives reframing |
+| Fig. 12     | UBEM platform comparison (T8)                     | §11                  |
+| Table 1     | Objectives O1–O7 (engineering)                    | Objectives           |
+| Table 1b    | Hypotheses H1–H7 (quantitative)                   | Objectives reframing |
 | **Table 2** | **Methodology phases (inputs / outputs / gates)** | **§4**               |
 | Table 3     | Provenance + confidence schema                    | §9                   |
 | Table 4     | Confidence level definitions                      | §2.6.4               |
 | Table 5     | Literature gap synthesis                          | §2.7                 |
-| **T1–T7**   | **Quantitative results tables (case study)**      | **§10**              |
+| **T1–T8**   | **Quantitative results tables (case study)**      | **§11**              |
 
 
 ---
@@ -1251,6 +1439,8 @@ paper2/latex/
 | 3   | O5 agent framework                    | LangGraph vs custom                                     | Open   |
 | 4   | Case study city                       | Turin / other                                           | Open   |
 | 5   | Paper venue                           | [TBD]                                                   | Open   |
-| 6   | H1–H6 success thresholds (X, Y, Z, τ) | Calibrate on pilot run                                  | Open   |
+| 6   | H1–H7 success thresholds (X, Y, Z, τ) | Calibrate on pilot run                                  | Open   |
+| 7   | O7 reference city                     | Turin Sansalvario / Singapore slice / Zurich (Buildings.city) | Open   |
+| 8   | O7 live platform runs                 | Literature matrix only vs hands-on CityBES/CityEL installs | Open   |
 
 

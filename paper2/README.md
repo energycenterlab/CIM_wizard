@@ -25,7 +25,7 @@ Or upload `paper2/latex/` to Overleaf and set `main.tex` as the root document.
 
 **North star:** Urban models are hard to validate at scale. Paper 2 assigns **confidence levels** to feature values based on **data source quality** and **calculator method agreement**, instead of presenting a single opaque number.
 
-**Six objectives (O1–O6):**
+**Six objectives (O1–O7):**
 
 | ID | Objective |
 |----|-----------|
@@ -35,6 +35,7 @@ Or upload `paper2/latex/` to Overleaf and set `main.tex` as the root document.
 | O4 | Fine-tune + validate LLM (`txt2ssql/`, `assist_cim/`) |
 | O5 | Multi-agent VKG / OBDA automation (LLM4VKG + fine-tuned SQL) |
 | O6 | Integrate warehouse + VKG into CIM Wizard for provenance & confidence |
+| O7 | **UBEM platform benchmark** — compare CIM Wizard vs CityBES, CityEL, GeoBEM, Buildings.city ([Lyu et al. 2026](paper2/1-s2.0-S0198971526000554-main.pdf)) |
 
 **Relationship to Paper 1:** Priority-based method fallback → **all methods** + provenance + confidence scoring.
 

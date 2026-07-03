@@ -113,6 +113,8 @@ async def execute_building_analysis(
              "description": "Calculate number of families per building"},
             {"feature_name": "building_construction_year", "method_name": "by_census_osm",
              "description": "Estimate construction year, census period, and TABULA classification"},
+            {"feature_name": "building_tabula_type", "method_name": "from_year_and_type",
+             "description": "Derive TABULA typology code from construction year + building type"},
             {"feature_name": "building_demographic", "method_name": "by_census_osm",
              "description": "Orchestrate demographic calculation (population + families)"},
             {"feature_name": "envelope_efficiency", "method_name": "assign_random",
@@ -141,6 +143,7 @@ async def execute_building_analysis(
             "building_type":             ("type",                lambda r: r.get('building_types', []) if isinstance(r, dict) else (r if isinstance(r, list) else [])),
             "building_population":       ("n_people",            lambda r: r.get('building_populations', []) if isinstance(r, dict) else (r if isinstance(r, list) else [])),
             "building_n_families":       ("n_family",            lambda r: r.get('building_families', []) if isinstance(r, dict) else (r if isinstance(r, list) else [])),
+            "building_tabula_type":      ("tabula_type",         lambda r: r.get('tabula_types', []) if isinstance(r, dict) else []),
         }
 
         for step_num, calc_config in enumerate(calculation_chain, 1):
@@ -199,6 +202,21 @@ async def execute_building_analysis(
                                 total = 0
                                 for col, key in [("const_year", "const_years"),
                                                  ("const_period_census", "const_periods"),
+                                                 ("const_tabula", "const_tabulas")]:
+                                    vals = result.get(key, [])
+                                    if vals:
+                                        total += data_manager.upsert_building_properties_batch(
+                                            bldgs, project_id, scenario_id, col, vals
+                                        )
+                                db_update_status["updated_records"] = total
+                                db_update_status["status"] = "success"
+
+                        elif feature_name == "building_tabula_type":
+                            if isinstance(result, dict):
+                                building_geo_result = results.get('building_geo', {})
+                                bldgs = building_geo_result.get('buildings', [])
+                                total = 0
+                                for col, key in [("tabula_type", "tabula_types"),
                                                  ("const_tabula", "const_tabulas")]:
                                     vals = result.get(key, [])
                                     if vals:

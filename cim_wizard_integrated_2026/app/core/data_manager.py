@@ -680,6 +680,7 @@ class CimWizardDataManager:
                 "number_of_floors": p.number_of_floors,
                 "const_year": p.const_year, "const_period_census": p.const_period_census,
                 "const_tabula": p.const_tabula,
+                "tabula_type": getattr(p, "tabula_type", None),
                 "envelope_efficiency": p.envelope_efficiency,
                 "fmu_file": p.fmu_file,
             }
@@ -833,6 +834,7 @@ class CimWizardDataManager:
             "const_year": lambda v: int(v),
             "const_period_census": lambda v: str(v),
             "const_tabula": lambda v: str(v),
+            "tabula_type": lambda v: str(v),
             "filter_res": lambda v: bool(v),
             "envelope_efficiency": lambda v: str(v),
             "fmu_file": lambda v: str(v),
@@ -981,6 +983,7 @@ class CimWizardDataManager:
                 "number_of_floors": p.number_of_floors, "type": p.type,
                 "const_period_census": p.const_period_census,
                 "const_year": p.const_year, "const_tabula": p.const_tabula,
+                "tabula_type": getattr(p, "tabula_type", None),
                 "n_people": p.n_people, "n_family": p.n_family,
                 "envelope_efficiency": p.envelope_efficiency,
                 "fmu_file": p.fmu_file,

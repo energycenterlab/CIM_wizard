@@ -1,0 +1,705 @@
+row_id,citydb_address,pg_type,attribute_type,geo_role,status,calculator,method,cim_source,logic
+1,citydb.address.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+2,citydb.address.objectid,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+3,citydb.address.identifier,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+4,citydb.address.identifier_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+5,citydb.address.street,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+6,citydb.address.house_number,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+7,citydb.address.po_box,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+8,citydb.address.zip_code,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+9,citydb.address.city,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+10,citydb.address.state,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+11,citydb.address.country,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+12,citydb.address.free_text,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+13,citydb.address.multi_point,geometry(MultiPointZ 4326),geometry,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+14,citydb.address.content,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+15,citydb.address.content_mime_type,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+16,citydb.ade.id,integer,integer,GEO-NONE,DB-INIT,—,—,—,Populated at database initialization.
+17,citydb.ade.name,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+18,citydb.ade.description,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+19,citydb.ade.version,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+20,citydb.appear_to_surface_data.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+21,citydb.appear_to_surface_data.appearance_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+22,citydb.appear_to_surface_data.surface_data_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+23,citydb.appearance.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+24,citydb.appearance.objectid,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+25,citydb.appearance.identifier,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+26,citydb.appearance.identifier_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+27,citydb.appearance.theme,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+28,citydb.appearance.is_global,integer,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+29,citydb.appearance.feature_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+30,citydb.appearance.implicit_geometry_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+31,citydb.building.id,bigint,fk,GEO-NONE,SCHEMA,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+32,citydb.building.building_parent_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+33,citydb.building.building_root_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+34,citydb.building.objectclass_id,integer,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+35,citydb.building.measured_height,double precision,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building_properties.height,Direct copy from building_properties.height.
+36,citydb.building.measured_height_unit,varchar(4000),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,constant:m,Literal m when height present.
+37,citydb.building.storeys_above_ground,numeric,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building_properties.number_of_floors,Cast number_of_floors to integer storeys_above_ground.
+38,citydb.building.storeys_below_ground,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_building_semantic_calculator,ctdb_from_cim,cim_vector.cim_wizard_building.building_surfaces_lod12.metadata,Count basement storeys from mixed-use LOD1.2 metadata when available.
+39,citydb.building.lod0_footprint_id,bigint,fk,GEO-FK,SCHEMA,ctdb_geometry_calculator,ctdb_map_lod12_surfaces,cim_vector.cim_wizard_building.building_geometry,Optional: persist footprint polygon as LoD0 surface_geometry FK.
+40,citydb.building.lod0_roofprint_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+41,citydb.building.lod1_multi_surface_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+42,citydb.building.lod2_multi_surface_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+43,citydb.building.lod3_multi_surface_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+44,citydb.building.lod4_multi_surface_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+45,citydb.building.lod1_solid_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+46,citydb.building.lod2_solid_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+47,citydb.building.lod3_solid_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+48,citydb.building.lod4_solid_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+49,citydb.citymodel.id,bigint,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+50,citydb.citymodel.gmlid,varchar(256),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_project_scenario.scenario_id,Map scenario UUID to CityModel gmlid.
+51,citydb.citymodel.name,varchar(1000),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_project_scenario.scenario_id,Synthetic name CIM-Scenario-{scenario_id[:8]}.
+52,citydb.citymodel.name_codespace,varchar(4000),text,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+53,citydb.citymodel.description,varchar(4000),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_project_scenario.project_id,Description text project {project_id}.
+54,citydb.citymodel.envelope,geometry(Geometry 4326),geometry,GEO-DIRECT,PLANNED-1,ctdb_envelope_calculator,ctdb_citymodel_envelope,citydb.surface_geometry.geometry,ST_Envelope(ST_Collect(member building surface geometries)).
+55,citydb.citymodel.creation_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Timestamp when the model was created
+56,citydb.citymodel.last_modification_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Timestamp of last modification
+57,citydb.citymodel.lineage,varchar(256),text,GEO-NONE,SCHEMA,—,—,—,Data lineage / provenance string
+58,citydb.cityobject.id,bigint,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+59,citydb.cityobject.objectclass_id,integer,fk,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,constant:26,Fixed objectclass_id=26 (Building).
+60,citydb.cityobject.gmlid,varchar(256),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_id,Map building UUID to building CityObject gmlid.
+61,citydb.cityobject.gmlid_codespace,varchar(1000),text,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+62,citydb.cityobject.name,varchar(1000),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_name,building_name or fallback BUI-{building_id[:8]}.
+63,citydb.cityobject.name_codespace,varchar(4000),text,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+64,citydb.cityobject.description,varchar(4000),text,GEO-NONE,SCHEMA,—,—,—,Textual description
+65,citydb.cityobject.envelope,geometry(Geometry 4326),geometry,GEO-DIRECT,PLANNED-1,ctdb_envelope_calculator,ctdb_citymodel_envelope,citydb.surface_geometry.geometry,ST_Envelope of all surfaces belonging to this building.
+66,citydb.cityobject.creation_date,timestamptz,timestamp,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,db_default,PostgreSQL default now() on insert.
+67,citydb.cityobject.termination_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Date when the object was terminated/demolished
+68,citydb.cityobject.last_modification_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Timestamp of last modification
+69,citydb.cityobject.lineage,varchar(256),text,GEO-NONE,SCHEMA,—,—,—,Data lineage / provenance
+70,citydb.cityobject.xml_source,text,text,GEO-NONE,SCHEMA,—,—,—,Original XML/GML source fragment
+71,citydb.cityobject_genericattrib.id,bigint,integer,GEO-NONE,SCHEMA,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+72,citydb.cityobject_genericattrib.parent_genattrib_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+73,citydb.cityobject_genericattrib.root_genattrib_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+74,citydb.cityobject_genericattrib.attrname,varchar(256),text,GEO-NONE,SCHEMA,—,—,—,Attribute name
+75,citydb.cityobject_genericattrib.datatype,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,Data type code (1=string 2=int 3=real 4=uri 5=date 6=blob 7=nested)
+76,citydb.cityobject_genericattrib.strval,varchar(4000),text,GEO-NONE,SCHEMA,—,—,—,String value (used when datatype=1)
+77,citydb.cityobject_genericattrib.intval,integer,integer,GEO-NONE,SCHEMA,—,—,—,Integer value (used when datatype=2)
+78,citydb.cityobject_genericattrib.realval,double precision,numeric,GEO-NONE,SCHEMA,—,—,—,Real/float value (used when datatype=3)
+79,citydb.cityobject_genericattrib.urival,varchar(4000),text,GEO-NONE,SCHEMA,—,—,—,URI value (used when datatype=4)
+80,citydb.cityobject_genericattrib.dateval,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Date value (used when datatype=5)
+81,citydb.cityobject_genericattrib.unit,varchar(4000),text,GEO-NONE,SCHEMA,—,—,—,Unit of measure for numeric values
+82,citydb.cityobject_genericattrib.cityobject_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+83,citydb.cityobject_member.citymodel_id,bigint,fk,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_project_scenario.scenario_id,Link building CityObject to scenario CityModel.
+84,citydb.cityobject_member.cityobject_id,bigint,fk,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_id,Link building CityObject as citymodel member.
+85,citydb.codelist.id,bigint,integer,GEO-NONE,DB-INIT,—,—,—,Populated at database initialization.
+86,citydb.codelist.codelist_type,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+87,citydb.codelist.url,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+88,citydb.codelist.mime_type,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+89,citydb.codelist_entry.id,bigint,integer,GEO-NONE,DB-INIT,—,—,—,Populated at database initialization.
+90,citydb.codelist_entry.codelist_id,bigint,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+91,citydb.codelist_entry.code,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+92,citydb.codelist_entry.definition,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+93,citydb.database_srs.srid,integer,integer,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+94,citydb.database_srs.srs_name,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+95,citydb.datatype.id,integer,integer,GEO-NONE,DB-INIT,—,—,—,Populated at database initialization.
+96,citydb.datatype.supertype_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+97,citydb.datatype.typename,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+98,citydb.datatype.is_abstract,integer,integer,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+99,citydb.datatype.ade_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+100,citydb.datatype.namespace_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+101,citydb.datatype.schema,jsonb,json,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+102,citydb.feature.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+103,citydb.feature.objectclass_id,integer,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+104,citydb.feature.objectid,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+105,citydb.feature.identifier,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+106,citydb.feature.identifier_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+107,citydb.feature.envelope,geometry(GeometryZ 4326),geometry,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+108,citydb.feature.last_modification_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+109,citydb.feature.updating_person,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+110,citydb.feature.reason_for_update,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+111,citydb.feature.lineage,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+112,citydb.feature.creation_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+113,citydb.feature.termination_date,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+114,citydb.feature.valid_from,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+115,citydb.feature.valid_to,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+116,citydb.geometry_data.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+117,citydb.geometry_data.geometry,geometry(GeometryZ 4326),geometry,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+118,citydb.geometry_data.implicit_geometry,geometry(GeometryZ),geometry,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+119,citydb.geometry_data.geometry_properties,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+120,citydb.geometry_data.feature_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+121,citydb.implicit_geometry.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+122,citydb.implicit_geometry.objectid,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+123,citydb.implicit_geometry.mime_type,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+124,citydb.implicit_geometry.mime_type_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+125,citydb.implicit_geometry.reference_to_library,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+126,citydb.implicit_geometry.library_object,bytea,binary,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+127,citydb.implicit_geometry.relative_geometry_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+128,citydb.namespace.id,integer,integer,GEO-NONE,DB-INIT,—,—,—,Populated at database initialization.
+129,citydb.namespace.alias,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+130,citydb.namespace.namespace,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+131,citydb.namespace.ade_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+132,citydb.objectclass.id,integer,integer,GEO-NONE,DB-INIT,—,—,—,Populated at database initialization.
+133,citydb.objectclass.superclass_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+134,citydb.objectclass.classname,text,text,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+135,citydb.objectclass.is_abstract,integer,integer,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+136,citydb.objectclass.is_toplevel,integer,integer,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+137,citydb.objectclass.ade_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+138,citydb.objectclass.namespace_id,integer,fk,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+139,citydb.objectclass.schema,jsonb,json,GEO-NONE,DB-INIT,—,—,—,Database metadata table.
+140,citydb.property.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+141,citydb.property.feature_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+142,citydb.property.parent_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+143,citydb.property.datatype_id,integer,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+144,citydb.property.namespace_id,integer,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+145,citydb.property.name,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+146,citydb.property.val_int,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+147,citydb.property.val_double,double precision,numeric,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+148,citydb.property.val_string,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+149,citydb.property.val_timestamp,timestamptz,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+150,citydb.property.val_uri,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+151,citydb.property.val_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+152,citydb.property.val_uom,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+153,citydb.property.val_array,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+154,citydb.property.val_lod,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+155,citydb.property.val_geometry_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+156,citydb.property.val_implicitgeom_id,bigint,fk,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+157,citydb.property.val_implicitgeom_refpoint,geometry(PointZ 4326),geometry,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+158,citydb.property.val_appearance_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+159,citydb.property.val_address_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+160,citydb.property.val_feature_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+161,citydb.property.val_relation_type,integer,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+162,citydb.property.val_content,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+163,citydb.property.val_content_mime_type,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+164,citydb.surface_data.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+165,citydb.surface_data.objectid,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+166,citydb.surface_data.identifier,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+167,citydb.surface_data.identifier_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+168,citydb.surface_data.is_front,integer,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+169,citydb.surface_data.objectclass_id,integer,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+170,citydb.surface_data.x3d_shininess,double precision,numeric,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+171,citydb.surface_data.x3d_transparency,double precision,numeric,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+172,citydb.surface_data.x3d_ambient_intensity,double precision,numeric,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+173,citydb.surface_data.x3d_specular_color,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+174,citydb.surface_data.x3d_diffuse_color,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+175,citydb.surface_data.x3d_emissive_color,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+176,citydb.surface_data.x3d_is_smooth,integer,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+177,citydb.surface_data.tex_image_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+178,citydb.surface_data.tex_texture_type,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+179,citydb.surface_data.tex_wrap_mode,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+180,citydb.surface_data.tex_border_color,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+181,citydb.surface_data.gt_orientation,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+182,citydb.surface_data.gt_reference_point,geometry(Point 4326),geometry,GEO-DIRECT,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+183,citydb.surface_data_mapping.surface_data_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+184,citydb.surface_data_mapping.geometry_data_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+185,citydb.surface_data_mapping.material_mapping,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+186,citydb.surface_data_mapping.texture_mapping,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+187,citydb.surface_data_mapping.world_to_texture_mapping,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+188,citydb.surface_data_mapping.georeferenced_texture_mapping,jsonb,json,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+189,citydb.surface_geometry.id,bigint,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+190,citydb.surface_geometry.gmlid,varchar(256),text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_surfaces_lod12.surfaces.*.surface_id,Synthetic ms-/poly- gmlid from surface cityobject id.
+191,citydb.surface_geometry.gmlid_codespace,varchar(1000),text,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+192,citydb.surface_geometry.parent_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+193,citydb.surface_geometry.root_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+194,citydb.surface_geometry.is_solid,numeric,integer,GEO-NONE,SCHEMA,—,—,—,1 if this node represents a solid
+195,citydb.surface_geometry.is_composite,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,1 if this node is a composite surface
+196,citydb.surface_geometry.is_triangulated,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,1 if this geometry is a triangulated surface
+197,citydb.surface_geometry.is_xlink,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,1 if this is an XLink reference to another geometry
+198,citydb.surface_geometry.is_reverse,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,1 if the surface normal is reversed
+199,citydb.surface_geometry.solid_geometry,geometry(GeometryZ 4326),geometry,GEO-DIRECT,SCHEMA,—,—,—,Solid geometry stored at root node (3D WGS84)
+200,citydb.surface_geometry.geometry,geometry(GeometryZ 4326),geometry,GEO-DIRECT,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_surfaces_lod12.surfaces.*.geometry,GeoJSON Polygon from LOD1.2 wall/roof/ground/floor to PostGIS PolygonZ EPSG:4326.
+201,citydb.surface_geometry.cityobject_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+202,citydb.tex_image.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+203,citydb.tex_image.image_uri,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+204,citydb.tex_image.image_data,bytea,binary,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+205,citydb.tex_image.mime_type,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+206,citydb.tex_image.mime_type_codespace,text,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+207,citydb.thematic_surface.id,bigint,fk,GEO-NONE,SCHEMA,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+208,citydb.thematic_surface.objectclass_id,integer,fk,GEO-FK,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_surfaces_lod12.surfaces.*.surface_type,Map Wall=34 Roof=33 Ground=35 Floor=32 from surface_type.
+209,citydb.thematic_surface.building_id,bigint,fk,GEO-FK,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_id,FK to parent building cityobject.id.
+210,citydb.thematic_surface.room_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+211,citydb.thematic_surface.building_installation_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+212,citydb.thematic_surface.lod2_multi_surface_id,bigint,fk,GEO-FK,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_vector.cim_wizard_building.building_surfaces_lod12,FK to surface_geometry root node for LOD1.2 polygon tree.
+213,citydb.thematic_surface.lod3_multi_surface_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+214,citydb.thematic_surface.lod4_multi_surface_id,bigint,fk,GEO-FK,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+215,citydb.ng2_address_to_building_unit.address_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+216,citydb.ng2_address_to_building_unit.building_unit_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+217,citydb.ng2_building.id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_building.id via tabula_extract_ng2_building from TABULA archetype catalog + component XLS.
+218,citydb.ng2_building.type,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,tabula_envelope_json + cim_wizard_building_properties.type,Map usage type and archetype class to ng2_building.type.
+219,citydb.ng2_building.type_codespace,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_building.type_codespace via tabula_extract_ng2_building from TABULA archetype catalog + component XLS.
+220,citydb.ng2_building.is_protected,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_building.is_protected via tabula_extract_ng2_building from TABULA archetype catalog + component XLS.
+221,citydb.ng2_building.constr_weight,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,TABULA_Codici_costruzioni.xlsx + const_tabula,Derive light/medium/heavy from TABULA period; fallback envelope_efficiency.
+222,citydb.ng2_building.constr_weight_codespace,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_building.constr_weight_codespace via tabula_extract_ng2_building from TABULA archetype catalog + component XLS.
+223,citydb.ng2_building.attic_thm_status,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_building.attic_thm_status via tabula_extract_ng2_building from TABULA archetype catalog + component XLS.
+224,citydb.ng2_building.basement_thm_status,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_ng2_building,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_building.basement_thm_status via tabula_extract_ng2_building from TABULA archetype catalog + component XLS.
+225,citydb.ng2_building_partition.id,bigint,fk,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+226,citydb.ng2_building_partition.objectclass_id,integer,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.objectclass_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+227,citydb.ng2_building_partition.heat_capacity,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[].volume_m3,Use zone volume_m3 as effective thermal capacity proxy.
+228,citydb.ng2_building_partition.heat_capacity_uom,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.heat_capacity_uom via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+229,citydb.ng2_building_partition.infiltration_rate,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.infiltration_rate via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+230,citydb.ng2_building_partition.infiltration_rate_uom,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.infiltration_rate_uom via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+231,citydb.ng2_building_partition.is_cooled,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[].is_cooled,Copy cooled flag per storey thermal zone.
+232,citydb.ng2_building_partition.is_heated,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[].is_heated,Copy heated flag per storey thermal zone.
+233,citydb.ng2_building_partition.coincides_with_lod2_hull,numeric,integer,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.coincides_with_lod2_hull via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+234,citydb.ng2_building_partition.coincides_with_lod3_hull,numeric,integer,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.coincides_with_lod3_hull via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+235,citydb.ng2_building_partition.type,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[].usage,One thermal zone per building level (storey); type from zone usage.
+236,citydb.ng2_building_partition.type_codespace,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.type_codespace via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+237,citydb.ng2_building_partition.is_primary,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.is_primary via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+238,citydb.ng2_building_partition.num_of_building_units,integer,integer,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.num_of_building_units via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+239,citydb.ng2_building_partition.int_heat_gains,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+240,citydb.ng2_building_partition.int_heat_gains_uom,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_uom via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+241,citydb.ng2_building_partition.int_heat_gains_conv,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_conv via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+242,citydb.ng2_building_partition.int_heat_gains_conv_uom,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_conv_uom via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+243,citydb.ng2_building_partition.int_heat_gains_lat,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_lat via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+244,citydb.ng2_building_partition.int_heat_gains_lat_uom,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_lat_uom via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+245,citydb.ng2_building_partition.int_heat_gains_rad,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_rad via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+246,citydb.ng2_building_partition.int_heat_gains_rad_uom,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.int_heat_gains_rad_uom via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+247,citydb.ng2_building_partition.num_of_rooms,integer,integer,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.num_of_rooms via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+248,citydb.ng2_building_partition.owner_name,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.owner_name via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+249,citydb.ng2_building_partition.ownership_type,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.ownership_type via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+250,citydb.ng2_building_partition.ownership_type_codespace,varchar,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.ownership_type_codespace via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+251,citydb.ng2_building_partition.cooling_schedule_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.cooling_schedule_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+252,citydb.ng2_building_partition.heating_schedule_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.heating_schedule_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+253,citydb.ng2_building_partition.ventilation_schedule_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.ventilation_schedule_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+254,citydb.ng2_building_partition.usage_zone_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.usage_zone_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+255,citydb.ng2_building_partition.thermal_zone_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.thermal_zone_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+256,citydb.ng2_building_partition.building_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.building_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+257,citydb.ng2_building_partition.lod1_solid_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.lod1_solid_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+258,citydb.ng2_building_partition.lod2_solid_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.lod2_solid_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+259,citydb.ng2_building_partition.lod3_solid_id,bigint,fk,GEO-FK,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,building_surfaces_lod12.thermal_zones[] (one zone per level),Fill ng2_building_partition.lod3_solid_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+260,citydb.ng2_cityobject.id,bigint,fk,GEO-NONE,SCHEMA,citydb_mapper_calculator,map_scenario_to_citydb,db_sequence,Auto-generated PK from PostgreSQL sequence on insert.
+261,citydb.ng2_cityobject.layered_construction_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,FK or codespace column filled implicitly by parent row insert.
+262,citydb.ng2_cityobject.ref_point,geometry(PointZ),geometry,GEO-DIRECT,PLANNED-1,ctdb_ref_point_calculator,ctdb_footprint_centroid,cim_vector.cim_wizard_building.building_geometry + z_value,Footprint centroid at z_value terrain height (sea level floor reference).
+263,citydb.ng2_ctyobj_relation.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+264,citydb.ng2_ctyobj_relation.ng2_cityobject_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+265,citydb.ng2_ctyobj_relation.cityobject_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+266,citydb.ng2_ctyobj_relation.relation_type,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+267,citydb.ng2_ctyobj_relation.relation_type_codespace,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+268,citydb.ng2_device.id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.id via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+269,citydb.ng2_device.objectclass_id,integer,fk,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.objectclass_id via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+270,citydb.ng2_device.model,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_vector.cim_wizard_building_properties.fmu_file,Map fmu_file identifier to heat-pump archetype model name.
+271,citydb.ng2_device.num_of_devices,integer,integer,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.num_of_devices via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+272,citydb.ng2_device.year_of_manufacture,integer,integer,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.year_of_manufacture via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+273,citydb.ng2_device.installed_power,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.installed_power via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+274,citydb.ng2_device.installed_power_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.installed_power_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+275,citydb.ng2_device.nominal_efficiency,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.nominal_efficiency via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+276,citydb.ng2_device.nominal_efficiency_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.nominal_efficiency_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+277,citydb.ng2_device.efficiency_indicator,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.efficiency_indicator via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+278,citydb.ng2_device.heat_diss,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+279,citydb.ng2_device.heat_diss_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+280,citydb.ng2_device.heat_diss_conv,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_conv via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+281,citydb.ng2_device.heat_diss_conv_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_conv_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+282,citydb.ng2_device.heat_diss_lat,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_lat via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+283,citydb.ng2_device.heat_diss_lat_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_lat_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+284,citydb.ng2_device.heat_diss_rad,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_rad via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+285,citydb.ng2_device.heat_diss_rad_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_diss_rad_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+286,citydb.ng2_device.heat_source,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.heat_source via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+287,citydb.ng2_device.cop_source_temp,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.cop_source_temp via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+288,citydb.ng2_device.cop_source_temp_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.cop_source_temp_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+289,citydb.ng2_device.cop_operation_temp,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.cop_operation_temp via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+290,citydb.ng2_device.cop_operation_temp_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.cop_operation_temp_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+291,citydb.ng2_device.has_condensation,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.has_condensation via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+292,citydb.ng2_device.type,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.type via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+293,citydb.ng2_device.type_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.type_codespace via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+294,citydb.ng2_device.installation_side,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.installation_side via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+295,citydb.ng2_device.max_cover_ratio,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.max_cover_ratio via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+296,citydb.ng2_device.max_cover_ratio_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.max_cover_ratio_uom via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+297,citydb.ng2_device.transmittance_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.transmittance_id via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+298,citydb.ng2_device.cityobject_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_hvac_calculator,ctdb_from_fmu_archetype,cim_wizard_building_properties.fmu_file,Fill ng2_device.cityobject_id via ctdb_from_fmu_archetype from TABULA archetype catalog + component XLS.
+299,citydb.ng2_device_operation.id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_device_operation_calculator,ctdb_from_archetype,fmu archetype metadata,Fill ng2_device_operation.id via ctdb_from_archetype from TABULA archetype catalog + component XLS.
+300,citydb.ng2_device_operation.type,varchar,text,GEO-NONE,PLANNED-3,ctdb_device_operation_calculator,ctdb_from_archetype,fmu archetype metadata,Fill ng2_device_operation.type via ctdb_from_archetype from TABULA archetype catalog + component XLS.
+301,citydb.ng2_device_operation.type_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_device_operation_calculator,ctdb_from_archetype,fmu archetype metadata,Fill ng2_device_operation.type_codespace via ctdb_from_archetype from TABULA archetype catalog + component XLS.
+302,citydb.ng2_device_operation.yearly_global_efficiency,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_device_operation_calculator,ctdb_from_archetype,fmu archetype metadata,Fill ng2_device_operation.yearly_global_efficiency via ctdb_from_archetype from TABULA archetype catalog + component XLS.
+303,citydb.ng2_device_operation.schedule_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_device_operation_calculator,ctdb_from_archetype,fmu archetype metadata,Fill ng2_device_operation.schedule_id via ctdb_from_archetype from TABULA archetype catalog + component XLS.
+304,citydb.ng2_device_operation.device_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_device_operation_calculator,ctdb_from_archetype,fmu archetype metadata,Fill ng2_device_operation.device_id via ctdb_from_archetype from TABULA archetype catalog + component XLS.
+305,citydb.ng2_energy_perf_cert.id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+306,citydb.ng2_energy_perf_cert.type,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+307,citydb.ng2_energy_perf_cert.type_codespace,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+308,citydb.ng2_energy_perf_cert.label,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+309,citydb.ng2_energy_perf_cert.value,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+310,citydb.ng2_energy_perf_cert.value_uom,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+311,citydb.ng2_energy_perf_cert.issue_date,date,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+312,citydb.ng2_energy_perf_cert.expiration_date,date,timestamp,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+313,citydb.ng2_energy_perf_cert.cert_method,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+314,citydb.ng2_energy_perf_cert.cert_uri,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+315,citydb.ng2_energy_perf_cert.building_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+316,citydb.ng2_energy_perf_cert.building_partition_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+317,citydb.ng2_layer.id,bigint,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,ng2_layered_construction layer rows,Fill ng2_layer.id via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+318,citydb.ng2_layer.thickness,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,ng2_layered_construction layer rows,Fill ng2_layer.thickness via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+319,citydb.ng2_layer.thickness_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,ng2_layered_construction layer rows,Fill ng2_layer.thickness_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+320,citydb.ng2_layer.material_id,bigint,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,ng2_layered_construction layer rows,Fill ng2_layer.material_id via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+321,citydb.ng2_layer.layered_construction_id,bigint,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,ng2_layered_construction layer rows,Fill ng2_layer.layered_construction_id via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+322,citydb.ng2_layered_construction.id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.id via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+323,citydb.ng2_layered_construction.objectclass_id,integer,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.objectclass_id via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+324,citydb.ng2_layered_construction.u_value,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,component XLS Dati.Trasmittanza (Wall/Roof/Floor/Ceiling_*),U-value per element from Politecnico component workbook assigned to archetype slot.
+325,citydb.ng2_layered_construction.u_value_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.u_value_uom via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+326,citydb.ng2_layered_construction.g_value,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,TABULA window typology defaults,Window g-value for window layered_construction row.
+327,citydb.ng2_layered_construction.g_value_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.g_value_uom via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+328,citydb.ng2_layered_construction.glazing_ratio,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.glazing_ratio via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+329,citydb.ng2_layered_construction.glazing_ratio_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.glazing_ratio_uom via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+330,citydb.ng2_layered_construction.library_code,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,construction code e.g. Wall_06.02,Store TABULA construction code as library_code on layered_construction.
+331,citydb.ng2_layered_construction.library_code_codespace,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.library_code_codespace via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+332,citydb.ng2_layered_construction.layered_construction_id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.layered_construction_id via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+333,citydb.ng2_layered_construction.library_id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_layered_construction,cim-database/materiale-tabula + tabula_archetype_code,Fill ng2_layered_construction.library_id via tabula_extract_layered_construction from TABULA archetype catalog + component XLS.
+334,citydb.ng2_library.id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+335,citydb.ng2_library.objectclass_id,integer,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+336,citydb.ng2_library.type,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+337,citydb.ng2_library.type_codespace,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+338,citydb.ng2_library.author,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+339,citydb.ng2_library.source,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+340,citydb.ng2_material.id,bigint,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.id via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+341,citydb.ng2_material.objectclass_id,integer,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.objectclass_id via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+342,citydb.ng2_material.library_code,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.library_code via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+343,citydb.ng2_material.library_code_codespace,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.library_code_codespace via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+344,citydb.ng2_material.thm_conductivity,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.thm_conductivity via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+345,citydb.ng2_material.thm_conductivity_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.thm_conductivity_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+346,citydb.ng2_material.spec_heat_capacity,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.spec_heat_capacity via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+347,citydb.ng2_material.spec_heat_capacity_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.spec_heat_capacity_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+348,citydb.ng2_material.density,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.density via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+349,citydb.ng2_material.density_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.density_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+350,citydb.ng2_material.permeance,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.permeance via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+351,citydb.ng2_material.permeance_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.permeance_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+352,citydb.ng2_material.porosity,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.porosity via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+353,citydb.ng2_material.porosity_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.porosity_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+354,citydb.ng2_material.embodied_carbon,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.embodied_carbon via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+355,citydb.ng2_material.embodied_carbon_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.embodied_carbon_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+356,citydb.ng2_material.embodied_energy,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.embodied_energy via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+357,citydb.ng2_material.embodied_energy_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.embodied_energy_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+358,citydb.ng2_material.is_ventilated,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.is_ventilated via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+359,citydb.ng2_material.r_value,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.r_value via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+360,citydb.ng2_material.r_value_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.r_value_uom via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+361,citydb.ng2_material.library_id,bigint,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_material_layers,Caratteristiche componente layer stack,Fill ng2_material.library_id via tabula_extract_material_layers from TABULA archetype catalog + component XLS.
+362,citydb.ng2_occupants.id,bigint,fk,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+363,citydb.ng2_occupants.type,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+364,citydb.ng2_occupants.type_codespace,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+365,citydb.ng2_occupants.num_of_occupants,integer,integer,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+366,citydb.ng2_occupants.heat_diss,numeric,numeric,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+367,citydb.ng2_occupants.heat_diss_uom,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+368,citydb.ng2_occupants.heat_diss_conv,numeric,numeric,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+369,citydb.ng2_occupants.heat_diss_conv_uom,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+370,citydb.ng2_occupants.heat_diss_lat,numeric,numeric,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+371,citydb.ng2_occupants.heat_diss_lat_uom,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+372,citydb.ng2_occupants.heat_diss_rad,numeric,numeric,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+373,citydb.ng2_occupants.heat_diss_rad_uom,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+374,citydb.ng2_occupants.avg_diet_type,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+375,citydb.ng2_occupants.avg_diet_type_codespace,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+376,citydb.ng2_occupants.avg_income_level,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+377,citydb.ng2_occupants.avg_income_level_codespace,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+378,citydb.ng2_occupants.avg_instr_level,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+379,citydb.ng2_occupants.avg_instr_level_codespace,varchar,text,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+380,citydb.ng2_occupants.schedule_id,bigint,fk,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+381,citydb.ng2_occupants.building_partition_id,bigint,fk,GEO-NONE,DEFERRED-OCCUPANTS,—,—,—,DEFERRED-OCCUPANTS: requires occupant template library beyond n_people/n_family.
+382,citydb.ng2_opening.id,bigint,integer,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.id via tabula_extract_opening from TABULA archetype catalog + component XLS.
+383,citydb.ng2_opening.area,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,building_surfaces_lod12 + tabula_glazing_ratio,Wall area × TABULA-period glazing ratio per orientation.
+384,citydb.ng2_opening.area_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.area_uom via tabula_extract_opening from TABULA archetype catalog + component XLS.
+385,citydb.ng2_opening.azimuth,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.azimuth via tabula_extract_opening from TABULA archetype catalog + component XLS.
+386,citydb.ng2_opening.azimuth_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.azimuth_uom via tabula_extract_opening from TABULA archetype catalog + component XLS.
+387,citydb.ng2_opening.inclination,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.inclination via tabula_extract_opening from TABULA archetype catalog + component XLS.
+388,citydb.ng2_opening.inclination_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.inclination_uom via tabula_extract_opening from TABULA archetype catalog + component XLS.
+389,citydb.ng2_opening.ground_view_factor,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.ground_view_factor via tabula_extract_opening from TABULA archetype catalog + component XLS.
+390,citydb.ng2_opening.ground_view_factor_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.ground_view_factor_uom via tabula_extract_opening from TABULA archetype catalog + component XLS.
+391,citydb.ng2_opening.sky_view_factor,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.sky_view_factor via tabula_extract_opening from TABULA archetype catalog + component XLS.
+392,citydb.ng2_opening.sky_view_factor_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_opening,LOD1.2 wall area × tabula_glazing_ratio,Fill ng2_opening.sky_view_factor_uom via tabula_extract_opening from TABULA archetype catalog + component XLS.
+393,citydb.ng2_optical_property.id,bigint,integer,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.id via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+394,citydb.ng2_optical_property.objectclass_id,integer,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.objectclass_id via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+395,citydb.ng2_optical_property.fraction,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.fraction via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+396,citydb.ng2_optical_property.fraction_uom,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.fraction_uom via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+397,citydb.ng2_optical_property.surface,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.surface via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+398,citydb.ng2_optical_property.wavelength_range,varchar,text,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.wavelength_range via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+399,citydb.ng2_optical_property.layered_construction_id,bigint,fk,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_optical_property,TABULA window g-value,Fill ng2_optical_property.layered_construction_id via tabula_extract_optical_property from TABULA archetype catalog + component XLS.
+400,citydb.ng2_qualified_attribute.id,bigint,integer,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.id via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+401,citydb.ng2_qualified_attribute.objectclass_id,integer,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.objectclass_id via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+402,citydb.ng2_qualified_attribute.type,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.type via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+403,citydb.ng2_qualified_attribute.type_codespace,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.type_codespace via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+404,citydb.ng2_qualified_attribute.value,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.value via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+405,citydb.ng2_qualified_attribute.value_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.value_uom via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+406,citydb.ng2_qualified_attribute.description,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.description via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+407,citydb.ng2_qualified_attribute.source,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.source via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+408,citydb.ng2_qualified_attribute.building_id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.building_id via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+409,citydb.ng2_qualified_attribute.building_partition_id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_qualified_attribute,tabula_envelope_json envelope KPIs,Fill ng2_qualified_attribute.building_partition_id via tabula_extract_qualified_attribute from TABULA archetype catalog + component XLS.
+410,citydb.ng2_refurbishment_measure.id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.id via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+411,citydb.ng2_refurbishment_measure.type,varchar,text,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.type via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+412,citydb.ng2_refurbishment_measure.type_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.type_codespace via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+413,citydb.ng2_refurbishment_measure.start_date,date,timestamp,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.start_date via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+414,citydb.ng2_refurbishment_measure.end_date,date,timestamp,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.end_date via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+415,citydb.ng2_refurbishment_measure.library_code,varchar,text,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.library_code via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+416,citydb.ng2_refurbishment_measure.library_code_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.library_code_codespace via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+417,citydb.ng2_refurbishment_measure.building_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.building_id via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+418,citydb.ng2_refurbishment_measure.building_partition_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_refurbishment_calculator,ctdb_from_envelope_efficiency,envelope_efficiency=high → retrofit hint,Fill ng2_refurbishment_measure.building_partition_id via ctdb_from_envelope_efficiency from TABULA archetype catalog + component XLS.
+419,citydb.ng2_resource.id,bigint,fk,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+420,citydb.ng2_resource.objectclass_id,integer,fk,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+421,citydb.ng2_resource.type,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+422,citydb.ng2_resource.type_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+423,citydb.ng2_resource.enduse,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+424,citydb.ng2_resource.enduse_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+425,citydb.ng2_resource.status,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+426,citydb.ng2_resource.operation_type,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+427,citydb.ng2_resource.operation_type_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+428,citydb.ng2_resource.year,integer,integer,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+429,citydb.ng2_resource.amount_type,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+430,citydb.ng2_resource.amount_type_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+431,citydb.ng2_resource.amount,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+432,citydb.ng2_resource.amount_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+433,citydb.ng2_resource.time_series_id,bigint,fk,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+434,citydb.ng2_resource.is_amount_normalized,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+435,citydb.ng2_resource.normalization_param,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+436,citydb.ng2_resource.normalization_value,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+437,citydb.ng2_resource.normalization_value_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+438,citydb.ng2_resource.co2_equivalent,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+439,citydb.ng2_resource.co2_equivalent_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+440,citydb.ng2_resource.costs_money,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+441,citydb.ng2_resource.costs_money_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+442,citydb.ng2_resource.yields_money,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+443,citydb.ng2_resource.yields_money_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+444,citydb.ng2_resource.energy_carrier,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+445,citydb.ng2_resource.energy_carrier_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+446,citydb.ng2_resource.maximum_load,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+447,citydb.ng2_resource.maximum_load_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+448,citydb.ng2_resource.source,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+449,citydb.ng2_resource.source_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+450,citydb.ng2_resource.is_dangerous,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+451,citydb.ng2_resource.is_recyclable,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+452,citydb.ng2_resource.cityobject_id,bigint,fk,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_resource_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+453,citydb.ng2_schedule.id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+454,citydb.ng2_schedule.objectclass_id,integer,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+455,citydb.ng2_schedule.library_code,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+456,citydb.ng2_schedule.library_code_codespace,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+457,citydb.ng2_schedule.type,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+458,citydb.ng2_schedule.type_codespace,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+459,citydb.ng2_schedule.start_time,time,timestamp,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+460,citydb.ng2_schedule.start_day,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+461,citydb.ng2_schedule.start_month,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+462,citydb.ng2_schedule.start_year,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+463,citydb.ng2_schedule.time_interval,numeric,numeric,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+464,citydb.ng2_schedule.time_interval_unit,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+465,citydb.ng2_schedule.idle_value,numeric,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+466,citydb.ng2_schedule.idle_value_uom,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+467,citydb.ng2_schedule.usage_value,numeric,numeric,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+468,citydb.ng2_schedule.usage_value_uom,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+469,citydb.ng2_schedule.start_usage_time,time,timestamp,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+470,citydb.ng2_schedule.end_usage_time,time,timestamp,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+471,citydb.ng2_schedule.constant_value,numeric,numeric,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+472,citydb.ng2_schedule.constant_value_uom,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+473,citydb.ng2_schedule.time_series_id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+474,citydb.ng2_schedule.library_id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+475,citydb.ng2_schedule_component.id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+476,citydb.ng2_schedule_component.type,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+477,citydb.ng2_schedule_component.type_codespace,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+478,citydb.ng2_schedule_component.repetitions,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+479,citydb.ng2_schedule_component.additional_gap,numeric,numeric,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+480,citydb.ng2_schedule_component.additional_gap_unit,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+481,citydb.ng2_schedule_component.parent_schedule_id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+482,citydb.ng2_schedule_component.schedule_id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES: requires committed hourly profile dataset.
+483,citydb.ng2_solar_collector.id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.id via ctdb_from_pv from TABULA archetype catalog + component XLS.
+484,citydb.ng2_solar_collector.objectclass_id,integer,fk,GEO-FK,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.objectclass_id via ctdb_from_pv from TABULA archetype catalog + component XLS.
+485,citydb.ng2_solar_collector.type,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.type via ctdb_from_pv from TABULA archetype catalog + component XLS.
+486,citydb.ng2_solar_collector.type_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.type_codespace via ctdb_from_pv from TABULA archetype catalog + component XLS.
+487,citydb.ng2_solar_collector.cell_type,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.cell_type via ctdb_from_pv from TABULA archetype catalog + component XLS.
+488,citydb.ng2_solar_collector.cell_type_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.cell_type_codespace via ctdb_from_pv from TABULA archetype catalog + component XLS.
+489,citydb.ng2_solar_collector.module_area,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_vector.pv.area_reale,PV polygon area linked via building.pv_ids.
+490,citydb.ng2_solar_collector.module_area_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.module_area_uom via ctdb_from_pv from TABULA archetype catalog + component XLS.
+491,citydb.ng2_solar_collector.azimuth,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.azimuth via ctdb_from_pv from TABULA archetype catalog + component XLS.
+492,citydb.ng2_solar_collector.azimuth_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.azimuth_uom via ctdb_from_pv from TABULA archetype catalog + component XLS.
+493,citydb.ng2_solar_collector.inclination,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.inclination via ctdb_from_pv from TABULA archetype catalog + component XLS.
+494,citydb.ng2_solar_collector.inclination_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.inclination_uom via ctdb_from_pv from TABULA archetype catalog + component XLS.
+495,citydb.ng2_solar_collector.aperture_area,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.aperture_area via ctdb_from_pv from TABULA archetype catalog + component XLS.
+496,citydb.ng2_solar_collector.aperture_area_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.aperture_area_uom via ctdb_from_pv from TABULA archetype catalog + component XLS.
+497,citydb.ng2_solar_collector.opt_efficiency,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.opt_efficiency via ctdb_from_pv from TABULA archetype catalog + component XLS.
+498,citydb.ng2_solar_collector.opt_efficiency_uom,varchar,text,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.opt_efficiency_uom via ctdb_from_pv from TABULA archetype catalog + component XLS.
+499,citydb.ng2_solar_collector.lin_heat_loss_coeff,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.lin_heat_loss_coeff via ctdb_from_pv from TABULA archetype catalog + component XLS.
+500,citydb.ng2_solar_collector.quad_heat_loss_coeff,numeric,numeric,GEO-NONE,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.quad_heat_loss_coeff via ctdb_from_pv from TABULA archetype catalog + component XLS.
+501,citydb.ng2_solar_collector.lod2_multi_surface_id,bigint,fk,GEO-FK,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_vector.pv.pv_geometry,Persist PV multipolygon as surface_geometry FK.
+502,citydb.ng2_solar_collector.lod3_multi_surface_id,bigint,fk,GEO-FK,PLANNED-3,ctdb_solar_collector_calculator,ctdb_from_pv,cim_wizard_building.pv_ids → cim_vector.pv,Fill ng2_solar_collector.lod3_multi_surface_id via ctdb_from_pv from TABULA archetype catalog + component XLS.
+503,citydb.ng2_storage_device.id,bigint,fk,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+504,citydb.ng2_storage_device.objectclass_id,integer,fk,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+505,citydb.ng2_storage_device.medium,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+506,citydb.ng2_storage_device.medium_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+507,citydb.ng2_storage_device.preparation_temp,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+508,citydb.ng2_storage_device.preparation_temp_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+509,citydb.ng2_storage_device.thm_losses_factor,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+510,citydb.ng2_storage_device.thm_losses_factor_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+511,citydb.ng2_storage_device.volume,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+512,citydb.ng2_storage_device.volume_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+513,citydb.ng2_storage_device.batt_techn,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+514,citydb.ng2_storage_device.batt_techn_codespace,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+515,citydb.ng2_storage_device.power_capacity,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+516,citydb.ng2_storage_device.power_capacity_uom,varchar,text,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_storage_device_from_outputs,outputs.*,POSTSIM: aggregate simulator outputs after run completes.
+517,citydb.ng2_suitability.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+518,citydb.ng2_suitability.reason,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+519,citydb.ng2_suitability.reason_codespace,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+520,citydb.ng2_suitability.value,numeric,numeric,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+521,citydb.ng2_suitability.value_uom,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+522,citydb.ng2_suitability.description,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+523,citydb.ng2_suitability.schedule_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+524,citydb.ng2_suitability.cityobject_id,bigint,fk,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+525,citydb.ng2_them_surf_to_thermal_zone.thematic_surface_id,bigint,fk,GEO-NONE,PLANNED-1,ctdb_surf_zone_adjacency_calculator,ctdb_from_lod12,building_surfaces_lod12 surfaces + thermal_zones storey_index,Fill ng2_them_surf_to_thermal_zone.thematic_surface_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+526,citydb.ng2_them_surf_to_thermal_zone.thermal_zone_id,bigint,fk,GEO-NONE,PLANNED-1,ctdb_surf_zone_adjacency_calculator,ctdb_from_lod12,building_surfaces_lod12 surfaces + thermal_zones storey_index,Fill ng2_them_surf_to_thermal_zone.thermal_zone_id via ctdb_from_lod12 from TABULA archetype catalog + component XLS.
+527,citydb.ng2_thematic_surface.id,bigint,fk,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.id via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+528,citydb.ng2_thematic_surface.total_surf_area,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thematic_surface_calculator,ctdb_from_lod12,building_surfaces_lod12.surfaces.*.properties.area_m2,Copy computed area_m2 per wall/roof/ground/floor surface.
+529,citydb.ng2_thematic_surface.total_surf_area_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.total_surf_area_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+530,citydb.ng2_thematic_surface.opaque_surf_area,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.opaque_surf_area via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+531,citydb.ng2_thematic_surface.opaque_surf_area_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.opaque_surf_area_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+532,citydb.ng2_thematic_surface.open_to_surf_ratio,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.open_to_surf_ratio via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+533,citydb.ng2_thematic_surface.open_to_surf_ratio_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.open_to_surf_ratio_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+534,citydb.ng2_thematic_surface.thickness,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.thickness via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+535,citydb.ng2_thematic_surface.thickness_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.thickness_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+536,citydb.ng2_thematic_surface.azimuth,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thematic_surface_calculator,ctdb_from_lod12,building_surfaces_lod12.surfaces.wall_surfaces[].properties.azimuth_degrees,Copy wall azimuth; roof/ground defaults per surface type.
+537,citydb.ng2_thematic_surface.azimuth_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.azimuth_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+538,citydb.ng2_thematic_surface.inclination,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_thematic_surface_calculator,ctdb_from_lod12,building_surfaces_lod12.surfaces.*.properties.inclination_degrees,Copy inclination; flat roof default 0 deg.
+539,citydb.ng2_thematic_surface.inclination_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.inclination_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+540,citydb.ng2_thematic_surface.ground_view_factor,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.ground_view_factor via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+541,citydb.ng2_thematic_surface.ground_view_factor_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.ground_view_factor_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+542,citydb.ng2_thematic_surface.sky_view_factor,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.sky_view_factor via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+543,citydb.ng2_thematic_surface.sky_view_factor_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.sky_view_factor_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+544,citydb.ng2_thematic_surface.is_adiabatic,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.is_adiabatic via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+545,citydb.ng2_thematic_surface.heat_capacity,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.heat_capacity via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+546,citydb.ng2_thematic_surface.heat_capacity_uom,varchar,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_thematic_surface,tabula_envelope_json + building_surfaces_lod12,Fill ng2_thematic_surface.heat_capacity_uom via tabula_extract_thematic_surface from TABULA archetype catalog + component XLS.
+547,citydb.ng2_time_series.id,bigint,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+548,citydb.ng2_time_series.objectclass_id,integer,fk,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+549,citydb.ng2_time_series.acquisition_method,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+550,citydb.ng2_time_series.acquisition_method_codespace,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+551,citydb.ng2_time_series.interpolation_type,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+552,citydb.ng2_time_series.source,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+553,citydb.ng2_time_series.period_begin,timestamptz,timestamp,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+554,citydb.ng2_time_series.period_end,timestamptz,timestamp,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+555,citydb.ng2_time_series.start_time,time,timestamp,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+556,citydb.ng2_time_series.start_day,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+557,citydb.ng2_time_series.start_month,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+558,citydb.ng2_time_series.temporal_extent,numeric,numeric,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+559,citydb.ng2_time_series.temporal_extent_unit,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+560,citydb.ng2_time_series.time_interval,numeric,numeric,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+561,citydb.ng2_time_series.time_interval_unit,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+562,citydb.ng2_time_series.values_list,text,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+563,citydb.ng2_time_series.values_list_uom,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+564,citydb.ng2_time_series.uom,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+565,citydb.ng2_time_series.file_uri,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+566,citydb.ng2_time_series.num_of_header_lines,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+567,citydb.ng2_time_series.field_separator,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+568,citydb.ng2_time_series.record_separator,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+569,citydb.ng2_time_series.value_column_number,integer,integer,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+570,citydb.ng2_time_series.decimal_symbol,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+571,citydb.ng2_time_series.auth_type,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+572,citydb.ng2_time_series.auth_type_codespace,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+573,citydb.ng2_time_series.base_url,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+574,citydb.ng2_time_series.connection_type,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+575,citydb.ng2_time_series.connection_type_codespace,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+576,citydb.ng2_time_series.datastream_id,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+577,citydb.ng2_time_series.link_to_observation,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+578,citydb.ng2_time_series.link_to_sensor_description,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+579,citydb.ng2_time_series.mqtt_server,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+580,citydb.ng2_time_series.mqtt_topic,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+581,citydb.ng2_time_series.observation_id,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+582,citydb.ng2_time_series.observation_property,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+583,citydb.ng2_time_series.sensor_id,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+584,citydb.ng2_time_series.sensor_name,varchar,text,GEO-NONE,DEFERRED-SCHEDULES,—,—,—,DEFERRED-SCHEDULES / DEFERRED-WEATHER / POSTSIM depending on series role.
+585,citydb.ng2_urban_function_area.id,bigint,integer,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+586,citydb.ng2_urban_function_area.type,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+587,citydb.ng2_urban_function_area.type_codespace,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+588,citydb.ng2_urban_function_area.code,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+589,citydb.ng2_urban_function_area.code_codespace,varchar,text,GEO-NONE,SCHEMA,—,—,—,Out of scope for current CIM→CityDB pipeline.
+590,citydb.ng2_utl_ntw_connection.id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.id via ctdb_from_grid from TABULA archetype catalog + component XLS.
+591,citydb.ng2_utl_ntw_connection.network_type,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_vector.cim_wizard_project_scenario.grid_id,"When grid_id set, write electricity consumer connection."
+592,citydb.ng2_utl_ntw_connection.network_type_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.network_type_codespace via ctdb_from_grid from TABULA archetype catalog + component XLS.
+593,citydb.ng2_utl_ntw_connection.connection_status,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.connection_status via ctdb_from_grid from TABULA archetype catalog + component XLS.
+594,citydb.ng2_utl_ntw_connection.function_in_network,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.function_in_network via ctdb_from_grid from TABULA archetype catalog + component XLS.
+595,citydb.ng2_utl_ntw_connection.function_in_network_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.function_in_network_codespace via ctdb_from_grid from TABULA archetype catalog + component XLS.
+596,citydb.ng2_utl_ntw_connection.usage_in_network,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.usage_in_network via ctdb_from_grid from TABULA archetype catalog + component XLS.
+597,citydb.ng2_utl_ntw_connection.usage_in_network_codespace,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.usage_in_network_codespace via ctdb_from_grid from TABULA archetype catalog + component XLS.
+598,citydb.ng2_utl_ntw_connection.network_id,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.network_id via ctdb_from_grid from TABULA archetype catalog + component XLS.
+599,citydb.ng2_utl_ntw_connection.network_node_id,varchar,text,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.network_node_id via ctdb_from_grid from TABULA archetype catalog + component XLS.
+600,citydb.ng2_utl_ntw_connection.cityobject_id,bigint,fk,GEO-NONE,PLANNED-3,ctdb_utility_connection_calculator,ctdb_from_grid,cim_wizard_project_scenario.grid_id,Fill ng2_utl_ntw_connection.cityobject_id via ctdb_from_grid from TABULA archetype catalog + component XLS.
+601,citydb.ng2_weather_data.id,bigint,fk,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+602,citydb.ng2_weather_data.type,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+603,citydb.ng2_weather_data.type_codespace,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+604,citydb.ng2_weather_data.value_type,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+605,citydb.ng2_weather_data.value_type_codespace,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+606,citydb.ng2_weather_data.yearly_value,numeric,numeric,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+607,citydb.ng2_weather_data.yearly_value_uom,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+608,citydb.ng2_weather_data.library_code,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+609,citydb.ng2_weather_data.library_code_codespace,varchar,text,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+610,citydb.ng2_weather_data.time_series_id,bigint,fk,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+611,citydb.ng2_weather_data.cityobject_id,bigint,fk,GEO-NONE,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+612,citydb.ng2_weather_data.position,geometry(PointZ),geometry,GEO-DIRECT,DEFERRED-WEATHER,—,—,—,DEFERRED-WEATHER: requires EPW/station binding on scenario.
+613,citydb.cityobject_genericattrib.u_value_w_m2k→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_surface_u_value,tabula_envelope_json.components + LOD1.2 surface slot,[surface] Per-surface U from archetype component code (Wall/Roof/Floor); replaces coarse TABULA_U_VALUES.
+614,citydb.cityobject_genericattrib.thermalZone_volume_m3→realval,numeric,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building_properties.volume,[building] Single-zone mode: copy building volume.
+615,citydb.cityobject_genericattrib.thermalZone_floorArea_m2→realval,numeric,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building_properties.area,[building] Single-zone mode: copy footprint area.
+616,citydb.cityobject_genericattrib.thermalZone_numberOfFloors→realval,numeric,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building_properties.number_of_floors,[building] Single-zone mode: copy storey count.
+617,citydb.cityobject_genericattrib.energySystem_envelopeEfficiency→strval,text,text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building_properties.envelope_efficiency,[building] Copy low/medium/high envelope efficiency label.
+618,citydb.cityobject_genericattrib.energySystem_fmuFile→strval,text,text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building_properties.fmu_file,[building] Copy FMU archetype file identifier.
+619,citydb.cityobject_genericattrib.thermalZone_count→intval,integer,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[],[building] Multi-zone: count of storey-level thermal zones.
+620,citydb.cityobject_genericattrib.tz:{zone_id}:usage→strval,text,text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].usage,[building] Multi-zone: per-zone usage type (one zone per building level).
+621,citydb.cityobject_genericattrib.tz:{zone_id}:volume_m3→realval,numeric,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].volume_m3,[building] Multi-zone: per-zone air volume from LOD1.2 storey slice.
+622,citydb.cityobject_genericattrib.tz:{zone_id}:floor_area_m2→realval,numeric,numeric,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].floor_area_m2,[building] Multi-zone: per-zone floor area.
+623,citydb.cityobject_genericattrib.tz:{zone_id}:is_heated→intval,integer,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].is_heated,[building] Multi-zone: heated flag per storey zone.
+624,citydb.cityobject_genericattrib.tz:{zone_id}:is_cooled→intval,integer,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].is_cooled,[building] Multi-zone: cooled flag per storey zone.
+625,citydb.cityobject_genericattrib.tz:{zone_id}:storey_index→intval,integer,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].storey_index,[building] Multi-zone: storey index links zone to floor surfaces.
+626,citydb.cityobject_genericattrib.tz:{zone_id}:apartment_index→intval,integer,integer,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,building_surfaces_lod12.thermal_zones[].apartment_index,[building] Mixed-use: apartment sub-zone index when present.
+627,citydb.cityobject_genericattrib.cim_building_id→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building.building_id,[building] Mirror building UUID for round-trip queries.
+628,citydb.cityobject_genericattrib.cim_height→realval,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.height,[building] Mirror calculated height.
+629,citydb.cityobject_genericattrib.cim_area→realval,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.area,[building] Mirror footprint area.
+630,citydb.cityobject_genericattrib.cim_volume→realval,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.volume,[building] Mirror building volume.
+631,citydb.cityobject_genericattrib.cim_number_of_floors→realval,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.number_of_floors,[building] Mirror storey count.
+632,citydb.cityobject_genericattrib.cim_type→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.type,[building] Mirror OSM-derived usage type.
+633,citydb.cityobject_genericattrib.cim_const_period_census→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.const_period_census,[building] Mirror census construction period band.
+634,citydb.cityobject_genericattrib.cim_const_year→intval,integer,integer,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.const_year,[building] Mirror estimated construction year.
+635,citydb.cityobject_genericattrib.cim_const_tabula→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.const_tabula,[building] Mirror TABULA period code TABULA_1…7.
+636,citydb.cityobject_genericattrib.cim_n_people→intval,integer,integer,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.n_people,[building] Mirror census-derived population count.
+637,citydb.cityobject_genericattrib.cim_n_family→intval,integer,integer,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.n_family,[building] Mirror household count.
+638,citydb.cityobject_genericattrib.cim_envelope_efficiency→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.envelope_efficiency,[building] Mirror envelope efficiency class.
+639,citydb.cityobject_genericattrib.cim_fmu_file→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.fmu_file,[building] Mirror assigned FMU archetype.
+640,citydb.cityobject_genericattrib.cim_filter_res→intval,boolean,boolean,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building_properties.filter_res,[building] Mirror residential vs non-residential filter flag.
+641,citydb.cityobject_genericattrib.cim_z_value→realval,numeric,numeric,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building.z_value,[building] Mirror terrain/floor height above sea level.
+642,citydb.cityobject_genericattrib.cim_census_id→intval,integer,integer,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building.census_id,[building] Mirror census tract link.
+643,citydb.cityobject_genericattrib.cim_lod→intval,integer,integer,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building.lod,[building] Mirror geometry LOD level.
+644,citydb.cityobject_genericattrib.cim_building_geometry_source→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building.building_geometry_source,[building] Mirror footprint source (OSM/census/etc.).
+645,citydb.cityobject_genericattrib.cim_pv_ids→strval,text,text,GEO-NONE,PLANNED-1,ctdb_attrib_calculator,ctdb_cim_genericattrib_mirror,cim_wizard_building.pv_ids,[building] Comma-joined PV UUID list for reverse lookup.
+646,citydb.cityobject_genericattrib.tabula_period_code→strval,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,tabula_envelope_json.const_tabula,[building] Copy TABULA_1…TABULA_7 period code.
+647,citydb.cityobject_genericattrib.tabula_archetype_code→strval,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,TABULA_Codici_costruzioni.Codice ed.,[building] Full archetype code e.g. SFH_05.
+648,citydb.cityobject_genericattrib.tabula_u_wall→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,component Wall_*.Dati.Trasmittanza,[building] Primary wall U-value W/m²K from XLS.
+649,citydb.cityobject_genericattrib.tabula_u_wall_2→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,component Wall_*.Dati.Trasmittanza (Parete2),[building] Secondary wall U when archetype has two wall types.
+650,citydb.cityobject_genericattrib.tabula_u_roof→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,component Roof_*.Dati.Trasmittanza,[building] Roof U-value W/m²K from XLS.
+651,citydb.cityobject_genericattrib.tabula_u_ground→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,component Floor_*.Dati.Trasmittanza (Solaio1),[building] Ground/floor slab U-value W/m²K.
+652,citydb.cityobject_genericattrib.tabula_u_ceiling→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,component Ceiling_*.Dati.Trasmittanza,[building] Attic ceiling U when present in archetype.
+653,citydb.cityobject_genericattrib.tabula_g_window→realval,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,TABULA window typology,[building] Window solar/g-value default.
+654,citydb.cityobject_genericattrib.tabula_envelope_class→strval,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,envelope KPI derivation,[building] Derived envelope performance label.
+655,citydb.cityobject_genericattrib.tabula_constr_weight→strval,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,archetype epoca,[building] Light/medium/heavy construction weight from period.
+656,citydb.cityobject_genericattrib.tabula_glazing_ratio→realval,numeric,numeric,GEO-NONE,PLANNED-3,building_tabula_archetype_calculator,tabula_extract_genericattrib,TABULA defaults,[building] Glazed-to-opaque ratio for tabula_extract_opening.
+657,citydb.cityobject_genericattrib.tabula_building_class→strval,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_genericattrib,archetype prefix SFH/MFH/TH/AB,[building] TABULA building class segment.
+658,citydb.cityobject_genericattrib.postSim_meanIndoorTemp_C→realval,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_genericattrib_from_outputs,outputs.building_frassinetto3,[building] Mean indoor temperature from simulation.
+659,citydb.cityobject_genericattrib.postSim_annualHeating_kWh→realval,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_genericattrib_from_outputs,outputs.heating_frassinetto_hp2,[building] Annual heating energy aggregate.
+660,citydb.cityobject_genericattrib.postSim_batterySOC_pct→realval,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_genericattrib_from_outputs,outputs.battery,[building] Battery state-of-charge time series summary.
+661,citydb.cityobject_genericattrib.postSim_hpCOP→realval,numeric,numeric,GEO-NONE,POSTSIM,ctdb_postsim_calculator,ctdb_genericattrib_from_outputs,outputs.heating_frassinetto_hp2,[building] Seasonal COP of heat pump.
+662,cim_vector.building_surfaces_lod12.surfaces.wall_surfaces[].geometry,json/jsonb,geometry,GEO-DIRECT,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building.building_surfaces_lod12,Wall PolygonZ per orientation.
+663,cim_vector.building_surfaces_lod12.surfaces.roof_surface.geometry,json/jsonb,geometry,GEO-DIRECT,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building.building_surfaces_lod12,Roof polygon at building height.
+664,cim_vector.building_surfaces_lod12.surfaces.ground_surface.geometry,json/jsonb,geometry,GEO-DIRECT,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building.building_surfaces_lod12,Ground/floor slab at z=0 relative.
+665,cim_vector.building_surfaces_lod12.surfaces.floor_surfaces[].geometry,json/jsonb,geometry,GEO-DIRECT,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building.building_surfaces_lod12,Inter-storey floor/ceiling polygons.
+666,cim_vector.building_surfaces_lod12.surfaces.wall_surfaces[].properties.area_m2,json/jsonb,numeric,GEO-NONE,PLANNED-1,ctdb_thematic_surface_calculator,ctdb_from_lod12,cim_wizard_building.building_surfaces_lod12,Pre-computed wall area.
+667,cim_vector.building_surfaces_lod12.surfaces.wall_surfaces[].properties.azimuth_degrees,json/jsonb,numeric,GEO-NONE,PLANNED-1,ctdb_thematic_surface_calculator,ctdb_from_lod12,cim_wizard_building.building_surfaces_lod12,Wall outward normal azimuth.
+668,cim_vector.building_surfaces_lod12.surfaces.wall_surfaces[].tabula.construction_code,json/jsonb,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_surface_assignment,tabula_envelope_json,Assign Parete1/2/3 construction code to wall by index/area.
+669,cim_vector.building_surfaces_lod12.surfaces.wall_surfaces[].tabula.u_value,json/jsonb,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_surface_assignment,component XLS Dati.Trasmittanza,Per-wall U from assigned TABULA component.
+670,cim_vector.building_surfaces_lod12.surfaces.roof_surface.tabula.u_value,json/jsonb,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_surface_assignment,Copertura component,Roof U from archetype Copertura slot.
+671,cim_vector.building_surfaces_lod12.surfaces.ground_surface.tabula.u_value,json/jsonb,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_surface_assignment,Solaio1 component,Ground slab U from archetype Solaio1 slot.
+672,cim_vector.building_surfaces_lod12.thermal_zones[].zone_id,json/jsonb,text,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,cim_wizard_building.building_surfaces_lod12,"Thermal zone id (z1, z2, … per level)."
+673,cim_vector.building_surfaces_lod12.thermal_zones[].storey_index,json/jsonb,integer,GEO-NONE,PLANNED-1,ctdb_thermal_partition_calculator,ctdb_from_lod12,cim_wizard_building.building_surfaces_lod12,Links zone to building level / floor surfaces.
+674,cim_vector.building_surfaces_lod12.metadata.building_height,json/jsonb,numeric,GEO-NONE,CALCULATED,building_geo_lod12_calculator,generate_lod12_surfaces,cim_wizard_building_properties.height,LOD1.2 extrusion height reference.
+675,cim_vector.cim_wizard_building.building_id,text,text,GEO-NONE,MAPPED,citydb_mapper_calculator,map_scenario_to_citydb,cim_wizard_building.building_id,Primary key UUID → cityobject.gmlid.
+676,cim_vector.cim_wizard_building.building_geometry,geometry,geometry,GEO-DIRECT,CALCULATED,building_geo_calculator,calculate_building_geometry,OSM/census footprint,Footprint polygon; input to LOD1.2 extrusion.
+677,cim_vector.cim_wizard_building.building_geometry_source,text,text,GEO-NONE,CALCULATED,building_geo_calculator,calculate_building_geometry,data source tag,"Source label (osm, census, …)."
+678,cim_vector.cim_wizard_building.building_surfaces_lod12,json,json,GEO-NONE,CALCULATED,building_geo_lod12_calculator,generate_lod12_surfaces,footprint + height + floors,Semantic walls/roof/ground/floors + thermal_zones JSON.
+679,cim_vector.cim_wizard_building.z_value,numeric,numeric,GEO-NONE,CALCULATED,building_z_value_calculator,calculate_z_value,DEM/terrain,Floor height above sea level → ref_point Z and CityJSON terrainHeight.
+680,cim_vector.cim_wizard_building.building_name,text,text,GEO-NONE,MAPPED,building_name_calculator,assign_building_names,OSM addr / synthetic,→ cityobject.name.
+681,cim_vector.cim_wizard_building.pv_ids,array_uuid,array_uuid,GEO-NONE,CALCULATED,pv_generator_calculator,generate_pv,cim_vector.pv,UUID list linking building to PV roof polygons.
+682,cim_vector.cim_wizard_building.census_id,integer,integer,GEO-NONE,CALCULATED,building_construction_year_calculator,assign_construction_period,census tract,Links building to census boundary for period assignment.
+683,cim_vector.cim_wizard_building_properties.height,numeric,numeric,GEO-NONE,MAPPED,building_height_calculator,calculate_height,OSM tags / rules,→ building.measured_height.
+684,cim_vector.cim_wizard_building_properties.area,numeric,numeric,GEO-NONE,CALCULATED,building_area_calculator,calculate_area,footprint geometry,→ genericattrib cim_area / thermalZone_floorArea_m2.
+685,cim_vector.cim_wizard_building_properties.volume,numeric,numeric,GEO-NONE,CALCULATED,building_volume_calculator,calculate_volume,area × height,→ genericattrib cim_volume / thermalZone_volume_m3.
+686,cim_vector.cim_wizard_building_properties.number_of_floors,numeric,numeric,GEO-NONE,MAPPED,building_n_floors_calculator,calculate_floors,height + filter_res,→ building.storeys_above_ground; drives LOD1.2 storey count.
+687,cim_vector.cim_wizard_building_properties.type,text,text,GEO-NONE,CALCULATED,building_type_calculator,derive_from_filter_res,filter_res boolean,residential/others → ng2_building.type.
+688,cim_vector.cim_wizard_building_properties.const_tabula,text,text,GEO-NONE,CALCULATED,building_construction_year_calculator,assign_tabula_period,census period,"TABULA_1…TABULA_7 → U-values, constructions, tabula_* genericattrib."
+689,cim_vector.cim_wizard_building_properties.const_period_census,text,text,GEO-NONE,CALCULATED,building_construction_year_calculator,assign_construction_period,census,Census construction period band.
+690,cim_vector.cim_wizard_building_properties.const_year,integer,integer,GEO-NONE,CALCULATED,building_construction_year_calculator,assign_construction_year,census,Estimated year → yearOfConstruction genericattrib.
+691,cim_vector.cim_wizard_building_properties.envelope_efficiency,text,text,GEO-NONE,MAPPED,envelope_efficiency_calculator,classify_envelope,const_tabula + type,low/medium/high → energySystem_envelopeEfficiency.
+692,cim_vector.cim_wizard_building_properties.fmu_file,text,text,GEO-NONE,MAPPED,fmu_assign_calculator,assign_fmu,building type + scenario,HVAC archetype id → ng2_device via ctdb_hvac_calculator.
+693,cim_vector.cim_wizard_building_properties.n_people,integer,integer,GEO-NONE,CALCULATED,building_demographic_calculator,distribute_population,census volume,→ cim_n_people genericattrib; ng2_occupants DEFERRED.
+694,cim_vector.cim_wizard_building_properties.n_family,integer,integer,GEO-NONE,CALCULATED,building_demographic_calculator,distribute_families,census,→ cim_n_family genericattrib.
+695,cim_vector.cim_wizard_building_properties.filter_res,boolean,boolean,GEO-NONE,CALCULATED,building_residential_filter_calculator,calculate_filter_res,area + height + OSM,Residential gate for volume/floors/construction calculators.
+696,cim_vector.cim_wizard_building_properties.tabula_type,text,text,GEO-NONE,PLANNED-1,building_tabula_type_calculator,tabula_extract_type_label,const_year + building_type,IT.{USAGE}.{TABULA_PERIOD} label.
+697,cim_vector.cim_wizard_building_properties.tabula_archetype_code,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,TABULA_Codici_costruzioni.xlsx,Resolve SFH_05 / MFH_05 / TH_05 / AB_05 from tabula_type + floors.
+698,cim_vector.cim_wizard_building_properties.tabula_envelope_json,json,json,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,all component XLS per archetype row,"Full envelope document: components, layers, U, dynamic props."
+699,cim_vector.cim_wizard_building_properties.tabula_u_roof,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,Roof_*.Dati.Trasmittanza,Scalar roof U for queries.
+700,cim_vector.cim_wizard_building_properties.tabula_u_wall,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,Wall_*.Dati.Trasmittanza (Parete1),Scalar primary wall U.
+701,cim_vector.cim_wizard_building_properties.tabula_u_wall_2,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,Wall_*.Dati.Trasmittanza (Parete2),Scalar secondary wall U when present.
+702,cim_vector.cim_wizard_building_properties.tabula_u_ground,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,Floor_*.Dati.Trasmittanza (Solaio1),Scalar ground/floor U.
+703,cim_vector.cim_wizard_building_properties.tabula_u_ceiling,numeric,numeric,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,Ceiling_*.Dati.Trasmittanza,Scalar attic ceiling U when present.
+704,cim_vector.cim_wizard_building_properties.tabula_building_class,text,text,GEO-NONE,PLANNED-1,building_tabula_archetype_calculator,tabula_extract_archetype_catalog,archetype prefix,SFH / MFH / TH / AB segment.

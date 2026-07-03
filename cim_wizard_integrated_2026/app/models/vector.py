@@ -98,6 +98,7 @@ class BuildingProperties(Base):
     const_period_census = Column(String(10), nullable=True)
     const_year = Column(Integer, nullable=True)
     const_tabula = Column(String(15), nullable=True)  # Note: lowercase in actual table
+    tabula_type = Column(String(50), nullable=True)  # e.g. IT.RES.TABULA_5
     
     # Demographics
     n_people = Column(Integer, nullable=True)

@@ -216,7 +216,7 @@ async def query_building_properties(
 
 _BP_EDITABLE_FIELDS = {
     "height", "area", "volume", "number_of_floors",
-    "type", "const_period_census", "const_year", "const_tabula",
+    "type", "const_period_census", "const_year", "const_tabula", "tabula_type",
     "n_people", "n_family", "envelope_efficiency", "fmu_file",
 }
 

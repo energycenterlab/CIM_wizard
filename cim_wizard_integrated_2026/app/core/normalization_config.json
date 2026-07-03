@@ -412,8 +412,17 @@
           "aliases": [
             "constTabula",
             "tabula",
-            "tabula_type",
             "TABULA"
+          ]
+        },
+        "tabula_type": {
+          "type": "string",
+          "required": false,
+          "description": "Full TABULA typology code (country.usage.period), e.g. IT.RES.TABULA_5",
+          "aliases": [
+            "tabulaType",
+            "tabula_type",
+            "TABULA_TYPE"
           ]
         },
         "n_people": {
