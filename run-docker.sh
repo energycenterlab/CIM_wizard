@@ -48,11 +48,20 @@ cmd_db_down() {
 }
 
 cmd_backend_up() {
+  if ! docker network inspect cim-database_default >/dev/null 2>&1; then
+    echo "Error: Database network not found. Start the database first with: ./run-docker.sh db-up"
+    exit 1
+  fi
   echo "Starting CIM Wizard Backend..."
   docker compose -f "$BACKEND_COMPOSE" -p cim-backend up -d --build
   echo ""
   echo "Backend running:"
   echo "  API docs: http://localhost:8001/docs"
+  if curl -sf http://localhost:8001/health >/dev/null 2>&1; then
+    echo "  Health check: OK"
+  else
+    echo "  Health check: waiting (run: docker logs cim-backend)"
+  fi
 }
 
 cmd_backend_down() {

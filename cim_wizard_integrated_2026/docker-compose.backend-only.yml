@@ -1,5 +1,5 @@
 # Backend only - use when DB is already running (e.g. from cim-database)
-# Requires: cim-integrateddb on localhost:15432
+# Requires: cim-integrateddb started via run-docker.sh db-up (creates cim-database_default network)
 
 services:
   backend:
@@ -10,7 +10,15 @@ services:
     container_name: cim-backend
     restart: unless-stopped
 
-    network_mode: host
+    ports:
+      - "8001:8001"
 
     environment:
-      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@localhost:15432/cim_wizard_integrated
+      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@cim-integrateddb:5432/cim_wizard_integrated
+
+    networks:
+      - cim-database_default
+
+networks:
+  cim-database_default:
+    external: true

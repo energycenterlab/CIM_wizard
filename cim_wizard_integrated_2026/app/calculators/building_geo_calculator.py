@@ -252,7 +252,11 @@ class BuildingGeoCalculator(BaseCalculator):
                     try:
                         server_name = overpass_url.split("//")[1].split("/")[0]
                         self.pipeline.log_info(self.calculator_name, f"Attempt {attempt + 1}/{max_retries} via {server_name}")
-                        response = requests.post(overpass_url, data=overpass_query, timeout=180)
+                        response = requests.get(
+                            overpass_url,
+                            params={"data": overpass_query},
+                            timeout=180,
+                        )
                         
                         if response.status_code == 200:
                             osm_data = response.json()
@@ -386,15 +390,23 @@ class BuildingGeoCalculator(BaseCalculator):
                 return buildings
             
             self.pipeline.log_info(self.calculator_name, "Querying OSM buildings using osmnx")
-            
-            # Configure osmnx
-            ox.config(log_console=False, use_cache=True)
-            
+
+            # osmnx 2.x uses ox.settings; 1.x used ox.config
+            if hasattr(ox, "settings"):
+                ox.settings.use_cache = True
+            elif hasattr(ox, "config"):
+                ox.config(log_console=False, use_cache=True)
+
+            # osmnx 2.x renamed geometries_from_polygon -> features_from_polygon
+            if hasattr(ox, "features_from_polygon"):
+                query_buildings = ox.features_from_polygon
+            else:
+                query_buildings = ox.geometries_from_polygon
+
             # Query buildings using osmnx
             try:
-                # Get buildings within the boundary
-                gdf_buildings = ox.geometries_from_polygon(
-                    boundary_shape, 
+                gdf_buildings = query_buildings(
+                    boundary_shape,
                     tags={'building': True}
                 )
                 
