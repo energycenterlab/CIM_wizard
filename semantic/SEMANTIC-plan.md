@@ -4,6 +4,14 @@ Study the feasibility of **automatically** building and maintaining a **Virtual 
 
 **Approach:** fine-tune a spatial-SQL LLM on the CIM Wizard dataset (`ai4db/` → `txt2ssql/`), evaluate with `assist_cim/`, and use it to generate **source SQL** in Ontop mappings while ontology rules supply **target RDF templates** — see [Fine-tuned Text-to-SQL → OBDA pipeline](#fine-tuned-text-to-sql--obda-pipeline-project-repos).
 
+**Reference stack (2025–2026):**
+
+| Paper | File | Role in CIM VKG plan |
+|-------|------|----------------------|
+| LLM4VKG (IJCAI 2025) | `phd_proposal/llm4vkg.pdf` | Mapping bootstrap + ontology completion |
+| RML Meets LLMs | `semantic/17_RML_Meets_LLMs_More_Structu.pdf` | LLM inside mappings for semi-structured UBEM fields |
+| BLINKG (TGDK 2026) | `semantic/BLINKG.pdf` | Per-task mapping benchmark + O5 evaluation protocol |
+
 ---
 
 ## Ontology stack (three layers)
@@ -112,6 +120,8 @@ flowchart TB
 | `cim_citydb.properties` / `citygml-bot-sosa-ssn-geosparql-time.properties` | Ontop JDBC | DB connection for virtualisation |
 | `catalog-v001.xml` | XML catalog | Resolves ontology IRIs to local stub/full files |
 | `test-queries.sparql` | Validation | SPARQL over VKG (buildings, zones, observations, GeoSPARQL) |
+| `../17_RML_Meets_LLMs_More_Structu.pdf` | Reference | RML-FNML + LLM-in-mapping for semi-structured fields |
+| `../BLINKG.pdf` | Reference | LLM mapping-generation benchmark (task-level P/R/F1) |
 
 **Mapping groups in `cim_citydb.obda`:** buildings & geometry; energy building attributes; thermal / usage zones (`bot:Zone`); building units (`bot:Space`); qualified attributes & resources as `sosa:Observation`; time series as `sosa:ObservationCollection` + `time:`; devices / solar / weather / EPC / simulation runs as observations.
 
@@ -218,6 +228,139 @@ flowchart LR
 
 **Caveats for spatial OBDA:** LLM4VKG targets relational **schema.org**-style benchmarks; **GeoSPARQL SQL expressions** (`ST_AsText`, CRS prefixes) still need template rules or a fine-tuned spatial-SQL model (your proposed novelty). Combine LLM4VKG alignment with **Bereta & Koubarakis (Ontop spatial, ISWC 2016)** patterns for geometry literals.
 
+**Complementary papers (2025–2026):** LLM4VKG automates *mapping authoring*; **RML Meets LLMs** embeds LLMs *inside* mappings for semi-structured fields; **BLINKG** benchmarks *mapping-task* accuracy — see sections below. Use all three together in the O5 pipeline.
+
+---
+
+## RML meets LLMs — hybrid structured + unstructured mappings
+
+`semantic/17_RML_Meets_LLMs_More_Structu.pdf` — *RML Meets LLMs: More Structure, Fewer Errors* (medicines-information use-case; RML-FNML + Ontop-style notation)
+
+**Problem:** Real UBEM/CityDB data is **semi-structured**: many columns are typed and joinable (height, storeys, `objectclass_id`), but others are **free text** (OSM tag strings, EPC narrative fields, census descriptions, method documentation in calculator configs). Pure RML/OBDA cannot parse these; pure LLM JSON→RDF sacrifices correctness guarantees and hallucinates (≈40% error rate on small pharma JSON in the paper vs ≈2.5% for hybrid).
+
+**Core idea:** Integrate LLM calls **inside** RML mapping rules via **RML-FNML** user-defined functions (`getAnswerFromLLM`, `getFloatFromLLM`, …). Structured attributes use standard triple maps; unstructured attributes call the LLM on **short, focused snippets** computed by the mapping `source` clause.
+
+```mermaid
+flowchart LR
+  subgraph structured["Structured path — correctness guaranteed"]
+    COL[citydb.building.measured_height]
+    RML[Standard RML / OBDA triple map]
+    RDF1[schema:height literal]
+    COL --> RML --> RDF1
+  end
+  subgraph unstructured["Unstructured path — LLM in mapping"]
+    TXT[OSM tag / EPC text field]
+    FNML[RML-FNML getAnswerFromLLM]
+    RDF2[Parsed datatype property]
+    TXT --> FNML --> RDF2
+  end
+  subgraph audit["Auditability"]
+    DESC[Store original text in cim:description / prov]
+    FNML -.-> DESC
+  end
+```
+
+**Formal pattern (from paper):** For property `P` extracted from unstructured attribute `U`:
+
+```text
+target  :entity/{id} :hasP getAnswerFromLLM(concat(PROMPT_P, {U})) .
+source  SELECT id, U FROM ...
+```
+
+- `PROMPT_P` — zero-shot or few-shot template per property (dosage amount, safety level, building use from OSM `building=*` tag, …).
+- `functions.ttl` — declares Java/Python UDF implementing LLM call + typed extraction (JSON `{"answer": ...}`).
+- **Provenance:** store raw `U` in a `description` / `xxxDesc` property alongside LLM-extracted value (paper’s MI ontology pattern) — aligns with Paper 2 O6 lineage.
+
+**Evaluation (paper):** 20 JSON drugs, 1,384 triples, 550 LLM-extracted; DeepSeek-32B: **34 errors (2.5%)** vs Claude Sonnet end-to-end **561 errors (40%)**. SPARQL query answers: hybrid beats NL-over-JSON and NL-over-LLM on dosage queries.
+
+**Relevance to CIM Wizard / CityDB:**
+
+| CIM data | Structured (standard OBDA) | Semi-structured (RML-FNML + LLM) |
+|----------|---------------------------|----------------------------------|
+| `citydb.building.measured_height` | `schema:height` | — |
+| `citydb.building.objectclass_id` + lookup | `a bot:Building` | — |
+| `ng2_*` thermal zone labels | datatype props | — |
+| OSM `building:use` free tags | — | infer `cim:buildingType` / TABULA archetype |
+| EPC / certificate narrative fields | — | extract U-value proxy, heating system hints |
+| Calculator `method` metadata strings | — | classify method tier for confidence (O6) |
+| Unparsed census text attributes | — | map to `cim:censusAttribute` with LLM + store raw |
+
+**Relation to LLM4VKG:** LLM4VKG **generates** mapping assertions; RML-Meets-LLMs **executes** LLM inside an existing mapping at materialisation time. CIM Wizard 2.0 needs **both**: LLM4VKG + fine-tuned SQL for `.obda` bootstrap, RML-FNML for columns that stay textual in the warehouse.
+
+**Implementation note:** Ontop supports OBDA (SQL source); full RML-FNML UDFs may require **RMLMapper** or a post-processing step for JSON/API sources. For PostgreSQL CityDB, prototype LLM-in-mapping on `assist_cim` agent repair loop first, then migrate hot paths to FNML when RML stack is wired.
+
+---
+
+## BLINKG — benchmark for LLM mapping generation
+
+`semantic/BLINKG.pdf` — Castedo et al., *BLINKG: A Benchmark for LLM-Integrated Knowledge Graph Generation* (TGDK 2026; [GitHub](https://github.com/citiususc/blinkg), DOI 10.4230/TGDK..?.?)
+
+**Problem:** LLM mapping papers (Hofer RML+LLM, Schmidt YARRRML, R2RML-ChatGPT, ReMap, LLM4VKG) use **inconsistent tasks, metrics, and datasets** — hard to compare or tune CIM-specific automation.
+
+**BLINKG contribution:** Domain-agnostic benchmark with **gold standards**, **three difficulty scenarios**, and **task-level** precision / recall / F1 (not only end-to-end SPARQL like RODI).
+
+### Comparison with other benchmarks
+
+| | RODI | SemTab | BLINKG |
+|---|------|--------|--------|
+| Focus | RDB → ontology (indirect via SPARQL) | Cell/entity/property annotation vs **existing KG** | Data → ontology **mapping decisions** |
+| Granularity | Graph-level | Annotation-level | **Task-level** (class, property, join, …) |
+| Requires populated KG | No | **Yes** (Wikidata) | No |
+| Input formats | RDB | Tabular | **CSV, JSON, XML, SQL, …** |
+| Expected output | R2RML file | Links | **Structured mapping table** (Table 6) |
+
+**Implication for CIM Wizard:** Use BLINKG-style **tabular mapping output** from O5 agents before serialising to `.obda`; use RODI/SPARQL (`test-queries.sparql`) as **downstream** integration test, not the only metric.
+
+### Three scenarios (difficulty ladder)
+
+| Scenario | Alignment | CIM Wizard analogue |
+|----------|-----------|-------------------|
+| **1 — Basic** | Lexically similar column ↔ ontology term | `building_id` → `bot:Building`; 8 atomic cases (1A–1H): single column, self-join, multi-file join, language tags |
+| **2 — Schema-aligned** | Input mirrors ontology (GTFS-Madrid) | Hypothetical: ontology built from CityGML ADE spec; `ng2_*` tables with obvious class names |
+| **3 — Schema-distant** | Lexically/structurally far (ePO / CODICE XML) | **`citydb` + `objectclass_id` + `ng2_*` energy ADE** — closest to production CityDB OBDA |
+
+CityDB OBDA (`cim_citydb.obda`) is predominantly **Scenario 3**: `objectclass_id = 26`, multi-hop joins (`building` → `feature` → `geometry_data`), PostGIS in source SQL, `cim:` extension properties.
+
+### BLINKG mapping tasks → O5 agent decomposition
+
+| BLINKG task | CIM Wizard O5 agent / tool | Example in `cim_citydb.obda` |
+|------------|------------------------------|------------------------------|
+| **Ontology class identification** | Schema + alignment agent | `citydb.building` → `bot:Building` |
+| **Subject generation** (simple / composite PK) | Template engine | `:building/{id}` |
+| **Ontology property identification** | LLM4VKG Matcher + `alignment.ttl` | `measured_height` → `schema:height` |
+| **Data reference identification** | **Fine-tuned Q2SQL** (`txt2ssql`) | `SELECT id, measured_height FROM citydb.building WHERE …` |
+| **Related entity class + joins** | Pattern detector (SR/SRm) + SQL agent | `MAP_Building_HasGeometry` FK path |
+| **Datatype annotation** | Template rules | `^^xsd:double`, `geo:wktLiteral` |
+| **Language annotation** | Low priority (mostly numeric UBEM) | `rdfs:label@en` for building names |
+| **Transformation functions** | PostGIS + RML-FNML | `ST_AsText(geom)`, CRS prefix; future LLM parse |
+
+### BLINKG experimental findings (relevant to design)
+
+- **Strong:** entity class ID, ontology property ID (when lexical overlap exists), data reference (Scenario 1–2).
+- **Weak:** **join conditions** (similarity 0.37–0.69 even in Scenario 1); **function name/output** (<0.20 F1 in Scenario 2); **schema-distant** Scenario 3 rarely exceeds 0.53 similarity.
+- **Prompting:** few-shot helps local tasks; **does not fix joins/functions** (DeepSeek F1 = 0 on joins/functions in Scenario 3).
+- **Evaluation:** similarity threshold **0.8** (max of Levenshtein, SBERT raw, SBERT verbalized) best matches expert labels; post-processing essential.
+- **Recommendation:** **Hybrid + human-in-the-loop** — LLMs draft mappings; experts validate; symbolic constraints (OWL, SHACL) catch hallucinations.
+
+### Proposed CIM BLINKG-style evaluation (extend `assist_cim` + `semantic/`)
+
+1. Extract **gold mapping table** from `cim_citydb.obda` (63 mappings) — columns per Table 6: data ref, property, class, subject template, join, datatype.
+2. Hold out N mappings; agents predict tabular rows; score per-task F1 (BLINKG macro-average over 3 runs).
+3. Serialise accepted rows to `.obda`; run Ontop + `test-queries.sparql` (RODI-style downstream).
+4. Optionally add **Scenario 1-style synthetic** `citydb` slices in `ai4db` for regression (lexically easy) before full CityDB (Scenario 3).
+5. Publish subset alongside `paper2/ubem_benchmark/` or `semantic/blinkg_cim/` for reproducibility.
+
+```mermaid
+flowchart TB
+  GOLD[Gold table from cim_citydb.obda]
+  AGENTS[O5 agents → BLINKG tabular output]
+  SCORE[Per-task P/R/F1 + similarity ≥ 0.8]
+  HITL[Human approve diff]
+  OBDA[Merge .obda]
+  ONTOP[Ontop + test-queries.sparql]
+  GOLD --> AGENTS --> SCORE --> HITL --> OBDA --> ONTOP
+```
+
 ---
 
 ## Fine-tuned Text-to-SQL → OBDA pipeline (project repos)
@@ -318,25 +461,33 @@ source      SELECT id, measured_height FROM citydb.building
 | `mappingId` | Deterministic naming from table + property + ontology term |
 | Validation | `assist_cim/evaluator_v2.py` (execute SQL) + Ontop + `test-queries.sparql` |
 
-### Proposed 5-step OBDA synthesis pipeline
+### Proposed 6-step OBDA synthesis pipeline (LLM4VKG + BLINKG + RML-FNML)
 
 1. **Schema introspection** — `information_schema` + FK graph for `citydb`, `ng2_*`, `cim_vector`; seed ontology = `alignment.ttl` + stubs.
-2. **Mapping intent** — For each table/column (or LLM4VKG pattern instance SE/SR/SRm/SH), define natural-language intent: e.g. *"Map building height from citydb.building to schema:height on bot:Building individuals"*.
-3. **Source SQL generation** — Fine-tuned model (`txt2ssql` Q2SQL or QInst2SQL) with prompt = schema card + intent + few-shot from existing `cim_citydb.obda` mappings.
-4. **Target template assembly** — Template engine fills `:building/{id}`, `bot:Building`, `geo:asWKT` literals (including `ST_AsText` + CRS prefix rules from Bereta & Koubarakis spatial OBDA).
-5. **Validate & merge** — Run SQL on remote DB; Ontop mapping check; SPARQL smoke tests; human approves diff → commit `.obda`.
+2. **BLINKG task planning** — Decompose each new table/column into BLINKG tasks (class, subject, property, data ref, join, datatype, transform); classify Scenario 1/2/3 difficulty.
+3. **Mapping pattern + alignment** — LLM4VKG SE/SR/SRm/SH detection; Retriever/Matcher/Namer on seed TBox.
+4. **Source SQL generation** — Fine-tuned CIM Q2SQL (`txt2ssql`) for **data reference + joins** (BLINKG’s hardest task — do not rely on generic LLM alone).
+5. **Target template assembly** — Rule library: BOT / CityGML / SOSA / GeoSPARQL / `cim:`; **RML-FNML** UDFs for semi-structured columns (OSM tags, EPC text).
+6. **Validate & merge** — BLINKG tabular scoring (per-task F1) → SQL EX (`evaluator_v2.py`) → Ontop → `test-queries.sparql` → human approves diff → commit `.obda`.
 
 ```mermaid
 flowchart TB
-  INTENT[Mapping intent\n(table, column, ontology term)]
-  LLM[Fine-tuned CIM Q2SQL\n(txt2ssql)]
+  INTENT[BLINKG task plan\n(class, property, join, datatype)]
+  PAT[LLM4VKG patterns\nSE / SR / SRm / SH]
+  LLM[Fine-tuned CIM Q2SQL\n(txt2ssql) — joins + data ref]
   TPL[Target template engine\n(alignment.ttl rules)]
-  VAL[assist_cim evaluator\n+ Ontop + SPARQL]
+  FNML[RML-FNML LLM UDFs\n(semi-structured fields)]
+  BLINKG[BLINKG tabular scorer\nper-task F1]
+  VAL[assist_cim EX\n+ Ontop + SPARQL]
   OBDA_OUT[cim_citydb.obda]
-  INTENT --> LLM
-  INTENT --> TPL
-  LLM -->|source SQL| VAL
-  TPL -->|target RDF| VAL
+  INTENT --> PAT
+  PAT --> LLM
+  PAT --> TPL
+  TPL --> FNML
+  LLM --> BLINKG
+  TPL --> BLINKG
+  FNML --> BLINKG
+  BLINKG --> VAL
   VAL --> OBDA_OUT
 ```
 
@@ -352,15 +503,17 @@ Extend `ai4db` with an **OBDA-aware** sample type so the fine-tuned model learns
 
 Pair with **inverse** samples: given existing `source` from `cim_citydb.obda`, predict which ontology properties the `target` asserts (classification task for a smaller model or LLM4VKG Matcher).
 
-### How this complements LLM4VKG
+### How this complements LLM4VKG, RML-Meets-LLMs, and BLINKG
 
-| Component | LLM4VKG (IJCAI 2025) | This project |
-|-----------|----------------------|--------------|
-| Schema ↔ ontology alignment | Generic LLM Retriever/Matcher/Namer | CIM fine-tuned model + `alignment.ttl` |
-| Source SQL | Not specialised for PostGIS | **Fine-tuned on 88K+ CIM spatial SQL** |
-| Target templates | Mapping patterns (SE/SR/…) | BOT / CityGML / SOSA / GeoSPARQL / `cim:` rules from `semantic/ontop/` |
-| Evaluation | RODI benchmark | `evaluator_v2.py` + Ontop `test-queries.sparql` |
-| Lifecycle | One-shot bootstrap | Incremental `.obda` diff on ontology/DB schema change |
+| Component | LLM4VKG (IJCAI 2025) | RML Meets LLMs (2025) | BLINKG (TGDK 2026) | This project |
+|-----------|----------------------|------------------------|-------------------|--------------|
+| Role | Bootstrap mappings + ontology completion | LLM **inside** mappings for text fields | **Benchmark** mapping tasks | Integrate all three on CityDB |
+| Schema ↔ ontology alignment | Generic LLM Retriever/Matcher/Namer | N/A (assumes mappings exist) | Task-level gold + metrics | CIM fine-tune + `alignment.ttl` |
+| Source SQL | Not specialised for PostGIS | SQL/JSONPath in logical source | Data reference + join tasks | **Fine-tuned on CIM spatial SQL** |
+| Target templates | Mapping patterns (SE/SR/…) | FNML + standard triple maps | Expected output table | BOT / CityGML / SOSA / GeoSPARQL / `cim:` |
+| Semi-structured text | Limited | **Core contribution** | Transformation + function tasks | OSM/EPC/census text via FNML |
+| Evaluation | RODI F1 | KG + SPARQL correctness | **Per-task P/R/F1** + similarity | BLINKG table + `evaluator_v2.py` + `test-queries.sparql` |
+| Lifecycle | One-shot bootstrap | Runtime materialisation | Reusable benchmark | Incremental `.obda` diff on schema/ontology change |
 
 ---
 
@@ -370,12 +523,14 @@ Pair with **inverse** samples: given existing `source` from `cim_citydb.obda`, p
 |------------|----------------------|
 | **Lembo et al., IJCAI 2017** | Formal OBDA **repair** under spec evolution — not LLM-generated mappings |
 | **LLM4VKG, IJCAI 2025** | Strong **initial** VKG bootstrap — no Ontop `.obda` **lifecycle** on ontology version diffs |
+| **RML Meets LLMs (2025)** | LLM-in-mapping for semi-structured fields — not applied to **CityDB / PostGIS / UBEM** |
+| **BLINKG (TGDK 2026)** | Mapping-task benchmark — no **CIM / CityDB / GeoSPARQL** scenario published yet |
 | **Hofer et al., ESWC 2024 workshop** | LLM RML case studies — not continuous sync with **GeoSPARQL / PostGIS** constraints |
 | **Wu / Shi / Ma** | Ontology-centric **pipelines** — not automatic OBDA from **CityDB** with energy extensions |
 | **Generic Text-to-SQL** (Spider, BIRD) | No **OBDA target templates**, no **CityDB/PostGIS** domain, no VKG validation loop |
-| **This project (`ai4db` + `txt2ssql` + `assist_cim`)** | CIM spatial-SQL fine-tuning exists — **not yet wired** to `.obda` synthesis or `citydb` schema |
+| **This project (`ai4db` + `txt2ssql` + `assist_cim`)** | CIM spatial-SQL fine-tuning exists — **not yet wired** to `.obda` synthesis, BLINKG eval, or RML-FNML |
 
-**Claimable contribution:** A **fine-tuned spatial-SQL LLM** (trained on `ai4db` CIM benchmarks) combined with ontology template rules and LLM4VKG-style alignment, for **incremental, ontology-version-aware** maintenance of `cim_citydb.obda`, validated by `assist_cim/evaluator_v2.py` + Ontop + GeoSPARQL SPARQL tests.
+**Claimable contribution:** A **hybrid VKG automation stack** — LLM4VKG alignment + **BLINKG-task** agents + fine-tuned PostGIS SQL for sources + ontology templates + **RML-FNML** for semi-structured UBEM fields — with **per-task mapping metrics** and Ontop/GeoSPARQL integration tests on `cim_citydb.obda`.
 
 ---
 
@@ -395,7 +550,12 @@ Manual OBDA workflow (current `cim_citydb.obda`):
 
 ## Related automation papers (broader)
 
-- **Xiao et al., LLM4VKG (IJCAI 2025)** — see above; primary reference for automation.
+- **Xiao et al., LLM4VKG (IJCAI 2025)** — see above; primary reference for mapping bootstrap.
+- **RML Meets LLMs (2025)** — `semantic/17_RML_Meets_LLMs_More_Structu.pdf`; RML-FNML + LLM for semi-structured fields; complements LLM4VKG (cited as only other LLM-in-OBDA work besides mapping generation).
+- **Castedo et al., BLINKG (TGDK 2026)** — `semantic/BLINKG.pdf`; [github.com/citiususc/blinkg](https://github.com/citiususc/blinkg); task-level mapping benchmark; supersedes RODI-only eval for O5 development.
+- **Hofer et al.** — LLM-generated RML from JSON (IMDB); evaluated with mapping accuracy; BLINKG cites as fragmented eval baseline.
+- **Schmidt et al.** — YARRRML + LLM in manufacturing; schema evolution focus.
+- **Freund et al., ReMap** — reverse-engineer RML from expected RDF; LLM mappings as baseline.
 - **"From SQL to Knowledge Graphs: An LLM-Driven MultiAgent Approach…" (OpenReview)** — Multi-agent ETL / analyzer / graph agents with iterative quality checks: [OpenReview](https://openreview.net/forum?id=HYu0dGmj5x).
 
 ## Can a fine-tuned SQL / spatial-SQL LLM maintain `.obda`?
@@ -409,7 +569,9 @@ Manual OBDA workflow (current `cim_citydb.obda`):
 | Evaluation & agent | `assist_cim/` | `evaluator_v2.py` (EX/EA), `agent_cim_assist.py` |
 | OBDA mappings | `semantic/ontop/` | Manual `cim_citydb.obda` (63 mappings) — **target for automation** |
 | CityDB schema in training | `ai4db/` | **TODO** — extend `stage1_cim_v2.py` for `citydb.*`, `ng2_*` |
-| OBDA generator script | — | **TODO** — intent → (source SQL from LLM) + (target from template rules) → `.obda` |
+| OBDA generator script | — | **TODO** — BLINKG-task agents → tabular output → `.obda` |
+| BLINKG gold extract | — | **TODO** — parse `cim_citydb.obda` → mapping table for eval |
+| RML-FNML prototypes | — | **TODO** — semi-structured OSM/EPC fields (pilot via `assist_cim` first) |
 
 ---
 
@@ -563,8 +725,11 @@ LIMIT 50
 ## Next steps (engineering)
 
 1. **Extend `ai4db/stage1_cim_v2.py`** with `citydb` + `ng2_*` schema definitions and OBDA-shaped SQL templates (mirror `cim_citydb.obda` mapping groups).
-2. **Fine-tune or continue training** via `txt2ssql/ftv2/` on merged dataset including CityDB OBDA-source samples; evaluate with `assist_cim/evaluator_v2.py`.
-3. **Build OBDA synthesis module** (`semantic/scripts/` or new package): mapping intent → fine-tuned Q2SQL + target template engine → draft `.obda`.
-4. **Validation loop:** SQL execution (`evaluator_v2.py`) → Ontop mapping load → `test-queries.sparql` on remote DB (`130.192.238.11:15432` or SSH tunnel).
-5. Add **Brick** / **SERAF** stubs when HVAC / device mappings expand beyond `cim:` + `sosa:Sensor`.
-6. Wire CI: Ontop smoke test + benchmark subset from `assist_cim` on disposable CityDB snapshot.
+2. **Extract BLINKG gold table** from `cim_citydb.obda` (63 mappings → Table 6 columns); add hold-out split for per-task F1 evaluation.
+3. **Fine-tune or continue training** via `txt2ssql/ftv2/` on merged dataset including CityDB OBDA-source samples; evaluate with `assist_cim/evaluator_v2.py`.
+4. **Build OBDA synthesis module** (`semantic/scripts/` or `semantic/agents/`): LLM4VKG alignment + BLINKG task agents + fine-tuned Q2SQL + target templates → tabular output → `.obda`.
+5. **Pilot RML-FNML** on one semi-structured column (e.g. OSM `building` tag → `cim:buildingType`) using paper’s `getAnswerFromLLM` pattern; store raw text for O6 provenance.
+6. **Validation loop:** BLINKG per-task F1 → SQL EX (`evaluator_v2.py`) → Ontop mapping load → `test-queries.sparql` on remote DB (`130.192.238.11:15432` or SSH tunnel).
+7. Add **Brick** / **SERAF** stubs when HVAC / device mappings expand beyond `cim:` + `sosa:Sensor`.
+8. Wire CI: Ontop smoke test + BLINKG subset + `assist_cim` benchmark on disposable CityDB snapshot.
+9. **Optional:** contribute **CIM CityDB scenario** back to BLINKG community (Schema-distant + GeoSPARQL transforms) once gold table is stable.
