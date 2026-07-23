@@ -18,6 +18,7 @@ ingest_v_upload.py  —  Warehouse Ingest Wizard
             PK · FK (default none) · spatial column · non-spatial → JSONB
 
   Step 5  Output
+            upload original file to MinIO → object_uri on meta_table
             download manifest JSON
             download ingested-row JSON
             POST to separate API endpoints (manifest + data) with custom headers
@@ -39,6 +40,9 @@ import requests
 import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from db import init_db, insert_record  # noqa: E402
+import minio_store  # noqa: E402
 
 # ── optional geo deps ────────────────────────────────────────────────────────
 try:
@@ -127,6 +131,8 @@ def _init():
         # step 5 (output)
         "manifest":        {},
         "ingested_rows":   [],
+        "object_uri":      None,
+        "dataset_id":      None,
         "manifest_api_url":    "",
         "manifest_api_token":  "",
         "manifest_api_headers":"",
@@ -429,6 +435,8 @@ def _build_manifest() -> dict:
         source.update({"filename": S.uploaded_file.name, "format": S.data_format})
         if S.data_format == "GeoPackage" and S.gpkg_layer:
             source["layer"] = S.gpkg_layer
+        if S.object_uri:
+            source["object_uri"] = S.object_uri
     elif S.source_type == "ogc":
         source.update({"url": S.ogc_url, "ogc_type": S.ogc_type})
         if S.ogc_layer:
@@ -597,6 +605,57 @@ def _registry_form(prefix: str = ""):
                                         key=f"{prefix}t_start")
         S.meta_t_end   = st.date_input("Temporal end",   value=S.meta_t_end,
                                         key=f"{prefix}t_end")
+
+
+def _guess_content_type(filename: str) -> str:
+    name = filename.lower()
+    if name.endswith(".geojson") or name.endswith(".json"):
+        return "application/geo+json"
+    if name.endswith(".csv"):
+        return "text/csv"
+    if name.endswith(".zip"):
+        return "application/zip"
+    if name.endswith(".gpkg"):
+        return "application/geopackage+sqlite3"
+    if name.endswith((".tif", ".tiff")):
+        return "image/tiff"
+    return "application/octet-stream"
+
+
+def _register_to_meta(object_uri: str | None, dataset_id: str) -> str:
+    """Insert registry row into public.meta_table; return dataset UUID."""
+    init_db()
+    tags = [t.strip() for t in S.meta_tags.split(",") if t.strip()]
+    filename = S.uploaded_file.name if S.uploaded_file else ""
+    size = None
+    if S.uploaded_file:
+        raw = S.uploaded_file.read()
+        S.uploaded_file.seek(0)
+        size = len(raw)
+
+    ogc_url = S.ogc_url.strip() or None if S.source_type == "ogc" else None
+    ogc_type = S.ogc_type if S.source_type == "ogc" else None
+
+    return insert_record(
+        name=S.meta_name or filename or "unnamed",
+        description=S.meta_desc or "",
+        tags=tags,
+        source_type=S.source_type or "file",
+        ogc_url=ogc_url,
+        ogc_type=ogc_type,
+        is_spatial=bool(S.is_spatial),
+        spatial_type=S.geom_type,
+        crs=S.target_crs or S.meta_crs or "EPSG:4326",
+        footprint_geojson=None,
+        temporal_start=S.meta_t_start,
+        temporal_end=S.meta_t_end,
+        location=None,
+        filename=filename,
+        file_size_bytes=size,
+        file_path=None,
+        object_uri=object_uri,
+        record_id=dataset_id,
+    )
 
 
 def _post_result(resp: requests.Response):
@@ -1193,6 +1252,75 @@ elif S.step == 5:
         st.code(manifest_str, language="json")
     with st.expander("Ingested rows JSON  (up to 5 sample rows)"):
         st.code(ingested_str, language="json")
+
+    st.divider()
+
+    # ── MinIO + meta_table ────────────────────────────────────────────────────
+    st.markdown("### Store file in MinIO + register meta_table")
+    st.caption(
+        "Uploads the original file to the `datawh` bucket and inserts a registry row "
+        "with `object_uri` (e.g. `s3://datawh/<dataset_id>/<filename>`)."
+    )
+
+    if S.dataset_id:
+        st.success(f"Registered — dataset_id `{S.dataset_id}`")
+        if S.object_uri:
+            st.code(S.object_uri, language="text")
+        else:
+            st.caption("No file uploaded (OGC/API source) — meta_table row only.")
+    else:
+        minio_ok = minio_store.is_configured()
+        if minio_ok:
+            st.info("MinIO configured — ready to upload.")
+        else:
+            st.warning(
+                "MinIO not configured. Add a `[minio]` section to "
+                "`.streamlit/secrets.toml` (see secrets.toml.example)."
+            )
+
+        can_store = bool(S.meta_name.strip()) and (
+            S.source_type != "file" or S.uploaded_file is not None
+        )
+        if st.button(
+            "Upload to MinIO & register",
+            type="primary",
+            key="minio_register",
+            disabled=not can_store,
+        ):
+            if not S.meta_name.strip():
+                st.error("Dataset name is required (Step 2).")
+            else:
+                try:
+                    dataset_id = str(uuid.uuid4())
+                    object_uri = None
+
+                    if S.source_type == "file" and S.uploaded_file:
+                        if not minio_store.is_configured():
+                            raise RuntimeError("MinIO is not configured.")
+                        raw = S.uploaded_file.read()
+                        S.uploaded_file.seek(0)
+                        with st.spinner("Uploading to MinIO…"):
+                            object_uri = minio_store.upload(
+                                raw,
+                                S.uploaded_file.name,
+                                prefix=dataset_id,
+                                content_type=_guess_content_type(S.uploaded_file.name),
+                            )
+
+                    with st.spinner("Writing meta_table…"):
+                        _register_to_meta(object_uri, dataset_id)
+
+                    S.dataset_id = dataset_id
+                    S.object_uri = object_uri
+                    # Refresh manifest so source.object_uri is included
+                    S.manifest = _build_manifest()
+                    st.success(
+                        f"Done — dataset_id `{dataset_id}`"
+                        + (f" · `{object_uri}`" if object_uri else " (no file upload)")
+                    )
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Store failed: {exc}")
 
     st.divider()
 

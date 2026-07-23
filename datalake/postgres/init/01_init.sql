@@ -31,22 +31,14 @@ CREATE TABLE IF NOT EXISTS public.meta_table (
     -- File storage (populated for source_type = 'file')
     filename          TEXT          NOT NULL DEFAULT '',
     file_size_bytes   BIGINT,
-    file_path         TEXT,         -- full path on the FTP server
-
+    file_path         TEXT,         -- legacy FTP / local path
+    object_uri        TEXT,         -- MinIO/S3 URI, e.g. s3://datawh/<id>/file.geojson
     uploaded_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
--- Spatial index on bounding polygon (ST_Intersects queries)
-CREATE INDEX IF NOT EXISTS idx_meta_spatial
-    ON public.meta_table USING GIST (spatial_footprint);
-
--- Array index on tags (overlap operator &&)
-CREATE INDEX IF NOT EXISTS idx_meta_tags
-    ON public.meta_table USING GIN (tags);
-
--- B-tree index for temporal range queries
-CREATE INDEX IF NOT EXISTS idx_meta_temporal
-    ON public.meta_table (temporal_start, temporal_end);
+-- Safe on existing volumes that were created before object_uri existed.
+ALTER TABLE public.meta_table
+    ADD COLUMN IF NOT EXISTS object_uri TEXT;
 
 -- ── Warehouse extension tables (added by api/db.py on startup) ──────────────
 

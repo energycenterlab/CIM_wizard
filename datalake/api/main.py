@@ -144,8 +144,9 @@ async def create_datasource(request: Request):
         "temporal_end":   registry.get("temporal_end"),
         "location":       registry.get("location"),
         "filename":       source.get("filename", ""),
-        "file_size_bytes": None,
+        "file_size_bytes": source.get("file_size_bytes"),
         "file_path":      source.get("file_path"),
+        "object_uri":     source.get("object_uri"),
     })
 
     # ── 2. Store manifest ──────────────────────────────────────────────────

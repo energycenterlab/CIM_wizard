@@ -66,8 +66,12 @@ CREATE TABLE IF NOT EXISTS public.meta_table (
     filename          TEXT          NOT NULL DEFAULT '',
     file_size_bytes   BIGINT,
     file_path         TEXT,
+    object_uri        TEXT,
     uploaded_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.meta_table
+    ADD COLUMN IF NOT EXISTS object_uri TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_meta_spatial
     ON public.meta_table USING GIST (spatial_footprint);
@@ -103,22 +107,26 @@ def insert_record(
     filename: str,
     file_size_bytes: int | None,
     file_path: str | None,
+    object_uri: str | None = None,
+    record_id: str | None = None,
 ) -> str:
-    """Insert one row into meta_table and return the generated UUID."""
+    """Insert one row into meta_table and return the UUID."""
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO public.meta_table (
+                    id,
                     name, description, tags,
                     source_type, ogc_url, ogc_type,
                     is_spatial, spatial_type, crs,
                     spatial_footprint,
                     temporal_start, temporal_end,
                     location,
-                    filename, file_size_bytes, file_path
+                    filename, file_size_bytes, file_path, object_uri
                 )
                 VALUES (
+                    COALESCE(%s::uuid, gen_random_uuid()),
                     %s, %s, %s,
                     %s, %s, %s,
                     %s, %s, %s,
@@ -127,11 +135,12 @@ def insert_record(
                          ELSE NULL END,
                     %s, %s,
                     %s,
-                    %s, %s, %s
+                    %s, %s, %s, %s
                 )
                 RETURNING id
                 """,
                 (
+                    record_id,
                     name, description, tags,
                     source_type, ogc_url, ogc_type,
                     is_spatial, spatial_type, crs,
@@ -139,10 +148,21 @@ def insert_record(
                     json.dumps(footprint_geojson) if footprint_geojson else None,
                     temporal_start, temporal_end,
                     location,
-                    filename, file_size_bytes, file_path,
+                    filename, file_size_bytes, file_path, object_uri,
                 ),
             )
             return str(cur.fetchone()[0])
+
+
+def update_object_uri(dataset_id: str, object_uri: str) -> bool:
+    """Set object_uri for an existing meta_table row."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE public.meta_table SET object_uri = %s WHERE id = %s",
+                (object_uri, dataset_id),
+            )
+            return cur.rowcount > 0
 
 
 def query_records(
@@ -208,6 +228,7 @@ def query_records(
                     filename,
                     file_size_bytes,
                     file_path,
+                    object_uri,
                     uploaded_at
                 FROM public.meta_table
                 {where}

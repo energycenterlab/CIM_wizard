@@ -42,6 +42,9 @@ def get_conn():
 EXTRA_DDL = """
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+ALTER TABLE public.meta_table
+    ADD COLUMN IF NOT EXISTS object_uri TEXT;
+
 -- Stores the full ingest manifest JSON for each datasource load.
 CREATE TABLE IF NOT EXISTS public.dw_manifests (
     id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -92,7 +95,7 @@ def insert_meta(payload: dict) -> str:
                     name, description, tags, source_type,
                     ogc_url, ogc_type, is_spatial, spatial_type, crs,
                     spatial_footprint, temporal_start, temporal_end,
-                    location, filename, file_size_bytes, file_path
+                    location, filename, file_size_bytes, file_path, object_uri
                 )
                 VALUES (
                     %s, %s, %s, %s,
@@ -100,7 +103,7 @@ def insert_meta(payload: dict) -> str:
                     CASE WHEN %s IS NOT NULL
                          THEN ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)
                          ELSE NULL END,
-                    %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s
                 )
                 RETURNING id
                 """,
@@ -121,6 +124,7 @@ def insert_meta(payload: dict) -> str:
                     payload.get("filename", ""),
                     payload.get("file_size_bytes"),
                     payload.get("file_path"),
+                    payload.get("object_uri"),
                 ),
             )
             return str(cur.fetchone()[0])
@@ -131,7 +135,7 @@ def update_meta(dataset_id: str, payload: dict) -> bool:
     allowed = {
         "name", "description", "tags", "source_type", "ogc_url", "ogc_type",
         "is_spatial", "spatial_type", "crs", "temporal_start", "temporal_end",
-        "location", "filename", "file_size_bytes", "file_path",
+        "location", "filename", "file_size_bytes", "file_path", "object_uri",
     }
     updates = {k: v for k, v in payload.items() if k in allowed}
     if not updates:
@@ -172,7 +176,7 @@ def get_meta_by_id(dataset_id: str) -> dict | None:
                        ogc_url, ogc_type, is_spatial, spatial_type, crs,
                        ST_AsGeoJSON(spatial_footprint) AS spatial_footprint,
                        temporal_start, temporal_end, location,
-                       filename, file_size_bytes, file_path, uploaded_at
+                       filename, file_size_bytes, file_path, object_uri, uploaded_at
                 FROM public.meta_table WHERE id = %s
                 """,
                 (dataset_id,),
@@ -223,7 +227,7 @@ def list_meta(
                        ogc_url, ogc_type, is_spatial, spatial_type, crs,
                        ST_AsGeoJSON(spatial_footprint) AS spatial_footprint,
                        temporal_start, temporal_end, location,
-                       filename, file_size_bytes, file_path, uploaded_at
+                       filename, file_size_bytes, file_path, object_uri, uploaded_at
                 FROM public.meta_table {where}
                 ORDER BY uploaded_at DESC
                 """,

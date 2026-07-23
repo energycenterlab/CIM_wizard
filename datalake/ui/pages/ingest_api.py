@@ -28,6 +28,8 @@ import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import minio_store  # noqa: E402
+
 # ── optional geo deps ────────────────────────────────────────────────────────
 try:
     import fiona
@@ -40,6 +42,12 @@ try:
     HAS_PANDAS = True
 except ImportError:
     HAS_PANDAS = False
+
+try:
+    import geopandas as gpd
+    HAS_GEOPANDAS = True
+except ImportError:
+    HAS_GEOPANDAS = False
 
 # ── page config ───────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Ingest (API) — Warehouse Wizard", layout="wide")
@@ -122,6 +130,10 @@ def _init():
         "meta_crs":        "EPSG:4326",
         "meta_t_start":    None,
         "meta_t_end":      None,
+        # bounding box (Step 2 — Manifest)
+        "bbox":            None,   # {"west","south","east","north"} in EPSG:4326
+        "bbox_corners":    None,   # {"SW","SE","NE","NW"} each [lon, lat]
+        "spatial_footprint": None, # GeoJSON Polygon for meta_table / API
         # step 3
         "columns":         [],
         "detected_crs":    None,
@@ -140,6 +152,7 @@ def _init():
         "manifest":        {},
         "api_token":       "",
         "submit_result":   None,   # dict returned by POST /api/v1/datasources
+        "object_uri":      None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -218,6 +231,418 @@ def _wkt_epsg(wkt: str) -> str | None:
 
 
 ProfileResult = tuple[list[str], str | None, str | None, str | None, int | None]
+
+
+# ── bounding box helpers ──────────────────────────────────────────────────────
+
+def _bbox_from_bounds(xmin: float, ymin: float, xmax: float, ymax: float,
+                      source_crs: str | None = None) -> dict:
+    """
+    Normalise bounds to EPSG:4326 and return bbox + four corners + footprint.
+    Corners are SW, SE, NE, NW as [lon, lat].
+    """
+    west, south, east, north = float(xmin), float(ymin), float(xmax), float(ymax)
+    crs = (source_crs or "EPSG:4326").upper()
+
+    if crs not in ("EPSG:4326", "WGS84", "CRS84") and HAS_GEOPANDAS:
+        from shapely.geometry import box
+        gdf = gpd.GeoDataFrame(geometry=[box(west, south, east, north)], crs=crs)
+        gdf = gdf.to_crs("EPSG:4326")
+        west, south, east, north = gdf.total_bounds
+
+    # Guard against inverted axes after transform
+    if west > east:
+        west, east = east, west
+    if south > north:
+        south, north = north, south
+
+    corners = {
+        "SW": [west, south],
+        "SE": [east, south],
+        "NE": [east, north],
+        "NW": [west, north],
+    }
+    footprint = {
+        "type": "Polygon",
+        "coordinates": [[
+            [west, south],
+            [east, south],
+            [east, north],
+            [west, north],
+            [west, south],
+        ]],
+    }
+    return {
+        "west": west, "south": south, "east": east, "north": north,
+        "crs": "EPSG:4326",
+        "corners": corners,
+        "footprint": footprint,
+    }
+
+
+def _iter_coords(obj: Any):
+    """Yield [lon, lat, ...] pairs from nested GeoJSON coordinates."""
+    if not isinstance(obj, (list, tuple)) or not obj:
+        return
+    if isinstance(obj[0], (int, float)):
+        yield obj
+        return
+    for item in obj:
+        yield from _iter_coords(item)
+
+
+def _parse_json_documents(raw: bytes) -> list[Any]:
+    """
+    Parse one or more JSON values from bytes.
+
+    Handles:
+      - normal GeoJSON / CityJSON (single root object)
+      - NDJSON / GeoJSON Text Sequences (one Feature per line / concatenated objects)
+      - UTF-8 BOM
+    """
+    text = raw.decode("utf-8-sig").strip()
+    if not text:
+        raise ValueError("File is empty.")
+
+    # Fast path: single JSON document
+    try:
+        return [json.loads(text)]
+    except json.JSONDecodeError as exc:
+        if "Extra data" not in str(exc):
+            preview = text[:80].replace("\n", "\\n")
+            raise ValueError(
+                f"Invalid JSON ({exc}). File starts with: {preview!r}"
+            ) from exc
+
+    # Slow path: multiple JSON values (NDJSON / concatenated)
+    decoder = json.JSONDecoder()
+    docs: list[Any] = []
+    idx = 0
+    n = len(text)
+    while idx < n:
+        while idx < n and text[idx].isspace():
+            idx += 1
+        if idx >= n:
+            break
+        try:
+            obj, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError as exc:
+            preview = text[idx:idx + 80].replace("\n", "\\n")
+            raise ValueError(
+                f"Could not parse JSON starting at char {idx}: {exc}. "
+                f"Snippet: {preview!r}"
+            ) from exc
+        docs.append(obj)
+        idx = end
+    if not docs:
+        raise ValueError("No JSON documents found in file.")
+    return docs
+
+
+def _geoms_from_json_doc(data: Any) -> tuple[list[dict], str | None]:
+    """
+    Extract geometry dicts + optional CRS hint from one parsed JSON document.
+    Returns (geoms, crs_or_None). Empty geoms means caller should try another strategy.
+    """
+    if isinstance(data, list):
+        geoms: list[dict] = []
+        for item in data:
+            if isinstance(item, dict):
+                if item.get("type") == "Feature":
+                    g = item.get("geometry")
+                    if g:
+                        geoms.append(g)
+                elif item.get("geometry"):
+                    geoms.append(item["geometry"])
+                elif item.get("type") in (
+                    "Polygon", "MultiPolygon", "Point", "MultiPoint",
+                    "LineString", "MultiLineString", "GeometryCollection",
+                ):
+                    geoms.append(item)
+        return geoms, None
+
+    if not isinstance(data, dict):
+        return [], None
+
+    if data.get("type") == "FeatureCollection":
+        geoms = [f.get("geometry") or {} for f in (data.get("features") or [])]
+        crs = None
+        crs_m = (data.get("crs") or {}).get("properties", {})
+        if crs_m.get("name"):
+            crs = crs_m["name"]
+        return geoms, crs
+
+    if data.get("type") == "Feature":
+        return [data.get("geometry") or {}], None
+
+    if data.get("type") in (
+        "Polygon", "MultiPolygon", "Point", "MultiPoint",
+        "LineString", "MultiLineString", "GeometryCollection",
+    ):
+        return [data], None
+
+    return [], None
+
+
+def _bbox_from_cityjson(data: dict) -> dict:
+    xs: list[float] = []
+    ys: list[float] = []
+    extent = (data.get("metadata") or {}).get("geographicalExtent")
+    if extent and len(extent) >= 6:
+        return _bbox_from_bounds(
+            extent[0], extent[1], extent[3], extent[4],
+            source_crs=_crs_hint_from_cityjson(data),
+        )
+    transform = data.get("transform") or {}
+    scale = transform.get("scale") or [1, 1, 1]
+    translate = transform.get("translate") or [0, 0, 0]
+    for v in data.get("vertices") or []:
+        xs.append(v[0] * scale[0] + translate[0])
+        ys.append(v[1] * scale[1] + translate[1])
+    if not xs:
+        raise ValueError("CityJSON has no geographicalExtent or vertices.")
+    return _bbox_from_bounds(
+        min(xs), min(ys), max(xs), max(ys),
+        source_crs=_crs_hint_from_cityjson(data),
+    )
+
+
+def _bbox_from_geojson_bytes(raw: bytes) -> dict:
+    docs = _parse_json_documents(raw)
+
+    # CityJSON is always a single object with CityObjects
+    if len(docs) == 1 and isinstance(docs[0], dict) and "CityObjects" in docs[0]:
+        return _bbox_from_cityjson(docs[0])
+
+    xs: list[float] = []
+    ys: list[float] = []
+    crs: str | None = None
+
+    for doc in docs:
+        geoms, doc_crs = _geoms_from_json_doc(doc)
+        if doc_crs:
+            crs = doc_crs
+        # NDJSON Feature without wrapping FeatureCollection
+        if not geoms and isinstance(doc, dict) and doc.get("type") == "Feature":
+            g = doc.get("geometry")
+            if g:
+                geoms = [g]
+        for g in geoms:
+            if not g:
+                continue
+            if g.get("type") == "GeometryCollection":
+                for sub in g.get("geometries") or []:
+                    for c in _iter_coords(sub.get("coordinates")):
+                        xs.append(float(c[0])); ys.append(float(c[1]))
+            else:
+                for c in _iter_coords(g.get("coordinates")):
+                    xs.append(float(c[0])); ys.append(float(c[1]))
+
+    if not xs:
+        # Last resort: open with fiona (handles some odd GeoJSON variants)
+        if HAS_FIONA:
+            with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp:
+                tmp.write(raw)
+                path = tmp.name
+            try:
+                return _bbox_from_fiona_path(path)
+            except Exception as exc:
+                raise ValueError(
+                    "No coordinates found in JSON/GeoJSON "
+                    f"(also tried fiona: {exc}). "
+                    "If this is NDJSON, each line must be a Feature with a geometry."
+                ) from exc
+        raise ValueError("No coordinates found in GeoJSON / NDJSON.")
+
+    return _bbox_from_bounds(
+        min(xs), min(ys), max(xs), max(ys),
+        source_crs=crs or "EPSG:4326",
+    )
+
+
+def _crs_hint_from_cityjson(data: dict) -> str:
+    ref = (data.get("metadata") or {}).get("referenceSystem") or ""
+    if not ref:
+        return "EPSG:4326"
+    parts = ref.rstrip("/").split("/")
+    if len(parts) >= 2 and parts[-2].upper() == "EPSG":
+        return f"EPSG:{parts[-1]}"
+    m = re.search(r"EPSG[:/](\d+)", ref, re.IGNORECASE)
+    return f"EPSG:{m.group(1)}" if m else "EPSG:4326"
+
+
+def _bbox_from_fiona_path(path: str, layer: str | None = None) -> dict:
+    if not HAS_FIONA:
+        raise RuntimeError("fiona is required to compute bbox for Shapefile / GeoPackage.")
+    kwargs = {"layer": layer} if layer else {}
+    with fiona.open(path, **kwargs) as src:
+        b = src.bounds  # (minx, miny, maxx, maxy)
+        if not b or any(v is None for v in b):
+            # Fall back to scanning geometries
+            xmin = ymin = float("inf")
+            xmax = ymax = float("-inf")
+            for feat in src:
+                g = feat.get("geometry") or {}
+                for c in _iter_coords(g.get("coordinates")):
+                    xmin = min(xmin, float(c[0])); xmax = max(xmax, float(c[0]))
+                    ymin = min(ymin, float(c[1])); ymax = max(ymax, float(c[1]))
+            if xmin == float("inf"):
+                raise ValueError("No geometries found.")
+            b = (xmin, ymin, xmax, ymax)
+        return _bbox_from_bounds(b[0], b[1], b[2], b[3],
+                                 source_crs=_crs_to_epsg(src.crs) or "EPSG:4326")
+
+
+def _bbox_from_csv_bytes(raw: bytes) -> dict:
+    if not HAS_PANDAS:
+        raise RuntimeError("pandas is required to compute bbox from CSV.")
+    df = pd.read_csv(io.BytesIO(raw))
+    lon_col = S.csv_lon
+    lat_col = S.csv_lat
+    if not lon_col or not lat_col:
+        # Heuristic
+        lower = {c.lower(): c for c in df.columns}
+        for lo, la in (("lon", "lat"), ("longitude", "latitude"), ("x", "y"), ("lng", "lat")):
+            if lo in lower and la in lower:
+                lon_col, lat_col = lower[lo], lower[la]
+                break
+    if not lon_col or not lat_col or lon_col not in df.columns or lat_col not in df.columns:
+        raise ValueError(
+            "CSV lon/lat columns unknown. Set them in Step 1 (vector CSV) "
+            "or name columns lon/lat / longitude/latitude."
+        )
+    xs = pd.to_numeric(df[lon_col], errors="coerce").dropna()
+    ys = pd.to_numeric(df[lat_col], errors="coerce").dropna()
+    if xs.empty or ys.empty:
+        raise ValueError("CSV lon/lat columns contain no numeric values.")
+    return _bbox_from_bounds(float(xs.min()), float(ys.min()),
+                             float(xs.max()), float(ys.max()),
+                             source_crs=S.meta_crs or "EPSG:4326")
+
+
+def _sniff_upload_format(filename: str, raw: bytes, declared: str) -> str:
+    """Prefer real file signatures over the Step-1 format dropdown when they conflict."""
+    name = (filename or "").lower()
+    head = raw[:64]
+
+    if head.startswith(b"PK\x03\x04") or name.endswith(".zip"):
+        return "Shapefile (zip)"
+    if head.startswith(b"SQLite format 3") or name.endswith(".gpkg"):
+        return "GeoPackage"
+    if name.endswith(".csv") or declared == "CSV":
+        return "CSV"
+    if declared in ("GeoJSON", "CityJSON", "Shapefile (zip)", "GeoPackage", "CSV"):
+        return declared
+    if name.endswith((".geojson", ".json")):
+        return "GeoJSON"
+    if name.endswith(".gpkg"):
+        return "GeoPackage"
+    return declared or "GeoJSON"
+
+
+def _compute_bbox_from_upload() -> dict:
+    """Compute EPSG:4326 bbox from the uploaded file (or raise)."""
+    if S.source_type != "file" or not S.uploaded_file:
+        raise RuntimeError("Upload a spatial file in Step 1 before calculating the bbox.")
+    if not S.is_spatial:
+        raise RuntimeError("Datasource is marked non-spatial — bbox does not apply.")
+
+    raw = S.uploaded_file.getbuffer().tobytes()
+    S.uploaded_file.seek(0)
+    fmt = _sniff_upload_format(S.uploaded_file.name, raw, S.data_format or "")
+
+    if fmt in ("GeoJSON", "CityJSON"):
+        return _bbox_from_geojson_bytes(raw)
+
+    if fmt == "CSV":
+        return _bbox_from_csv_bytes(raw)
+
+    if fmt == "Shapefile (zip)":
+        with tempfile.TemporaryDirectory() as tmp:
+            zpath = os.path.join(tmp, "up.zip")
+            open(zpath, "wb").write(raw)
+            with zipfile.ZipFile(zpath) as zf:
+                zf.extractall(tmp)
+            shps = [
+                os.path.join(dp, f)
+                for dp, _, fns in os.walk(tmp)
+                for f in fns if f.lower().endswith(".shp")
+            ]
+            if not shps:
+                raise ValueError("No .shp inside the zip.")
+            return _bbox_from_fiona_path(shps[0])
+
+    if fmt == "GeoPackage":
+        with tempfile.NamedTemporaryFile(suffix=".gpkg", delete=False) as tmp:
+            tmp.write(raw)
+            path = tmp.name
+        try:
+            return _bbox_from_fiona_path(path, layer=S.gpkg_layer or None)
+        finally:
+            os.unlink(path)
+
+    raise ValueError(
+        f"Bbox calculation is not supported for format '{fmt}'. "
+        "Use GeoJSON, Shapefile (zip), GeoPackage, CSV, or CityJSON."
+    )
+
+
+def _render_bbox_panel() -> None:
+    """UI: calculate button + four corner coordinates (used in Step 2 — Manifest)."""
+    st.markdown("#### Spatial bounding box")
+    st.caption(
+        "Compute the dataset envelope in EPSG:4326 from the uploaded file. "
+        "Stored in the manifest and sent as `spatial_footprint` on submit."
+    )
+
+    col_btn, col_clear = st.columns([2, 1])
+    with col_btn:
+        calc = st.button("Calculate bounding box", key="calc_bbox",
+                         disabled=not (S.source_type == "file" and S.uploaded_file
+                                       and S.is_spatial))
+    with col_clear:
+        if S.bbox and st.button("Clear bbox", key="clear_bbox"):
+            S.bbox = None
+            S.bbox_corners = None
+            S.spatial_footprint = None
+            st.rerun()
+
+    if calc:
+        try:
+            with st.spinner("Computing bounding box…"):
+                result = _compute_bbox_from_upload()
+            S.bbox = {
+                "west": result["west"], "south": result["south"],
+                "east": result["east"], "north": result["north"],
+                "crs": result["crs"],
+            }
+            S.bbox_corners = result["corners"]
+            S.spatial_footprint = result["footprint"]
+            st.success("Bounding box calculated (EPSG:4326).")
+        except Exception as exc:
+            st.error(f"Bbox calculation failed: {exc}")
+
+    if S.bbox and S.bbox_corners:
+        b = S.bbox
+        c = S.bbox_corners
+        st.markdown(
+            f"**Extent (W/S/E/N):** `{b['west']:.6f}` / `{b['south']:.6f}` / "
+            f"`{b['east']:.6f}` / `{b['north']:.6f}`  ·  CRS `{b.get('crs', 'EPSG:4326')}`"
+        )
+        sw, se, ne, nw = st.columns(4)
+        with sw:
+            st.metric("SW (lon, lat)", f"{c['SW'][0]:.6f}, {c['SW'][1]:.6f}")
+        with se:
+            st.metric("SE (lon, lat)", f"{c['SE'][0]:.6f}, {c['SE'][1]:.6f}")
+        with ne:
+            st.metric("NE (lon, lat)", f"{c['NE'][0]:.6f}, {c['NE'][1]:.6f}")
+        with nw:
+            st.metric("NW (lon, lat)", f"{c['NW'][0]:.6f}, {c['NW'][1]:.6f}")
+    elif S.source_type == "file" and S.is_spatial and not S.uploaded_file:
+        st.info("Upload a file in Step 1 to enable bbox calculation.")
+    elif S.source_type != "file":
+        st.caption("Bbox from file is only available for file sources. "
+                   "OGC footprints can be added later.")
 
 
 def _profile_geojson(raw: bytes) -> ProfileResult:
@@ -424,6 +849,8 @@ def _build_manifest() -> dict:
         source.update({"filename": S.uploaded_file.name, "format": S.data_format})
         if S.data_format == "GeoPackage" and S.gpkg_layer:
             source["layer"] = S.gpkg_layer
+        if S.object_uri:
+            source["object_uri"] = S.object_uri
     elif S.source_type == "ogc":
         source.update({"url": S.ogc_url, "ogc_type": S.ogc_type})
         if S.ogc_layer:
@@ -472,7 +899,10 @@ def _build_manifest() -> dict:
             "detected_crs":  S.detected_crs,
             "geom_type":     S.geom_type,
             "feature_count": S.feature_count,
+            "bbox":          S.bbox,
+            "bbox_corners":  S.bbox_corners,
         },
+        "spatial_footprint": S.spatial_footprint,
         "registry": {
             "name":           S.meta_name,
             "description":    S.meta_desc,
@@ -792,6 +1222,9 @@ elif S.step == 2:
         _registry_form(prefix="manual_")
 
     st.divider()
+    _render_bbox_panel()
+
+    st.divider()
     can_next = bool(S.meta_name.strip()) and (
         not S.has_std_meta or S.meta_approved or not S.std_meta_parsed)
     _back_next(1, 3, disabled=not can_next)
@@ -1009,7 +1442,13 @@ elif S.step == 5:
         f"**PK policy:** `{wm.get('pk',{}).get('policy','—')}`  \n"
         f"**Spatial:** `{S.is_spatial}` · geometry `{S.geom_type or '—'}`  \n"
         f"**Detected CRS:** `{S.detected_crs or '—'}` → target `{S.target_crs}`  \n"
-        f"**JSONB attributes:** {len(wm.get('non_spatial',{}).get('include',[]))} column(s)"
+        f"**JSONB attributes:** {len(wm.get('non_spatial',{}).get('include',[]))} column(s)  \n"
+        f"**Bbox:** "
+        + (
+            f"`W {S.bbox['west']:.4f}  S {S.bbox['south']:.4f}  "
+            f"E {S.bbox['east']:.4f}  N {S.bbox['north']:.4f}`"
+            if S.bbox else "— (not calculated)"
+        )
     )
 
     # ── Download (local, no API needed) ───────────────────────────────────────
@@ -1036,6 +1475,23 @@ elif S.step == 5:
     st.markdown("### Submit to FastAPI backend")
     st.caption(f"Target: **{base_url}/api/v1/datasources**")
 
+    minio_ok = minio_store.is_configured()
+    if S.source_type == "file" and S.uploaded_file:
+        if minio_ok:
+            st.info(
+                f"On submit, the file will be uploaded to MinIO "
+                f"(`{minio_store.endpoint_url()}` / bucket from MINIO_URI) "
+                "and `object_uri` will be stored on `meta_table`."
+            )
+            if S.object_uri:
+                st.code(S.object_uri, language="text")
+        else:
+            st.warning(
+                "MinIO is not configured — set `MINIO_URI` in `ingest.sh` "
+                "or `[minio]` in `.streamlit/secrets.toml`. "
+                "Submit will still register metadata without an object_uri."
+            )
+
     S.api_token = st.text_input("Bearer token (optional)", value=S.api_token,
                                  type="password", key="submit_token")
 
@@ -1043,44 +1499,88 @@ elif S.step == 5:
         if not alive:
             st.error("API is not reachable. Start the backend first.")
         else:
-            # Build the POST body that the API expects
-            payload = {
-                "registry": {
-                    "name":           reg.get("name"),
-                    "description":    reg.get("description", ""),
-                    "tags":           reg.get("tags", []),
-                    "crs":            reg.get("crs", "EPSG:4326"),
-                    "temporal_start": reg.get("temporal_start"),
-                    "temporal_end":   reg.get("temporal_end"),
-                },
-                "source": manifest.get("source", {}),
-                "datasource_class": manifest.get("datasource_class", {}),
-                "spatial_footprint": None,
-                "manifest": manifest,
-                "features": features,
-            }
-            with st.spinner("Posting to API…"):
-                try:
+            try:
+                object_uri = S.object_uri
+                file_size = None
+
+                # Upload original file to MinIO before registering
+                if S.source_type == "file" and S.uploaded_file and minio_store.is_configured():
+                    raw = S.uploaded_file.getbuffer().tobytes()
+                    S.uploaded_file.seek(0)
+                    file_size = len(raw)
+                    # provisional id for object key prefix; API assigns the real dataset_id
+                    prefix = str(uuid.uuid4())
+                    name = S.uploaded_file.name
+                    ctype = "application/octet-stream"
+                    lower = name.lower()
+                    if lower.endswith((".geojson", ".json")):
+                        ctype = "application/geo+json"
+                    elif lower.endswith(".csv"):
+                        ctype = "text/csv"
+                    elif lower.endswith(".zip"):
+                        ctype = "application/zip"
+                    elif lower.endswith(".gpkg"):
+                        ctype = "application/geopackage+sqlite3"
+                    with st.spinner("Uploading file to MinIO…"):
+                        object_uri = minio_store.upload(
+                            raw, name, prefix=prefix, content_type=ctype,
+                        )
+                    S.object_uri = object_uri
+
+                source = dict(manifest.get("source") or {})
+                if object_uri:
+                    source["object_uri"] = object_uri
+                if file_size is not None:
+                    source["file_size_bytes"] = file_size
+
+                # Keep manifest in sync
+                manifest = dict(manifest)
+                manifest["source"] = source
+                if object_uri:
+                    prof = dict(manifest.get("profile") or {})
+                    prof["object_uri"] = object_uri
+                    manifest["profile"] = prof
+                S.manifest = manifest
+
+                payload = {
+                    "registry": {
+                        "name":           reg.get("name"),
+                        "description":    reg.get("description", ""),
+                        "tags":           reg.get("tags", []),
+                        "crs":            reg.get("crs", "EPSG:4326"),
+                        "temporal_start": reg.get("temporal_start"),
+                        "temporal_end":   reg.get("temporal_end"),
+                    },
+                    "source": source,
+                    "datasource_class": manifest.get("datasource_class", {}),
+                    "spatial_footprint": S.spatial_footprint or manifest.get("spatial_footprint"),
+                    "manifest": manifest,
+                    "features": features,
+                }
+                with st.spinner("Posting to API…"):
                     resp = requests.post(
                         f"{base_url}/api/v1/datasources",
                         json=payload,
                         headers=_api_headers(S.api_token),
-                        timeout=60,
+                        timeout=120,
                     )
-                    if resp.ok:
-                        result = resp.json()
-                        S.submit_result = result
-                        st.success(
-                            f"Submitted — dataset_id: `{result.get('dataset_id')}`  |  "
-                            f"manifest_id: `{result.get('manifest_id')}`  |  "
-                            f"features ingested: `{result.get('feature_count', 0)}`"
-                        )
-                    else:
-                        st.error(f"HTTP {resp.status_code}: {resp.text[:500]}")
-                except requests.exceptions.ConnectionError:
-                    st.error("Connection refused — is the API running?")
-                except Exception as exc:
-                    st.error(f"Request failed: {exc}")
+                if resp.ok:
+                    result = resp.json()
+                    S.submit_result = result
+                    msg = (
+                        f"Submitted — dataset_id: `{result.get('dataset_id')}`  |  "
+                        f"manifest_id: `{result.get('manifest_id')}`  |  "
+                        f"features ingested: `{result.get('feature_count', 0)}`"
+                    )
+                    if object_uri:
+                        msg += f"  \n**object_uri:** `{object_uri}`"
+                    st.success(msg)
+                else:
+                    st.error(f"HTTP {resp.status_code}: {resp.text[:500]}")
+            except requests.exceptions.ConnectionError:
+                st.error("Connection refused — is the API running?")
+            except Exception as exc:
+                st.error(f"Request failed: {exc}")
 
     # ── Post-submit actions ───────────────────────────────────────────────────
     if S.submit_result:

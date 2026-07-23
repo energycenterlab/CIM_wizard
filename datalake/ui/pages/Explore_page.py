@@ -226,8 +226,10 @@ with st.sidebar:
                         st.markdown(f"**File:** `{row['filename']}`")
                     if row.get("file_size_bytes") is not None:
                         st.markdown(f"**Size:** {_fmt_size(row['file_size_bytes'])}")
-                    if row.get("file_path"):
-                        st.markdown(f"**FTP path:** `{row['file_path']}`")
+                if row.get("object_uri"):
+                    st.markdown(f"**Object URI:** `{row['object_uri']}`")
+                elif row.get("file_path"):
+                    st.markdown(f"**FTP path:** `{row['file_path']}`")
 
                 st.caption(f"ID: {row['id']}")
                 st.caption(f"Uploaded: {str(row.get('uploaded_at') or '')[:19]} UTC")

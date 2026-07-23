@@ -1,0 +1,12 @@
+# MinIO object storage for datalake raw / cold file assets.
+# S3 API on 9000, web console on 9001.
+# Prefer quay.io over the archived Docker Hub minio/minio image.
+FROM quay.io/minio/minio:latest
+
+# Persistent object data lives on the volume mounted at /data (see docker-compose).
+VOLUME ["/data"]
+
+EXPOSE 9000 9001
+
+# Standalone server — fine for lab / single-node. Production needs erasure coding.
+CMD ["server", "/data", "--console-address", ":9001"]
