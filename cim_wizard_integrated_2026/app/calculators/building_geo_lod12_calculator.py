@@ -14,8 +14,51 @@ import math
 import json
 
 from app.calculators.base_calculator import BaseCalculator
+from app.core.geo_metric import (
+    polygon_area_3d_m2,
+    polygon_area_m2,
+    ring_area_m2,
+    ring_length_m,
+)
 
 BASEMENT_HEIGHT = 3.0
+
+# Surface tilt in degrees from horizontal, per CityGML surface class.
+SURFACE_TILT = {
+    "WallSurface": 90.0,
+    "RoofSurface": 0.0,
+    "FloorSurface": 0.0,
+    "GroundSurface": 0.0,
+    "CeilingSurface": 0.0,
+}
+
+
+def extrude_zone_shell(
+    exterior_ring: List[List[float]], z_min: float, z_max: float
+) -> Optional[Dict[str, Any]]:
+    """Closed shell of one thermal zone as a GeoJSON MultiPolygon of faces.
+
+    Mirrors ``extrude_zone_solid`` in ``logic/stand_alone_CIM.ipynb``:
+    bottom slab + top slab + one quad per footprint edge.
+    """
+    if not exterior_ring or len(exterior_ring) < 4:
+        return None
+
+    bottom = [[p[0], p[1], z_min] for p in exterior_ring]
+    top = [[p[0], p[1], z_max] for p in exterior_ring]
+
+    faces: List[List[List[List[float]]]] = [[bottom], [top]]
+    for i in range(len(exterior_ring) - 1):
+        p1, p2 = exterior_ring[i], exterior_ring[i + 1]
+        faces.append([[
+            [p1[0], p1[1], z_min],
+            [p2[0], p2[1], z_min],
+            [p2[0], p2[1], z_max],
+            [p1[0], p1[1], z_max],
+            [p1[0], p1[1], z_min],
+        ]])
+
+    return {"type": "MultiPolygon", "coordinates": faces}
 
 
 class BuildingGeoLod12Calculator(BaseCalculator):
@@ -279,9 +322,10 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             z_min = f * storey_h
             z_max = (f + 1) * storey_h
             label = f"F{f}"
+            zone_id = f"tz-{label}"
 
             walls = self._generate_wall_surfaces_for_range(
-                ring, z_min, z_max, label,
+                ring, z_min, z_max, label, zone_id=zone_id,
             )
             all_walls.extend(walls)
 
@@ -289,6 +333,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 floor_surfaces.append(
                     self._generate_horizontal_surface(
                         ring, z_max, f"floor_{f + 1}", "FloorSurface",
+                        zone_id=zone_id,
                     )
                 )
 
@@ -301,11 +346,13 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 "storey_height": round(storey_h, 3),
             })
             thermal_zones.append({
-                "zone_id": f"tz-{label}",
+                "zone_id": zone_id,
                 "storey_index": f,
                 "usage": "residential",
                 "volume_m3": round(footprint_area * storey_h, 2),
                 "floor_area_m2": round(footprint_area, 2),
+                "z_min": round(z_min, 3),
+                "z_max": round(z_max, 3),
                 "is_heated": True,
                 "is_cooled": False,
             })
@@ -387,11 +434,14 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         bz_min = -basement_height
         bz_max = 0.0
         all_walls.extend(
-            self._generate_wall_surfaces_for_range(ring, bz_min, bz_max, "B")
+            self._generate_wall_surfaces_for_range(
+                ring, bz_min, bz_max, "B", zone_id="tz-basement",
+            )
         )
         floor_surfaces.append(
             self._generate_horizontal_surface(
                 ring, bz_min, "basement_floor", "FloorSurface",
+                zone_id="tz-basement",
             )
         )
         storeys.append({
@@ -408,6 +458,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             "usage": "non_residential_storage",
             "volume_m3": round(footprint_area * basement_height, 2),
             "floor_area_m2": round(footprint_area, 2),
+            "z_min": round(bz_min, 3),
+            "z_max": round(bz_max, 3),
             "is_heated": False,
             "is_cooled": False,
         })
@@ -416,11 +468,14 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         gz_min = 0.0
         gz_max = storey_h
         all_walls.extend(
-            self._generate_wall_surfaces_for_range(ring, gz_min, gz_max, "G")
+            self._generate_wall_surfaces_for_range(
+                ring, gz_min, gz_max, "G", zone_id="tz-commercial",
+            )
         )
         floor_surfaces.append(
             self._generate_horizontal_surface(
                 ring, gz_max, "floor_1", "FloorSurface",
+                zone_id="tz-commercial",
             )
         )
         storeys.append({
@@ -437,6 +492,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             "usage": "commercial",
             "volume_m3": round(footprint_area * storey_h, 2),
             "floor_area_m2": round(footprint_area, 2),
+            "z_min": round(gz_min, 3),
+            "z_max": round(gz_max, 3),
             "is_heated": True,
             "is_cooled": True,
         })
@@ -447,14 +504,20 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             z_min = f_idx * storey_h
             z_max = (f_idx + 1) * storey_h
             label = f"F{f_idx}"
+            # Storey walls and slabs are shared by every apartment on the floor;
+            # attribute them to the first zone, as the stand-alone notebook does.
+            storey_zone_id = f"tz-{label}-A1"
 
             all_walls.extend(
-                self._generate_wall_surfaces_for_range(ring, z_min, z_max, label)
+                self._generate_wall_surfaces_for_range(
+                    ring, z_min, z_max, label, zone_id=storey_zone_id,
+                )
             )
             if f_idx < n_floors - 1:
                 floor_surfaces.append(
                     self._generate_horizontal_surface(
                         ring, z_max, f"floor_{f_idx + 1}", "FloorSurface",
+                        zone_id=storey_zone_id,
                     )
                 )
 
@@ -480,6 +543,8 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                     "usage": "residential",
                     "volume_m3": round(storey_volume / apts_this_floor, 2),
                     "floor_area_m2": round(storey_area / apts_this_floor, 2),
+                    "z_min": round(z_min, 3),
+                    "z_max": round(z_max, 3),
                     "is_heated": True,
                     "is_cooled": False,
                 })
@@ -548,6 +613,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         z_min: float,
         z_max: float,
         storey_label: str,
+        zone_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Generate wall surfaces for a single storey (z_min → z_max)."""
         walls: List[Dict[str, Any]] = []
@@ -562,7 +628,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 [p1[0], p1[1], z_max],
                 [p1[0], p1[1], z_min],
             ]
-            wall_length = math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
+            wall_length = ring_length_m(p1, p2)
             dx = p2[0] - p1[0]
             dy = p2[1] - p1[1]
             azimuth = math.degrees(math.atan2(dx, dy))
@@ -579,12 +645,14 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 'properties': {
                     'wall_index': i + 1,
                     'storey_label': storey_label,
+                    'zone_id': zone_id,
                     'area_m2': wall_length * wall_height,
                     'height_m': wall_height,
                     'length_m': wall_length,
                     'z_min': z_min,
                     'z_max': z_max,
                     'azimuth_degrees': azimuth,
+                    'tilt_degrees': SURFACE_TILT['WallSurface'],
                     'orientation': self._get_cardinal_direction(azimuth),
                     'lod': 1.2,
                 },
@@ -597,6 +665,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         z: float,
         surface_id: str,
         surface_type: str = "FloorSurface",
+        zone_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Generate a horizontal slab (floor or ceiling) at height *z*."""
         coords = [[p[0], p[1], z] for p in exterior_ring]
@@ -604,6 +673,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
         return {
             'surface_id': surface_id,
             'surface_type': surface_type,
+            'zone_id': zone_id,
             'geometry': {
                 'type': 'Polygon',
                 'coordinates': [coords],
@@ -611,6 +681,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             'properties': {
                 'area_m2': area,
                 'height_m': z,
+                'tilt_degrees': SURFACE_TILT.get(surface_type, 0.0),
                 'lod': 1.2,
             },
         }
@@ -900,6 +971,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                     'height_m': height,
                     'roof_type': 'flat',  # LoD 1.2 typically has flat roofs
                     'slope_degrees': 0.0,
+                    'tilt_degrees': SURFACE_TILT['RoofSurface'],
                     'lod': 1.2,
                     'surface_material': 'unknown',  # For TABULA typology assignment
                     'construction_type': 'unknown'   # For TABULA typology assignment
@@ -945,6 +1017,7 @@ class BuildingGeoLod12Calculator(BaseCalculator):
                 'properties': {
                     'area_m2': ground_area,
                     'height_m': 0.0,
+                    'tilt_degrees': SURFACE_TILT['GroundSurface'],
                     'lod': 1.2,
                     'surface_material': 'unknown',  # For foundation/ground interface
                     'construction_type': 'slab_on_ground'
@@ -988,38 +1061,12 @@ class BuildingGeoLod12Calculator(BaseCalculator):
             return 'Unknown'
     
     def _calculate_polygon_area(self, geometry: Dict[str, Any]) -> float:
-        """Calculate area of polygon geometry using shoelace formula"""
-        if geometry.get('type') != 'Polygon':
-            return 0.0
-        
-        coordinates = geometry.get('coordinates', [])
-        if not coordinates:
-            return 0.0
-        
-        coords = coordinates[0]  # Exterior ring
-        area = 0.0
-        n = len(coords)
-        
-        for i in range(n - 1):
-            area += coords[i][0] * coords[i + 1][1]
-            area -= coords[i + 1][0] * coords[i][1]
-        
-        return abs(area) / 2.0
-    
+        """Footprint area in m2 (coordinates are EPSG:4326, so reproject)."""
+        return polygon_area_m2(geometry)
+
     def _calculate_polygon_area_3d(self, coordinates: List[List[float]]) -> float:
-        """Calculate area of 3D polygon using projection to 2D"""
-        if len(coordinates) < 3:
-            return 0.0
-        
-        # Project to XY plane and calculate area
-        area = 0.0
-        n = len(coordinates)
-        
-        for i in range(n - 1):
-            area += coordinates[i][0] * coordinates[i + 1][1]
-            area -= coordinates[i + 1][0] * coordinates[i][1]
-        
-        return abs(area) / 2.0
+        """True 3D area in m2 of a planar ring given in EPSG:4326 + metre Z."""
+        return polygon_area_3d_m2(coordinates)
     
     def _save_surfaces_to_database(self, building_id: str, surfaces: Dict[str, Any]) -> bool:
         """Save LoD 1.2 surfaces to database"""

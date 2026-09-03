@@ -642,11 +642,17 @@ async def map_to_citydb(
 
     ``force_lod12`` (optional, default ``false``): when ``true``,
     regenerate LOD 1.2 even for buildings that already have it.
+
+    ``force_remap`` (optional, default ``false``): when ``true``, delete the
+    existing citydb rows for each building and write them again.  Needed to
+    refresh buildings that are already mapped, since they are otherwise
+    skipped.
     """
     project_id = request_data.get("project_id")
     scenario_id = request_data.get("scenario_id")
     lod12_method = request_data.get("lod12_method", "by_footprint_height")
     force_lod12 = request_data.get("force_lod12", False)
+    force_remap = request_data.get("force_remap", False)
 
     if not all([project_id, scenario_id]):
         raise HTTPException(
@@ -667,7 +673,8 @@ async def map_to_citydb(
     calc = CitydbMapperCalculator(executor)
     try:
         result = calc.map_scenario_to_citydb(
-            project_id, scenario_id, lod12_method, force_lod12=force_lod12,
+            project_id, scenario_id, lod12_method,
+            force_lod12=force_lod12, force_remap=force_remap,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CityDB mapping failed: {e}")

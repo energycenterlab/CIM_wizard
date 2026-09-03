@@ -36,6 +36,11 @@ from app.models.citydb import (
     ThematicSurface,
     SurfaceGeometry,
     CityObjectGenericAttrib,
+    ObjectClass,
+    Ng2Building,
+    Ng2BuildingPartition,
+    Ng2ThematicSurface,
+    Ng2ThemSurfToThermalZone,
 )
 
 # Make all models available at package level
@@ -71,4 +76,11 @@ __all__ = [
     'ThematicSurface',
     'SurfaceGeometry',
     'CityObjectGenericAttrib',
+    'ObjectClass',
+
+    # Energy ADE 2.0 (citydb schema, ng2_* tables)
+    'Ng2Building',
+    'Ng2BuildingPartition',
+    'Ng2ThematicSurface',
+    'Ng2ThemSurfToThermalZone',
 ]
