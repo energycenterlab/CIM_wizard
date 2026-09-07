@@ -1,0 +1,13 @@
+# Backend on cloud4 → live DB on cloud3
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cim-backend:latest
+    container_name: cim-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@130.192.238.11:15432/cim_wizard_integrated
