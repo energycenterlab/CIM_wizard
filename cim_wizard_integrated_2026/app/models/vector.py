@@ -33,6 +33,9 @@ class ProjectScenario(Base):
     # Grid link (nullable FK to cim_network.network_scenarios)
     grid_id = Column(UUID(as_uuid=True), nullable=True)
     
+    # True once assign_pv has run for this project-scenario
+    pv_assigned = Column(Boolean, nullable=False, default=False)
+    
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -61,7 +64,9 @@ class Building(Base):
     z_value = Column(Float, nullable=True)
     building_name = Column(String(100), nullable=True)
     
-    # PV reverse lookup (denormalized list of pv_id UUIDs)
+    # Deprecated: superseded by BuildingProperties.pv, which is scenario-aware.
+    # No longer written by the PV calculator; see
+    # cim-database/migrations/pv_scenario_assignment.sql
     pv_ids = Column(ARRAY(UUID(as_uuid=True)), default=list)
     
     # LoD 1.2 data
@@ -103,6 +108,10 @@ class BuildingProperties(Base):
     # Demographics
     n_people = Column(Integer, nullable=True)
     n_family = Column(Integer, nullable=True)
+    
+    # PV polygons matched to this building footprint (offset spatial join).
+    # NULL when no PV was matched.
+    pv = Column(ARRAY(UUID(as_uuid=True)), nullable=True)
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -173,12 +182,20 @@ class GridLine(Base):
 
 
 class PV(Base):
-    """PV-suitable roof polygon, linked to a building"""
+    """PV-suitable roof polygon.
+
+    Digitised from Torino roofprints, so the geometry overhangs the building
+    footprint and matching needs a metric offset (see PvGeneratorCalculator).
+
+    ``scenario_id`` lists every scenario that has claimed this polygon, and is
+    NULL while the polygon is unused.  The building link lives on
+    ``BuildingProperties.pv``, which is keyed per scenario.
+    """
     __tablename__ = 'pv'
     __table_args__ = {'schema': 'cim_vector'}
 
     pv_id = Column(UUID(as_uuid=True), primary_key=True)
-    building_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    scenario_id = Column(ARRAY(UUID(as_uuid=True)), nullable=True)
 
     fid = Column(BigInteger, nullable=True)
     slope = Column(Float, nullable=True)

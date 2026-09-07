@@ -660,8 +660,8 @@ class CimWizardDataManager:
         """
         Return a GeoJSON FeatureCollection with building geometries merged
         with their properties.  Handles baseline / delta merging.
-        Includes building-level columns (z_value, building_name, pv_ids),
-        grid data (if grid_id assigned), and PV data (if pv_ids present).
+        Includes building-level columns (z_value, building_name), grid data
+        (if grid_id assigned), and the scenario's PV data (if assigned).
         """
         from geoalchemy2.shape import to_shape
         from shapely.geometry import mapping
@@ -683,6 +683,7 @@ class CimWizardDataManager:
                 "tabula_type": getattr(p, "tabula_type", None),
                 "envelope_efficiency": p.envelope_efficiency,
                 "fmu_file": p.fmu_file,
+                "pv": [str(x) for x in (getattr(p, "pv", None) or [])],
             }
 
         def _merge(base_dict, delta_row):
@@ -693,14 +694,31 @@ class CimWizardDataManager:
                         out[k] = v
             return out
 
-        # Pre-load PV data keyed by building_id for buildings that have PVs
+        # Pre-load this scenario's PV data, keyed by building_id.  The
+        # assignment lives on building_properties.pv, so it is scenario-scoped;
+        # fall back to the baseline scenario when the delta has none of its own.
+        pv_sql = text("""
+            SELECT bp.building_id,
+                   pv.pv_id, pv.fid, pv.slope, pv.num, pv.area_reale,
+                   pv.number, pv.s, pv.index_righ, pv.id_pod,
+                   ST_AsGeoJSON(pv.pv_geometry)::text AS geojson
+            FROM cim_vector.cim_wizard_building_properties bp
+            JOIN cim_vector.pv pv ON pv.pv_id = ANY(bp.pv)
+            WHERE bp.project_id = :pid
+              AND bp.scenario_id = CAST(:sid AS uuid)
+              AND bp.lod = :lod
+        """)
+
         pv_map = {}
         try:
-            pv_rows = session.execute(text("""
-                SELECT pv_id, building_id, fid, slope, num, area_reale, number, s,
-                       index_righ, id_pod, ST_AsGeoJSON(pv_geometry)::text AS geojson
-                FROM cim_vector.pv
-            """)).mappings().all()
+            pv_rows = session.execute(
+                pv_sql, {"pid": project_id, "sid": scenario_id, "lod": lod}
+            ).mappings().all()
+            if not pv_rows and query_sid and query_sid != scenario_id:
+                pv_rows = session.execute(
+                    pv_sql, {"pid": project_id, "sid": query_sid, "lod": lod}
+                ).mappings().all()
+
             import json as _json
             for r in pv_rows:
                 bid = str(r["building_id"])
@@ -728,7 +746,6 @@ class CimWizardDataManager:
                 bid_str = str(building.building_id)
                 merged["z_value"] = building.z_value
                 merged["building_name"] = building.building_name
-                merged["pv_ids"] = [str(p) for p in building.pv_ids] if building.pv_ids else []
 
                 if bid_str in pv_map:
                     merged["pv_data"] = pv_map[bid_str]

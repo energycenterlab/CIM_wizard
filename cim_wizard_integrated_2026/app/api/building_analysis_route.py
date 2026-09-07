@@ -14,6 +14,7 @@ from app.db.database import get_db
 from app.core.data_manager import CimWizardDataManager
 from app.core.pipeline_executor import CimWizardPipelineExecutor
 from app.core.normalizer import normalize_input, validate
+from app.calculators.pv_generator_calculator import DEFAULT_OFFSET_M
 
 router = APIRouter()
 
@@ -522,20 +523,47 @@ async def assign_pv(
     db: Session = Depends(get_db),
 ):
     """
-    Spatial join PV polygons to buildings in a scenario.
+    Offset spatial join of PV polygons to the buildings of a scenario.
 
-    Body: { "project_id": "...", "scenario_id": "..." }
+    Body::
+
+        {
+            "project_id": "...",
+            "scenario_id": "...",
+            "lod": 0,
+            "offset_m": 2.0
+        }
+
+    ``offset_m`` (optional, default 2.0) is the metric tolerance applied to
+    each building footprint before matching.  The PV polygons are digitised
+    from roofprints, which overhang the footprints, so a tolerance of zero
+    would miss them.
+
+    Writes ``cim_wizard_building_properties.pv``, appends the scenario to
+    ``pv.scenario_id`` and sets ``cim_wizard_project_scenario.pv_assigned``.
+    Re-running withdraws the scenario's previous assignments first.
     """
     project_id = request_data.get("project_id")
     scenario_id = request_data.get("scenario_id")
+    lod = request_data.get("lod", 0)
+    offset_m = request_data.get("offset_m", DEFAULT_OFFSET_M)
 
     if not all([project_id, scenario_id]):
         raise HTTPException(status_code=400, detail="project_id and scenario_id are required")
 
+    try:
+        offset_m = float(offset_m)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="offset_m must be a number")
+    if offset_m < 0:
+        raise HTTPException(status_code=400, detail="offset_m must be >= 0")
+
     executor, data_manager = get_pipeline_executor(db)
     from app.calculators.pv_generator_calculator import PvGeneratorCalculator
     calc = PvGeneratorCalculator(executor)
-    result = calc.assign_pv_to_buildings(project_id, scenario_id)
+    result = calc.assign_pv_to_buildings(
+        project_id, scenario_id, lod=int(lod), offset_m=offset_m,
+    )
     if not result:
         raise HTTPException(status_code=500, detail="PV assignment failed")
     return result
@@ -549,11 +577,12 @@ async def get_pv_with_building_info(
     db: Session = Depends(get_db),
 ):
     """
-    Return all PV polygons for buildings in the given project/scenario,
+    Return all PV polygons assigned to buildings in the given project/scenario,
     enriched with building height (from building_properties) and z_value.
 
-    Joins via cim_wizard_building.pv_ids array — works even if
-    pv.building_id is NULL (e.g. freshly loaded PVs before assignment).
+    Joins via ``cim_wizard_building_properties.pv``, so the result is scoped to
+    this scenario.  Returns an empty FeatureCollection until
+    ``POST /assign_pv`` has run -- check ``pv_assigned`` in the response.
     """
     result = db.execute(text("""
         SELECT
@@ -569,17 +598,23 @@ async def get_pv_with_building_info(
             ST_AsGeoJSON(pv.pv_geometry)::text AS pv_geojson,
             b.z_value,
             bp.height                          AS building_height
-        FROM cim_vector.cim_wizard_building b
-        JOIN cim_vector.cim_wizard_building_properties bp
-          ON bp.building_id = b.building_id
-         AND bp.project_id  = :pid
-         AND bp.scenario_id = :sid
-         AND bp.lod         = b.lod
+        FROM cim_vector.cim_wizard_building_properties bp
+        JOIN cim_vector.cim_wizard_building b
+          ON b.building_id = bp.building_id
+         AND b.lod         = bp.lod
         JOIN cim_vector.pv pv
-          ON pv.pv_id = ANY(b.pv_ids)
-        WHERE b.lod = :lod
-        ORDER BY b.building_id, pv.pv_id
+          ON pv.pv_id = ANY(bp.pv)
+        WHERE bp.project_id  = :pid
+          AND bp.scenario_id = CAST(:sid AS uuid)
+          AND bp.lod         = :lod
+        ORDER BY bp.building_id, pv.pv_id
     """), {"pid": project_id, "sid": scenario_id, "lod": lod}).mappings().all()
+
+    pv_assigned = db.execute(text("""
+        SELECT COALESCE(bool_or(pv_assigned), FALSE)
+        FROM cim_vector.cim_wizard_project_scenario
+        WHERE project_id = :pid AND scenario_id = CAST(:sid AS uuid)
+    """), {"pid": project_id, "sid": scenario_id}).scalar()
 
     features = []
     for r in result:
@@ -609,6 +644,7 @@ async def get_pv_with_building_info(
         "type": "FeatureCollection",
         "project_id":  project_id,
         "scenario_id": scenario_id,
+        "pv_assigned": bool(pv_assigned),
         "total_pv":    len(features),
         "features":    features,
     }

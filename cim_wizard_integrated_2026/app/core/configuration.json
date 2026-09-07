@@ -432,7 +432,9 @@
       "class_path": "app.calculators.pv_generator_calculator",
       "class_name": "PvGeneratorCalculator",
       "output": [
-        {"table": "cim_wizard_building", "schema": "cim_vector", "column": "pv_ids", "type": "UUID[]"}
+        {"table": "cim_wizard_building_properties", "schema": "cim_vector", "column": "pv", "type": "UUID[]"},
+        {"table": "pv", "schema": "cim_vector", "column": "scenario_id", "type": "UUID[]"},
+        {"table": "cim_wizard_project_scenario", "schema": "cim_vector", "column": "pv_assigned", "type": "Boolean"}
       ],
       "methods": [
         {
