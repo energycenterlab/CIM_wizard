@@ -59,3 +59,7 @@ typer==0.16.1
 rich==14.1.0
 packaging==25.0
 networkx==3.5
+
+# Job queue
+celery[redis]==5.4.0
+redis==5.2.1

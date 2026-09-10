@@ -28,6 +28,8 @@ from app.models.outputs import (
     HeatingFrassinettoHp2
 )
 
+from app.models.jobs import Job
+
 from app.models.citydb import (
     CityModel,
     CityObject,
@@ -67,6 +69,9 @@ __all__ = [
     'BuildingFrassinetto3',
     'Battery',
     'HeatingFrassinettoHp2',
+
+    # Jobs (Celery)
+    'Job',
 
     # 3DCityDB models (citydb schema, managed by 3DCityDB init scripts)
     'CityModel',

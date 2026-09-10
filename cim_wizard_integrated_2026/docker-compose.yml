@@ -49,11 +49,47 @@ services:
 
     environment:
       DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@db:5432/cim_wizard_integrated
+      CELERY_BROKER_URL: redis://cim-redis:6379/0
+      CELERY_RESULT_BACKEND: redis://cim-redis:6379/1
+
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "4"]
 
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: cim-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - cim_redis_data:/data
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cim-backend:latest
+    container_name: cim-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.celery_app:celery", "worker", "-Q", "heavy", "-c", "1", "-l", "info"]
+    environment:
+      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@db:5432/cim_wizard_integrated
+      CELERY_BROKER_URL: redis://cim-redis:6379/0
+      CELERY_RESULT_BACKEND: redis://cim-redis:6379/1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_started
 
 volumes:
   cim_postgres_data:
+    driver: local
+  cim_redis_data:
     driver: local

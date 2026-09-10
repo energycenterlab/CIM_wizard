@@ -6,8 +6,10 @@ Integrated service combining vector, census, and raster services with direct dat
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import os
 
-from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route, building_analysis_route, network_routes, cim_wizard_views, citydb_route
+from app.api import vector_routes, pipeline_routes, census_routes, raster_routes, complete_chain_route, building_analysis_route, network_routes, cim_wizard_views, citydb_route, jobs_route
+from app.models import jobs as _jobs_model  # noqa: F401 — register Job on Base.metadata
 from app.db.database import engine, Base
 from app.db.database import create_all_schemas
 from app.core.settings import settings
@@ -121,6 +123,12 @@ app.include_router(
     tags=["3DCityDB"]
 )
 
+app.include_router(
+    jobs_route.router,
+    prefix=f"{settings.API_V1_STR}/jobs",
+    tags=["Jobs"]
+)
+
 
 @app.get("/")
 async def root():
@@ -136,7 +144,8 @@ async def root():
             "building_analysis": f"{settings.API_V1_STR}/building",
             "network_data": f"{settings.API_V1_STR}/network",
             "cim_wizard": f"{settings.API_V1_STR}/cim-wizard",
-            "citydb": f"{settings.API_V1_STR}/citydb"
+            "citydb": f"{settings.API_V1_STR}/citydb",
+            "jobs": f"{settings.API_V1_STR}/jobs",
         },
         "documentation": {
             "swagger": "/docs",
@@ -147,13 +156,23 @@ async def root():
 
 @app.get("/health")
 async def health():
+    redis_status = "not_configured"
+    broker = os.getenv("CELERY_BROKER_URL")
+    if broker:
+        try:
+            import redis as redis_lib
+            redis_lib.from_url(broker, socket_connect_timeout=1).ping()
+            redis_status = "operational"
+        except Exception:
+            redis_status = "unavailable"
     return {
         "status": "healthy",
         "services": {
             "vector": "operational",
-            "pipeline": "operational", 
+            "pipeline": "operational",
             "census": "operational",
             "raster": "operational",
-            "network": "operational"
+            "network": "operational",
+            "redis": redis_status,
         }
     }

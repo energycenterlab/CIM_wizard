@@ -40,7 +40,23 @@ export interface BaselineRequest {
   project_name?: string;
   scenario_name?: string | null;
   save_to_db?: boolean;
+  sync?: boolean;
 }
+
+export interface JobStatus {
+  job_id: string;
+  job_type: string;
+  status: 'queued' | 'running' | 'success' | 'failed' | string;
+  project_id?: string;
+  scenario_id?: string;
+  progress?: number;
+  current_step?: string | null;
+  error?: string | null;
+  result?: any;
+  poll_url?: string;
+}
+
+export type JobProgressCallback = (job: JobStatus) => void;
 
 async function handleResponse<T>(resp: Response): Promise<T> {
   if (!resp.ok) {
@@ -155,13 +171,88 @@ export async function getBuildingProperties(projectId: string, scenarioId: strin
   return handleResponse<any[]>(resp);
 }
 
-export async function createBaselineScenario(payload: BaselineRequest): Promise<any> {
-  const resp = await fetch(CIM_WIZARD_URLS.BASELINE_SCENARIO, {
+export async function getJob(jobId: string): Promise<JobStatus> {
+  const resp = await fetch(CIM_WIZARD_URLS.JOB(jobId), {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+  });
+  return handleResponse<JobStatus>(resp);
+}
+
+async function waitForJob(
+  jobId: string,
+  onProgress?: JobProgressCallback,
+  intervalMs = 2000,
+  timeoutMs = 20 * 60 * 1000,
+): Promise<JobStatus> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const job = await getJob(jobId);
+    onProgress?.(job);
+    if (job.status === 'success') return job;
+    if (job.status === 'failed') {
+      throw new Error(job.error || 'Job failed');
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error('Timed out waiting for the job to finish. Do not retry the create request; check job status instead.');
+}
+
+/**
+ * POST a heavy pipeline. Default backend response is 202 + job_id.
+ * Poll until success. Never retry the POST (each call creates a new project).
+ */
+export async function postHeavyJob(
+  url: string,
+  payload: unknown,
+  onProgress?: JobProgressCallback,
+): Promise<any> {
+  const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
     body: JSON.stringify(payload),
   });
+
+  if (resp.status === 202) {
+    const accepted = await resp.json();
+    onProgress?.(accepted);
+    const jobId = accepted.job_id;
+    if (!jobId) {
+      throw new Error('Server accepted the job but did not return job_id');
+    }
+    return waitForJob(jobId, onProgress);
+  }
+
   return handleResponse<any>(resp);
+}
+
+export async function createBaselineScenario(
+  payload: BaselineRequest,
+  onProgress?: JobProgressCallback,
+): Promise<any> {
+  return postHeavyJob(CIM_WIZARD_URLS.BASELINE_SCENARIO, payload, onProgress);
+}
+
+export async function assignPv(
+  payload: { project_id: string; scenario_id: string; lod?: number; offset_m?: number },
+  onProgress?: JobProgressCallback,
+): Promise<any> {
+  return postHeavyJob(CIM_WIZARD_URLS.ASSIGN_PV, payload, onProgress);
+}
+
+export async function mapToCitydb(
+  payload: {
+    project_id: string;
+    scenario_id: string;
+    lod12_method?: string;
+    force_lod12?: boolean;
+    force_remap?: boolean;
+  },
+  onProgress?: JobProgressCallback,
+): Promise<any> {
+  return postHeavyJob(CIM_WIZARD_URLS.MAP_TO_CITYDB, payload, onProgress);
 }
 
 export async function healthCheck(): Promise<{ status: string; service?: string }> {

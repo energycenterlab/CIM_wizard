@@ -25,6 +25,10 @@ export const CIM_WIZARD_URLS = {
   BUILDING_PROPERTIES: (projectId: string, scenarioId: string) =>
     `${CIM_WIZARD_BASE}/api/v1/vector/buildingproperties/${projectId}/${scenarioId}`,
   BASELINE_SCENARIO: `${CIM_WIZARD_BASE}/api/v1/building/execute_building_analysis`,
+  ASSIGN_PV: `${CIM_WIZARD_BASE}/api/v1/building/assign_pv`,
+  MAP_TO_CITYDB: `${CIM_WIZARD_BASE}/api/v1/building/map_to_citydb`,
+  JOB: (jobId: string) => `${CIM_WIZARD_BASE}/api/v1/jobs/${jobId}`,
+  JOBS: `${CIM_WIZARD_BASE}/api/v1/jobs`,
   COMPLETE_CHAIN: `${CIM_WIZARD_BASE}/api/v1/complete/execute_complete_chain`,
 };
 

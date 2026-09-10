@@ -16,6 +16,7 @@ const ProjectGeoForm = () => {
 
   const [formData, setFormData] = useState({});
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [projvalue, setProjValue] = useState({});
   const [fileUploaded, setFileUploaded]= useState(false);
@@ -27,6 +28,7 @@ const ProjectGeoForm = () => {
   const handleCancel = () => {
     setFormData({});
     setErrorMessage("");
+    setStatusMessage("");
     setProjValue({});
     setFileUploaded(false);
     setConfirmLoading(false);
@@ -52,6 +54,7 @@ const ProjectGeoForm = () => {
 
     setConfirmLoading(true);
     setErrorMessage('');
+    setStatusMessage('Queuing job…');
 
     try {
       // Convert coordinates to GeoJSON Feature format
@@ -100,6 +103,10 @@ const ProjectGeoForm = () => {
         project_name: formData.proj_name,
         scenario_name: 'baseline',
         save_to_db: true
+      }, (job) => {
+        const step = job.current_step ? ` — ${job.current_step}` : '';
+        const pct = typeof job.progress === 'number' ? ` (${Math.round(job.progress * 100)}%)` : '';
+        setStatusMessage(`${job.status}${step}${pct}`);
       });
 
       console.log('Backend response:', response);
@@ -244,6 +251,7 @@ const ProjectGeoForm = () => {
         )}
         </div>
     <RasterUpload />
+      {statusMessage && confirmLoading && <p style={{ color: '#29582A' }}>{statusMessage}</p>}
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
       <div className={"button-row"}>
       <button type="submit" disabled={confirmLoading}>

@@ -1,5 +1,20 @@
 # Backend on cloud4 → live DB on cloud3
+# Redis is internal-only (not published). One Celery worker runs fat jobs.
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@130.192.238.11:15432/cim_wizard_integrated
+  CELERY_BROKER_URL: redis://cim-redis:6379/0
+  CELERY_RESULT_BACKEND: redis://cim-redis:6379/1
+
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: cim-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - cim_redis_data:/data
+
   backend:
     build:
       context: .
@@ -7,7 +22,27 @@ services:
     image: cim-backend:latest
     container_name: cim-backend
     restart: unless-stopped
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "4"]
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgresql://cim_wizard_user:cim_wizard_password@130.192.238.11:15432/cim_wizard_integrated
+      <<: *backend-env
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cim-backend:latest
+    container_name: cim-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.celery_app:celery", "worker", "-Q", "heavy", "-c", "1", "-l", "info"]
+    environment:
+      <<: *backend-env
+    depends_on:
+      - redis
+      - backend
+
+volumes:
+  cim_redis_data:
