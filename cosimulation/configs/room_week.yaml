@@ -1,0 +1,25 @@
+# Instantiation is data; simulators stay classes.
+# Change this file, re-run scenario.py — no code edits needed.
+
+step_size_s: 3600
+days: 7
+
+daylight:
+  id: outdoor
+  sunrise: 8
+  sunset: 17
+  noon: 12
+  peak_lux: 4000
+  cloudy: true
+
+# One occupant + curtain + light per room; they share outdoor daylight.
+rooms:
+  - id: office
+    occupant_id: alice
+    present_hours:
+      - {start: 8, end: 13}
+      - {start: 14, end: 20}
+  - id: studio
+    occupant_id: bob
+    present_hours:
+      - {start: 10, end: 16}
