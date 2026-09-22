@@ -1,0 +1,17 @@
+---
+description: Notebooks stay thin local runners over core and app code
+globs: "**/*.ipynb"
+alwaysApply: false
+---
+
+# Notebooks
+
+`city_information_modeler/notebooks/` is for local testing. A cell imports from `core` or
+`app` and calls it. Geometry, source parsing, physics and file I/O belong in `core/` first;
+if a cell grows past a call and a look at the result, move it.
+
+Core functions take a GeoDataFrame or GeoJSON and return the same kind of object, so a
+notebook can run them without a database or a pipeline.
+
+Call a core method directly to run the whole job in this process. Use
+`parallel.Runner` when you want it split across workers; both give the same answer.

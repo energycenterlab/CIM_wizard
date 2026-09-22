@@ -1,0 +1,41 @@
+---
+description: Monorepo map — which subproject owns what, and where a change belongs
+alwaysApply: true
+---
+
+# Repo map
+
+One git repo, several separate projects. They share a research goal (Torino UBEM with provenance, `paper2/`) but they are not one codebase. They connect through the database, exported files, and papers — never through cross-project Python imports.
+
+## Runtime projects
+
+| Path | What it is |
+|---|---|
+| `city_information_modeler/` | **Active development.** Stateless `core/`, external `parallel/` runner, `app/` orchestration, `notebooks/`, `config/`. All new work goes here. |
+| `cim_wizard_integrated_2026/` | **Frozen.** Previous backend: FastAPI + SQLAlchemy + Celery + PostGIS, plus `building_simulation/` (CESAR-P), `grid_simulation/`, `logic/*.ipynb`, `alembic/`. Read for reference; do not change. |
+| `cim-database/` | Database stack: PostgreSQL, PostGIS, TimescaleDB, 3DCityDB with Energy ADE. Init SQL, migrations, TABULA data, ER diagrams. |
+| `datalake/` | Semi data warehouse (objective O1). Streamlit ingest wizard + FastAPI over PostGIS; separate DB from `cim-database`. |
+| `coesi-frontend-main_2026/` | Web client. React 19, Vite, TypeScript, MapLibre. |
+| `semantic/` | Ontology and OBDA layer: Ontop mappings, Fuseki/GraphDB compose, CityGML + BOT + SOSA + GeoSPARQL. |
+
+## CIM Assist (one project, three stages)
+
+| Path | Stage |
+|---|---|
+| `ai4db/` | Build the CIM spatial text-to-SQL dataset and benchmark. |
+| `txt2ssql/` | Fine-tune the models (`ftv2/`, `ftv3/`: SQLCoder, Qwen, Llama, Mistral, Phi). |
+| `assist_cim/` | Agent, evaluation (`evaluator_v2.py`), figures and tables. |
+
+## Research and data folders
+
+- `paper2/` — Paper 2 outline and LaTeX. Objectives O1–O7 name their implementation folder; read it before changing a claim.
+- `thesis_CIM_wizard_Assist/` — MSc thesis behind CIM Assist.
+- `cosimulation/` — mosaik sandbox. Not wired into the API; the existing building simulation code sits in the frozen `cim_wizard_integrated_2026/building_simulation/`, so rebuild rather than edit it.
+- `phd_proposal/` — reference PDFs only.
+- `grid/`, `pv/` — geodata only (substation borders, PV footprints). Grid and PV code belongs in the backend, not here.
+
+## Boundaries
+
+- Keep a change inside one project. Do not import across project folders; move shared logic into the backend or pass data through the database or a file.
+- The other rules in `.cursor/rules/` target `city_information_modeler/` unless their `globs` say otherwise. Its layers and the stateless, parallelizable core contract are in the `cim-development-structure` rule.
+- Data-only folders stay data-only. Do not add scripts to `grid/`, `pv/`, or `phd_proposal/`.

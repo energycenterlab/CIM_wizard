@@ -1,0 +1,6 @@
+# CIM Wizard rules
+
+Project rules are the `.mdc` files in `.cursor/rules/`. Follow those files.
+
+New development goes in `city_information_modeler/`. `cim_wizard_integrated_2026/` is frozen:
+read it for reference, do not change it. Do not create `logic/dev/`.

@@ -1,0 +1,28 @@
+---
+description: Vectorized GeoPandas, spatial index, and semantic 3D surfaces
+globs: city_information_modeler/**/*.py,city_information_modeler/**/*.ipynb
+alwaysApply: false
+---
+
+# Spatial processing
+
+Process whole GeoDataFrames with GeoPandas, NumPy and Shapely 2.x. Do not walk footprints,
+coordinates or rows with `for`, `iterrows`, `itertuples`, or `apply` when a column or
+geometry operation exists.
+
+```python
+metric = gdf.to_crs(32632)
+gdf = gdf.copy()
+gdf["area_m2"] = metric.geometry.area
+```
+
+- Point-in-polygon and nearest matches use `sindex` or `geopandas.sjoin`, not a distance
+  loop per feature.
+- Write columns with `.loc` or a direct assignment. Do not chain indexes (`df["a"]["b"]`).
+- Copy a frame before editing it when the caller still holds the original.
+- Measure, round and extrude in EPSG:32632. Rounding degrees to a few decimals merges
+  footprints that are hundreds of metres apart.
+- Extrusion returns one row per surface: `RoofSurface`, `WallSurface` or `GroundSurface`,
+  linked by `building_uuid`.
+- Attribute math is linear. Polygon intersections are not; prefer an indexed join or a
+  predicate over a pairwise loop.

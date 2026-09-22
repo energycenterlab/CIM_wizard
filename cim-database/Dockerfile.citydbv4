@@ -1,0 +1,7 @@
+docker run -d --name citydb-v4 \
+  -p 25432:5432 \
+  -e POSTGRES_PASSWORD=cim_wizard_password \
+  -e POSTGRES_USER=cim_wizard_user \
+  -e SRID=4326 \
+  -e SRS_NAME="urn:ogc:def:crs:EPSG::4326" \
+  3dcitydb/3dcitydb-pg:4.4.2

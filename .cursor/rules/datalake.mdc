@@ -1,0 +1,33 @@
+---
+description: Datalake semi data warehouse — ingest manifest, warehouse tables, and UI/API split
+globs: datalake/**
+alwaysApply: false
+---
+
+# Datalake
+
+Semi data warehouse for CIM datasources (objective O1 in `paper2/`). Its own stack, separate from `cim-database`: PostGIS on `35432`, MongoDB on `27018`, MinIO on `9000`/`9001`, FastAPI on `8008`.
+
+## Layout
+
+- `ui/`: Streamlit. `Home.py`, `pages/Upload_page.py`, `pages/Explore_page.py`.
+- `ui/pages/ingest_v_upload.py` writes to PostGIS directly; `ui/pages/ingest_api.py` posts the same payload to the API. Change both when the wizard changes.
+- `api/`: FastAPI over PostGIS (`main.py` routes, `db.py` psycopg2). `mongo_api/` mirrors the same REST contract on MongoDB — keep the endpoint shapes identical.
+- `models/datasource.py` and `datalake.py`: the older STAC-item track (`dl4r:` extension, MongoDB `datasources` + `geodata`).
+
+## Warehouse contract
+
+The wizard profiles a source, then the user maps every column to PK, FK, geometry, or JSONB. That mapping is the ingest manifest, and it is the point of this project.
+
+- `public.meta_table`: one registry row per datasource (tags, CRS, footprint, `object_uri`).
+- `public.dw_manifests`: the manifest JSON, keyed by `dataset_id`.
+- `public.dw_features`: every ingested entity — `id`, `dataset_id`, `geometry`, `attributes` JSONB.
+
+Keep all datasets in `dw_features`. One GiST index over that table is what lets a single `ST_Intersects` reach entities from every dataset. Do not add a per-dataset feature table, and do not promote attributes to typed columns.
+
+## Rules
+
+- Unmapped columns go to `attributes` JSONB. Never drop them silently.
+- Store footprints and geometry in EPSG:4326; record the detected source CRS and set `reproject` in the manifest instead of reprojecting in the UI.
+- Schema changes go in `postgres/init/01_init.sql` and the matching DDL in `api/db.py` and `ui/db.py`, all with `IF NOT EXISTS`.
+- Files go to MinIO and are referenced by `object_uri`. Do not store file bytes in the database.

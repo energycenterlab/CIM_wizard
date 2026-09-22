@@ -1,0 +1,24 @@
+---
+description: Python typing, structure, and tests
+globs: city_information_modeler/**/*.py
+alwaysApply: false
+---
+
+# Python
+
+- Annotate every parameter and return type.
+- Write a few named steps. Skip dense one-liners and nested comprehensions; a reader should
+  be able to put a breakpoint between the steps.
+- Use `snake_case` for modules and functions. One responsibility per function.
+- Raise a specific exception with a message that says what to do about it. No bare `except`.
+- Read configuration from `config/`, never from a hardcoded constant in class logic.
+- Do not commit secrets. Do not build SQL, paths or shell commands from request input.
+
+# Tests
+
+Tests live in `city_information_modeler/tests/` and run with pytest. Keep them offline:
+record the attributes a service returns and test the mapping against those, so the suite does
+not depend on a public endpoint being up.
+
+Where a fact about an external service drives the code, state the measured fact in the
+module docstring, so the next reader knows it was verified and not assumed.

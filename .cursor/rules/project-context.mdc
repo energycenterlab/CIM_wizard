@@ -1,0 +1,37 @@
+---
+description: Where CIM code lives, which trees are active, and the shared data rules
+alwaysApply: true
+---
+
+# CIM Wizard
+
+3D building energy modelling for Torino, built on the Piemonte open datasets (BDTRE, DBGT)
+and census data.
+
+## Which tree to work in
+
+- `city_information_modeler/` is where all new development goes. See the
+  `cim-development-structure` rule for its layers.
+- `cim_wizard_integrated_2026/` is **frozen**. Do not add to it, refactor it, or change its
+  behaviour. Read it for reference only. If something there is needed, rebuild it in
+  `city_information_modeler/`.
+- `cim-database/` holds the PostgreSQL, PostGIS, TimescaleDB and 3DCityDB stack.
+- Do not create `logic/dev/`. That path is not part of this repo.
+
+## Data rules, in every tree
+
+- Payloads and stored geometry are EPSG:4326. Distance, area, volume, extrusion and
+  geometry rounding are done in EPSG:32632, via `core/geometry.py`.
+- A building id is a deterministic `uuid.uuid5` of the source name and that source's
+  identifier. When a source publishes no identifier, derive the key from the rounded
+  footprint in a metric CRS. Never `uuid.uuid4` for a building.
+- Every source maps its fields onto the shared schema in `core/schema.py`. A field the
+  source does not publish stays null. Never substitute a different field for a missing one,
+  and never invent a value.
+- Record where a value came from next to it (`height_source`, `construction_year_source`, and
+  the `_origin` columns a conflated frame carries).
+- Combining sources is reference-plus-enrichment: one source defines what counts as one
+  building and supplies the geometry, the others fill the fields it left empty. Do not average
+  values from different sources and do not merge their outlines into a geometry neither
+  source published.
+- TABULA archetypes, U-values and compute settings live in config files, not in class logic.

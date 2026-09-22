@@ -1,0 +1,16 @@
+---
+description: Docker and Compose conventions for the CIM database stack
+globs: cim-database/**,**/Dockerfile*,**/docker-compose*.yml,**/docker-compose*.yaml
+alwaysApply: false
+---
+
+# Containers
+
+- Pass configuration with environment variables. Do not copy `.env` files or passwords into
+  an image.
+- The database image must keep PostGIS (see `cim-database/Dockerfile.citydbv4`). Do not
+  switch it to plain PostgreSQL.
+- Keep published ports consistent with the connection strings in use. The integrated stack
+  exposes Postgres on host port `15432`.
+- Run one process per container.
+- Prefer the Compose files already in the repo over adding another orchestrator.

@@ -1,0 +1,71 @@
+---
+description: Layers of city_information_modeler and the stateless, parallelizable core contract
+globs: city_information_modeler/**
+alwaysApply: false
+---
+
+# city_information_modeler layers
+
+    core/      Stateless data and geometry classes. Every public method is parallelizable.
+    parallel/  The external runner. Sizes worker pools from config/compute.yaml.
+    app/       Orchestration. Imports core classes and composes them in different ways.
+    notebooks/ Local testing. Imports core and app, holds no logic.
+    config/    compute.yaml and other settings.
+    tests/     pytest, offline by default.
+
+`core/` imports nothing from `parallel/`, `app/` or `notebooks/`. Dependencies point inward.
+
+# core/ must be stateless
+
+A core class holds immutable settings and nothing else. Use `@dataclass(frozen=True)` so an
+instance is immutable and picklable: a worker process gets a copy and must produce the same
+answer as any other worker.
+
+- Never store results, counters, caches or progress on `self`.
+- Never mutate an argument. Copy the frame, return a new one.
+- No database session, no file read or write, no `print`. Data in, data out.
+
+# core/ methods must be parallelizable
+
+Every public core method declares how an external tool may divide its work, with
+`core.contracts.parallelizable`. The decorator only attaches the declaration, so a direct
+call still runs the whole job in one process, which is what a notebook wants.
+
+```python
+@parallelizable(
+    split=SPLIT_SPATIAL_TILES,      # or SPLIT_ROW_BATCHES, SPLIT_SPATIAL_BLOCKS, SPLIT_NONE
+    merge=MERGE_CONCAT_DEDUP,       # tiles overlap at their edges, so repeats must go
+    workload=WORKLOAD_IO,           # io -> threads; cpu -> processes counted against RAM
+    split_arg="boundary_geojson",   # the one argument that carries divisible work
+    dedup_on="building_uuid",
+)
+def fetch_buildings(self, boundary_geojson: Dict[str, Any]) -> gpd.GeoDataFrame:
+```
+
+Pick the split by what the work needs, not by what is easiest. `row_batches` is wrong whenever
+a row's answer depends on other rows nearby: a method comparing two frames takes them as one
+`SPLIT_SPATIAL_BLOCKS` argument, so the runner keeps each row together with the neighbours it
+has to see.
+
+To satisfy the declaration a method must take its divisible work in one named argument and
+return something the declared merge can recombine. Splitting must not change the answer:
+running the pieces and merging has to equal one sequential call, including at the boundary
+edge. Check a change with the `sequential` profile against a parallel one.
+
+# Worker sizing belongs to config, never to code
+
+`config/compute.yaml` describes the server: cores, RAM, reserved cores, RAM per worker,
+thread count for network work, and the splitting minimums. The runner caps CPU workers by
+cores, by the configured ceiling, and by how many the RAM holds, whichever is smallest.
+
+Core code never reads that file, never counts cores, and never starts a worker. Moving to a
+bigger server is an edit in `compute.yaml` alone.
+
+# app/ orchestrates, notebooks/ only call
+
+An `app/` module decides which core classes to call and in what order for one use case.
+Several orchestrations may compose the same core classes differently; none of them may
+reimplement geometry or data logic that belongs in core.
+
+A notebook cell imports from `core` or `app` and calls it. Move anything longer than a call
+into core first.

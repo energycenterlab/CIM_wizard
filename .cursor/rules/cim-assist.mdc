@@ -1,0 +1,23 @@
+---
+description: CIM Assist stages — dataset generation, fine-tuning, and evaluation
+globs: ai4db/**,txt2ssql/**,assist_cim/**
+alwaysApply: false
+---
+
+# CIM Assist
+
+Text-to-spatial-SQL over the CIM Wizard database (objectives O3–O4 in `paper2/`). One project in three folders; each stage consumes the previous one's output.
+
+| Stage | Folder | Output |
+|---|---|---|
+| Dataset | `ai4db/` | Training pairs and benchmark JSONL |
+| Fine-tune | `txt2ssql/` | Adapters per base model, in `ftv2/` and `ftv3/` |
+| Evaluate | `assist_cim/` | Agent runs, execution accuracy, figures and tables |
+
+## Rules
+
+- Generation scripts are staged and reproducible: seed the RNG, keep the taxonomy declarations (`TASK_TAXONOMY`, `DOMAIN_TAXONOMY`, `CIM_SCHEMAS`) at module top, and write JSONL. Do not hand-edit a generated `.jsonl`.
+- The schema in `ai4db/stage1_cim_v2.py` and `assist_cim/CIM_DATABASE_SCHEMA.txt` describes the real `cim_vector` tables. When the backend schema changes, update these too, or the generated SQL trains on a schema that no longer exists.
+- One fine-tuning script per base model and task shape (`*_q2sql.py`, `*_q2inst.py`, `*_qinst2sql.py`). Copy an existing script rather than adding a model branch inside one.
+- Report execution accuracy from `assist_cim/evaluator_v2.py`. Keep the benchmark split fixed so numbers stay comparable with the thesis and `paper2/`.
+- These scripts run against a database and local or Ollama models. Read connection details and model endpoints from environment variables, not hardcoded hosts.

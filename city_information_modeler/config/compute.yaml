@@ -1,0 +1,64 @@
+# Server computation power.
+#
+# The parallel runner reads this file to size its worker pools. Core classes never read it:
+# they only declare how their work may be divided, and the runner decides how far to go on
+# this machine. Moving the same code to a bigger server is a change here, not in core.
+#
+# cpu_cores / ram_gb        set to `auto` to detect the machine
+# reserve_cores             cores left for the OS and the parent process
+# ram_per_cpu_worker_gb     memory one process worker needs; caps workers on small machines
+# max_cpu_workers           hard ceiling for CPU-bound work, or `null` for no extra ceiling
+# io_workers                threads for network-bound work; not limited by core count,
+#                           but keep it polite towards the public WFS endpoints
+# spatial_tile_oversubscribe  tiles requested per worker, so a slow tile cannot stall the run
+# min_tile_side_m           never cut a tile smaller than this
+# min_rows_per_split        never hand a worker a batch smaller than this
+
+active_profile: auto
+
+profiles:
+  auto:
+    cpu_cores: auto
+    ram_gb: auto
+    reserve_cores: 1
+    ram_per_cpu_worker_gb: 2.0
+    max_cpu_workers: null
+    io_workers: 8
+    spatial_tile_oversubscribe: 2
+    min_tile_side_m: 250.0
+    min_rows_per_split: 5000
+
+  laptop:
+    cpu_cores: 8
+    ram_gb: 16
+    reserve_cores: 2
+    ram_per_cpu_worker_gb: 2.0
+    max_cpu_workers: 4
+    io_workers: 6
+    spatial_tile_oversubscribe: 2
+    min_tile_side_m: 250.0
+    min_rows_per_split: 5000
+
+  workstation:
+    cpu_cores: 32
+    ram_gb: 128
+    reserve_cores: 2
+    ram_per_cpu_worker_gb: 3.0
+    max_cpu_workers: null
+    io_workers: 16
+    spatial_tile_oversubscribe: 3
+    min_tile_side_m: 250.0
+    min_rows_per_split: 5000
+
+  # Single-worker profile. Use it to reproduce a parallel run sequentially when a result
+  # looks wrong, without editing any code.
+  sequential:
+    cpu_cores: 1
+    ram_gb: 2
+    reserve_cores: 0
+    ram_per_cpu_worker_gb: 1.0
+    max_cpu_workers: 1
+    io_workers: 1
+    spatial_tile_oversubscribe: 1
+    min_tile_side_m: 250.0
+    min_rows_per_split: 1000000
