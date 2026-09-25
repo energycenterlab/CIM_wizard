@@ -1,0 +1,48 @@
+name: citydbv4
+
+services:
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:4.4.2
+    container_name: citydb-v4-energyade3
+    restart: unless-stopped
+    ports:
+      - "55432:5432"
+    environment:
+      POSTGRES_DB: citydb
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      SRID: "4326"
+      SRS_NAME: "urn:ogc:def:crs:EPSG::4326"
+    volumes:
+      - citydb_v4_data:/var/lib/postgresql/data
+      # Must sort AFTER the image's 3dcitydb-initdb.sh ('3' < 'z')
+      - ./energy-ade-3/CREATE_ADE_DB.sql:/docker-entrypoint-initdb.d/z10_energy_ade3.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cim_wizard_user -d citydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  impexp:
+    image: 3dcitydb/impexp:5.5.1
+    profiles: ["tools"]
+    depends_on:
+      citydb:
+        condition: service_healthy
+    environment:
+      CITYDB_TYPE: postgresql
+      CITYDB_HOST: citydb
+      CITYDB_PORT: "5432"
+      CITYDB_NAME: citydb
+      CITYDB_SCHEMA: citydb
+      CITYDB_USERNAME: cim_wizard_user
+      CITYDB_PASSWORD: cim_wizard_password
+    volumes:
+      - ./impexp-data:/data
+      - ./ade-extensions:/ade-extensions:ro
+    working_dir: /data
+
+volumes:
+  citydb_v4_data:
+    driver: local
