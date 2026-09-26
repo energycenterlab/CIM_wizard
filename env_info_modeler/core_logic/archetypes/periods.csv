@@ -1,0 +1,10 @@
+period_id,period_label,year_from,year_to,istat_census_code,episcope_piedmont_label,urbem_apartment_sheets,tabula_suffix,dbgt_label_examples,period_note
+P1,before_1918,,1918,E8,Before 1919,-1930,_01,1918 (al ..) [open lower bound]; exact years <= 1918,"proxy: URBEM <1930 sheet also covers 1919-1929; approximate for pre-1919 stock | TABULA _01 ends 1900; 1901-1918 truly belongs to _02, midpoint rule keeps _01 - verify for early-1900s stock"
+P2,1919_1945,1919,1945,E9,1919 - 1945,1931-1940+1941-1950,_03,1919 - 1945; exact years 1919-1945,weighted blend of URBEM 1931-1940 + 1941-1950; 1919-1930 years missing from blend
+P3,1946_1960,1946,1960,E10,1946 - 1960,1941-1950+1951-1960,_04,1946 - 1960; exact years 1946-1960,weighted blend of URBEM 1941-1950 + 1951-1960; 1941-1945 spill into blend
+P4,1961_1970,1961,1970,E11,1961 - 1970,1961-1970,_05,1961 - 1970 (DBGT); exact years 1961-1970,exact 1:1 URBEM sheet
+P5,1971_1980,1971,1980,E12,1971 - 1980,1971-1980,_05,1971 - 1980 (DBGT straddles TABULA _05/_06 at 1975/76),exact 1:1 URBEM sheet | TABULA _05 covers 1961-1975; 1976-1980 truly belongs to _06 - midpoint rule keeps _05
+P6,1981_1990,1981,1990,E13,1981 - 1990,1981-1990,_06,1981 - 1990; exact years 1981-1990,exact 1:1 URBEM sheet
+P7,1991_2000,1991,2000,E14,1991 - 2000,1991-2000,_07,1991 - 2000 (DBGT); exact years 1991-2000,exact 1:1 URBEM sheet
+P8,2001_2005,2001,2005,E15,2001 - 2005,2001-2010,_07,2001 - 2005 (DBGT); exact years 2001-2005,proxy: URBEM 2001-2010 sheet also covers 2006-2010
+P9,after_2005,2006,,E16,After 2005,2001-2010+2011-,_08,exact years > 2005; Dopo il 2005,weighted blend of URBEM 2001-2010 + 2011-

@@ -1,0 +1,12 @@
+statistic,scope,value,unit,source,status
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",70.5,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",14.0,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",6.2,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",3.2,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",1.5,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",0.2,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+space_heating_fuel_share,"Piedmont residential stock (all periods, all classes)",4.4,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.3)",VERIFY against live page before publication
+refurbished_share_by_period,Piedmont apartments by construction age,,% of apartments,"EPISCOPE Italy country page, ISTAT Census 2001 (S-1.2.1)","TODO - transcribe; unit is apartment, not split by SFH/MFH"
+stock_counts_by_period_class,Piedmont buildings/apartments by age x SFH/MFH,,counts,"EPISCOPE Italy country page, ISTAT Census 2011 (S-1.1)",TODO - transcribe
+heating_centralisation,Piedmont dwellings,,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.1)",TODO - transcribe
+dhw_system_coupling,Piedmont dwellings with hot water,,% of dwellings,"EPISCOPE Italy country page, ISTAT Census 2011 (S-2.5/S-2.6)",TODO - transcribe

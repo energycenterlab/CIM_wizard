@@ -1,0 +1,5 @@
+building_class,definition,tabula_prefix,census_rule,fallback_rule,urbem_workbook_available,notes
+SFH,Single-family house: one dwelling in the building,SFH,census n_dwellings == 1 -> SFH,no census: n_floors == 1 and height_m <= 7.5 -> SFH (low confidence),no - RES_SFH workbook not in repo,TABULA envelope from SFH_xx; systems/windows empty until SFH source added
+MFH,Multi-family house: small multi-dwelling block,MFH,census n_dwellings 2-8 -> MFH,no census: n_floors 2-3 or height_m 7.5-12 -> MFH (low confidence),no - RES_MFH workbook not in repo,TABULA envelope from MFH_xx; systems/windows empty until MFH source added
+Apartments,Apartments in multifamily blocks (large condominiums),AB,census n_dwellings >= 9 -> Apartments,no census: n_floors >= 4 or height_m > 12 -> Apartments (low confidence),"yes - RES_APPBLOCK_E_PIE.xlsx (EPC, Piedmont, climate zone E)",TABULA envelope from AB_xx; systems/windows/geometry from URBEM apartment workbook
+TH_EXCLUDED,Terraced house - TABULA TH_xx deliberately NOT used,TH (unused),never assigned,never assigned,no,User decision 2026-09: drop TH; one-dwelling rows go to SFH even if terraced

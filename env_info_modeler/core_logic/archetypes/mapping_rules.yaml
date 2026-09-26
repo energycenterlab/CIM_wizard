@@ -1,0 +1,71 @@
+# Archetype mapping rules (configuration, not logic)
+#
+# These rules decide how a building row gets its archetype. The logic lives in
+# core/archetypes.py and only reads the numbers below, so changing a threshold
+# or a usage list is an edit here, never in code.
+
+# --- Residential gate -------------------------------------------------------
+# Only these usages enter the archetype mapping. Everything else keeps a null
+# class with source "non_residential_skipped". Mixed classes count as
+# residential because the residential share still needs an archetype, but they
+# are flagged low confidence since the non-residential share is ignored.
+residential_usages:
+  - residential
+mixed_residential_usages:
+  - mixed_residential_commercial
+  - mixed_residential_industrial
+  - mixed_residential_public
+
+# --- Period assignment ------------------------------------------------------
+# Precedence for one row:
+#   1. construction_year (exact or the source's representative of a range)
+#   2. midpoint of construction_year_from/_to when the representative is missing
+#   3. construction_year_to alone for open lower bounds ("1918 (al ..)": use the cap)
+#   4. null period when nothing is known - never guess from other columns
+# A year belongs to the first canonical period whose year_to holds it.
+# Open bounds in periods.csv (empty year_from/year_to) mean minus/plus infinity.
+period_source_rank:
+  construction_year: high
+  construction_year_range_midpoint: medium
+  open_lower_bound_capped: low
+  missing: null
+
+# --- Class assignment -------------------------------------------------------
+# Census dwelling counts decide first. Height and floor count are only a
+# fallback and always low confidence. One address is NOT one dwelling, so
+# address counts must never feed this rule.
+census_class_thresholds:
+  sfh_dwellings: 1        # exactly one dwelling -> SFH
+  mfh_max_dwellings: 8    # 2-8 dwellings -> MFH
+  # 9 or more dwellings -> Apartments
+fallback_class_thresholds:
+  sfh_max_floors: 1
+  sfh_max_height_m: 7.5
+  mfh_max_floors: 3
+  mfh_max_height_m: 12.0
+  # more floors or more height -> Apartments
+
+# --- Provenance --------------------------------------------------------------
+# Every step writes what it did next to the value, so a result stays traceable.
+provenance_columns:
+  - archetype_period_id
+  - archetype_period_source
+  - archetype_period_confidence
+  - archetype_class
+  - archetype_class_source
+  - archetype_class_confidence
+
+# --- Stochastic variants -----------------------------------------------------
+# Refurbishment and system shares in systems.csv are probabilities, not labels.
+# Sampling them must pass an explicit random_seed so a run stays reproducible.
+# Refurbishment shares are still missing (see README.md) - no sampling until
+# a source fills them.
+sampling:
+  requires_random_seed: true
+  default_seed: 42
+
+# --- Known boundary quirks ----------------------------------------------------
+# DBGT "1971 - 1980" straddles TABULA _05/_06 at 1975/76. Census periods keep
+# the row whole in P5 (1971_1980); the envelope crosswalk documents the TABULA
+# side of the mismatch. Never split or average the row.
+# TABULA TH_xx (terraced) is deliberately unused: one-dwelling rows map to SFH.

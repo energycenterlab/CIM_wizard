@@ -1,0 +1,28 @@
+period_id,period_label,building_class,urbem_n_records,urbem_record_unit,episcope_n_buildings_piedmont,episcope_n_apartments_piedmont,refurbished_share,refurbishment_type_shares,sources,notes
+P1,before_1918,Apartments,58853,apartments (EPC records),,,,,URBEM ['-1930'],EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P1,before_1918,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P1,before_1918,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P2,1919_1945,Apartments,30678,apartments (EPC records),,,,,"URBEM ['1931-1940', '1941-1950']",EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P2,1919_1945,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P2,1919_1945,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P3,1946_1960,Apartments,64810,apartments (EPC records),,,,,"URBEM ['1941-1950', '1951-1960']",EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P3,1946_1960,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P3,1946_1960,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P4,1961_1970,Apartments,76504,apartments (EPC records),,,,,URBEM ['1961-1970'],EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P4,1961_1970,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P4,1961_1970,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P5,1971_1980,Apartments,33754,apartments (EPC records),,,,,URBEM ['1971-1980'],EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P5,1971_1980,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P5,1971_1980,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P6,1981_1990,Apartments,14645,apartments (EPC records),,,,,URBEM ['1981-1990'],EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P6,1981_1990,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P6,1981_1990,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P7,1991_2000,Apartments,12567,apartments (EPC records),,,,,URBEM ['1991-2000'],EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P7,1991_2000,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P7,1991_2000,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P8,2001_2005,Apartments,18517,apartments (EPC records),,,,,URBEM ['2001-2010'],EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P8,2001_2005,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P8,2001_2005,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P9,after_2005,Apartments,31679,apartments (EPC records),,,,,"URBEM ['2001-2010', '2011-']",EPISCOPE S-1.1 Piedmont building/apartment counts to be added from episcope.eu/country/it
+P9,after_2005,SFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
+P9,after_2005,MFH,,,,,,,none yet,"EPISCOPE S-1.1 (stock) and S-1.2.1 (refurbished share, statistical unit = apartment, NOT split by class) to be added; refurbishment conditioned on class does not exist - do not invent"
