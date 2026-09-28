@@ -10,11 +10,11 @@ and census data.
 
 ## Which tree to work in
 
-- `city_information_modeler/` is where all new development goes. See the
+- `env_info_modeler/` is where all new development goes. See the
   `cim-development-structure` rule for its layers.
 - `cim_wizard_integrated_2026/` is **frozen**. Do not add to it, refactor it, or change its
   behaviour. Read it for reference only. If something there is needed, rebuild it in
-  `city_information_modeler/`.
+  `env_info_modeler/`.
 - `cim-database/` holds the PostgreSQL, PostGIS, TimescaleDB and 3DCityDB stack.
 - Do not create `logic/dev/`. That path is not part of this repo.
 

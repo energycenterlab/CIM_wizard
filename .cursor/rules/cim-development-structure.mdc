@@ -1,10 +1,10 @@
 ---
-description: Layers of city_information_modeler and the stateless, parallelizable core contract
-globs: city_information_modeler/**
+description: Layers of env_info_modeler and the stateless, parallelizable core contract
+globs: env_info_modeler/**
 alwaysApply: false
 ---
 
-# city_information_modeler layers
+# env_info_modeler layers
 
     core/      Stateless data and geometry classes. Every public method is parallelizable.
     parallel/  The external runner. Sizes worker pools from config/compute.yaml.
@@ -69,3 +69,48 @@ reimplement geometry or data logic that belongs in core.
 
 A notebook cell imports from `core` or `app` and calls it. Move anything longer than a call
 into core first.
+
+
+---
+description: Notebooks stay thin local runners over core and app code
+globs: "**/*.ipynb"
+alwaysApply: false
+---
+
+# Notebooks
+
+`city_information_modeler/notebooks/` is for local testing. A cell imports from `core` or
+`app` and calls it. Geometry, source parsing, physics and file I/O belong in `core/` first;
+if a cell grows past a call and a look at the result, move it.
+
+Core functions take a GeoDataFrame or GeoJSON and return the same kind of object, so a
+notebook can run them without a database or a pipeline.
+
+Call a core method directly to run the whole job in this process. Use
+`parallel.Runner` when you want it split across workers; both give the same answer.
+
+
+---
+description: Python typing, structure, and tests
+globs: env_info_modeler/**/*.py
+alwaysApply: false
+---
+
+# Python
+
+- Annotate every parameter and return type.
+- Write a few named steps. Skip dense one-liners and nested comprehensions; a reader should
+  be able to put a breakpoint between the steps.
+- Use `snake_case` for modules and functions. One responsibility per function.
+- Raise a specific exception with a message that says what to do about it. No bare `except`.
+- Read configuration from `config/`, never from a hardcoded constant in class logic.
+- Do not commit secrets. Do not build SQL, paths or shell commands from request input.
+
+# Tests
+
+Tests live in `env_info_modeler/tests/` and run with pytest. Keep them offline:
+record the attributes a service returns and test the mapping against those, so the suite does
+not depend on a public endpoint being up.
+
+Where a fact about an external service drives the code, state the measured fact in the
+module docstring, so the next reader knows it was verified and not assumed.

@@ -11,7 +11,7 @@ One git repo, several separate projects. They share a research goal (Torino UBEM
 
 | Path | What it is |
 |---|---|
-| `city_information_modeler/` | **Active development.** Stateless `core/`, external `parallel/` runner, `app/` orchestration, `notebooks/`, `config/`. All new work goes here. |
+| `env_info_modeler/` | **Active development.** Stateless `core/`, external `parallel/` runner, `app/` orchestration, `notebooks/`, `config/`. All new work goes here. |
 | `cim_wizard_integrated_2026/` | **Frozen.** Previous backend: FastAPI + SQLAlchemy + Celery + PostGIS, plus `building_simulation/` (CESAR-P), `grid_simulation/`, `logic/*.ipynb`, `alembic/`. Read for reference; do not change. |
 | `cim-database/` | Database stack: PostgreSQL, PostGIS, TimescaleDB, 3DCityDB with Energy ADE. Init SQL, migrations, TABULA data, ER diagrams. |
 | `datalake/` | Semi data warehouse (objective O1). Streamlit ingest wizard + FastAPI over PostGIS; separate DB from `cim-database`. |
@@ -37,5 +37,5 @@ One git repo, several separate projects. They share a research goal (Torino UBEM
 ## Boundaries
 
 - Keep a change inside one project. Do not import across project folders; move shared logic into the backend or pass data through the database or a file.
-- The other rules in `.cursor/rules/` target `city_information_modeler/` unless their `globs` say otherwise. Its layers and the stateless, parallelizable core contract are in the `cim-development-structure` rule.
+- The other rules in `.cursor/rules/` target `env_info_modeler/` unless their `globs` say otherwise. Its layers and the stateless, parallelizable core contract are in the `cim-development-structure` rule.
 - Data-only folders stay data-only. Do not add scripts to `grid/`, `pv/`, or `phd_proposal/`.
