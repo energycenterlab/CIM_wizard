@@ -1,0 +1,29 @@
+figure_period,period_ids,performance_level,share,u_wall_min,u_wall_max,window_type,heat_generator,source,confidence
+Ante 1919,P1,1,0.56,1.0,2.0,Single glazing,Standard boiler,"Digitised by eye from 'Set-up of the residential building stock (RBS) model' slide (Energy and Environmental Assessment of Building Stocks, AY 2025/26, slide 34); likely from Ballarini, Corgnati, Corrado (2014) Energy Policy 68 - verify",low: shares read off a stacked-bar chart
+Ante 1919,P1,2,0.22,1.0,2.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Ante 1919,P1,3,0.22,0.8,1.0,Standard double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1919-1945,P2,1,0.46,1.0,2.0,Single glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1919-1945,P2,2,0.33,1.0,2.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1919-1945,P2,3,0.21,0.8,1.0,Standard double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1946-1960,P3,1,0.50,1.0,2.0,Single glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1946-1960,P3,2,0.26,1.0,2.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1946-1960,P3,3,0.24,0.8,1.0,Standard double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1961-1970,P4,1,0.56,1.0,2.0,Single glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1961-1970,P4,2,0.08,1.0,2.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1961-1970,P4,3,0.11,1.0,2.0,Standard double glazing,District heating,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1961-1970,P4,4,0.25,0.8,1.0,Standard double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1971-1990,P5;P6,1,0.34,1.0,2.0,Single glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1971-1990,P5;P6,2,0.19,0.8,1.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1971-1990,P5;P6,3,0.20,0.6,0.8,Standard double glazing,District heating,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1971-1990,P5;P6,4,0.15,0.4,0.6,Low-e double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1971-1990,P5;P6,5,0.12,0.3,0.4,Low-e double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1991-2005,P7;P8,1,0.17,1.0,2.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1991-2005,P7;P8,2,0.36,0.6,0.8,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1991-2005,P7;P8,3,0.27,0.4,0.6,Low-e double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+1991-2005,P7;P8,4,0.20,0.3,0.4,Low-e double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Post 2005,P9,1,0.07,0.8,1.0,Standard double glazing,Standard boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Post 2005,P9,2,0.15,0.6,0.8,Standard double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Post 2005,P9,3,0.13,0.4,0.6,Low-e double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Post 2005,P9,4,0.08,0.3,0.4,Low-e double glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Post 2005,P9,5,0.50,0.2,0.3,Low-e triple glazing,Condensing boiler,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart
+Post 2005,P9,6,0.07,0.0,0.2,Low-e triple glazing,Heat pump,"Digitised by eye from RBS slide 34 - verify",low: shares read off a stacked-bar chart

@@ -1,0 +1,10 @@
+period_id,episcope_age_bin,refurbished_share,not_refurbished_share,technical_systems_share,structural_elements_share,non_structural_elements_share,statistical_unit,source,notes
+P1,Before 1919,0.515,0.485,0.466,0.150,0.384,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",type shares are shares of refurbishment actions among refurbished apartments
+P2,1919 - 1945,0.533,0.467,0.484,0.120,0.396,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",type shares are shares of refurbishment actions among refurbished apartments
+P3,1946 - 1961,0.544,0.456,0.511,0.077,0.412,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",EPISCOPE bin ends 1961; canonical P3 ends 1960
+P4,1962 - 1971,0.546,0.454,0.521,0.065,0.414,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",EPISCOPE bin is 1962-1971; canonical P4 is 1961-1970
+P5,1972 - 1981,0.526,0.474,0.536,0.067,0.397,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",EPISCOPE bin is 1972-1981; canonical P5 is 1971-1980
+P6,1982 - 1991,0.413,0.587,0.531,0.083,0.386,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",EPISCOPE bin is 1982-1991; canonical P6 is 1981-1990
+P7,After 1991,0.244,0.756,0.412,0.204,0.384,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)",one EPISCOPE bin covers P7-P9
+P8,After 1991,0.244,0.756,0.412,0.204,0.384,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)","one EPISCOPE bin covers P7-P9; census 2001 predates most of P8"
+P9,After 1991,0.244,0.756,0.412,0.204,0.384,apartment,"EPISCOPE Italy country page S-1.2.1, Piedmont (ISTAT Census 2001)","one EPISCOPE bin covers P7-P9; census 2001 predates all of P9 - treat as upper bound"

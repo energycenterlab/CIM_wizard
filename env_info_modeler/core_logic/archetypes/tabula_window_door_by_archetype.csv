@@ -1,0 +1,25 @@
+tabula_archetype,window_type_id,door_type_id,source,notes
+SFH_01,W_SG_METAL,D_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_02,W_SG_METAL,D_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_03,W_SG_WOOD,D_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_04,W_SG_WOOD,D_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_05,W_SG_WOOD,D_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_06,W_DG_WOOD,D_DOUBLE_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_07,W_DG_WOOD,D_DOUBLE_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+SFH_08,W_LOWE_WOOD,D_DOUBLE_WOOD,"TABULA Italy Scientific Report (POLITO 2012), Table 29",
+MFH_01,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_02,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_03,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_04,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_05,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_06,W_DG_METAL,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_07,W_LOWE_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+MFH_08,W_LOWE_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for MFH
+AB_01,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_02,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_03,W_SG_METAL,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_04,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_05,W_SG_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_06,W_DG_METAL,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_07,W_DG_METAL_TB,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB
+AB_08,W_LOWE_WOOD,,"TABULA Italy Scientific Report (POLITO 2012), Table 29",TABULA lists no external door for AB

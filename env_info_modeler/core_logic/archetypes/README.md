@@ -38,6 +38,12 @@ unused: one-dwelling rows map to `SFH` even if terraced.
 | `stock_weights.csv` | URBEM record counts | apartment sample sizes; EPISCOPE counts still TODO |
 | `episcope_piedmont_aggregates.csv` | EPISCOPE Italy country page (ISTAT Census 2011) | region-wide heating fuel shares; the rest TODO |
 | `mapping_rules.yaml` | project configuration | residential gate, precedence, thresholds, provenance |
+| `episcope_refurbishment_piedmont.csv` | EPISCOPE Italy S-1.2.1, Piedmont (ISTAT 2001) | refurbished share and refurbishment-type shares per period (unit: apartment, not split by class) |
+| `system_distributions.csv` | URBEM shares from `systems.csv` (Apartments, per period) + EPISCOPE S-2.1/S-2.3/S-2.5 Piedmont (SFH/MFH, all periods) | long format: heating system type, energy carrier, DHW system |
+| `window_door_types.csv` | TABULA Italy Scientific Report (POLITO 2012), Tables 5-6 | window/door types with U and g |
+| `tabula_window_door_by_archetype.csv` | same report, Table 29 | window/door type per TABULA archetype (no door listed for MFH/AB) |
+| `refurbishment_u_targets.csv` | same report, Section 3.5 | standard/advanced refurbishment U targets |
+| `performance_clusters.csv` | RBS stacked-bar figure (slide 34), digitised by eye | performance levels per period: share, wall U band, window type, heat generator - low confidence, verify |
 
 `cim_wizard_integrated_2026/` was read for the census E-codes only. Nothing was changed there.
 

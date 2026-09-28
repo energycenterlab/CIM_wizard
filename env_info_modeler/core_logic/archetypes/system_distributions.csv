@@ -1,0 +1,136 @@
+period_id,building_class,variable,category,probability,method,source,notes
+P1,Apartments,heating_system_type,Autonomous,0.76,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,heating_system_type,Centralized,0.24,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,energy_carrier,District heating,0.05,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,energy_carrier,Electricity,0.07,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,energy_carrier,LPG,0.02,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,dhw_system,"Autonomous, coupled with heating",0.55,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,dhw_system,"Autonomous, detached from heating",0.3,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,dhw_system,"Centralized, coupled with heating",0.13,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P1,Apartments,dhw_system,"Centralized, detached from heating",0.02,urbem distribution,URBEM ['-1930'] EPC apartments (n=58853) via systems.csv,period and class specific
+P2,Apartments,heating_system_type,Autonomous,0.6357,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,heating_system_type,Centralized,0.3643,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,energy_carrier,District heating,0.05,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,energy_carrier,Electricity,0.07,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,energy_carrier,LPG,0.02,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,dhw_system,"Autonomous, coupled with heating",0.481,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,dhw_system,"Autonomous, detached from heating",0.4095,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,dhw_system,"Centralized, coupled with heating",0.0948,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P2,Apartments,dhw_system,"Centralized, detached from heating",0.0148,urbem distribution,"URBEM ['1931-1940', '1941-1950'] EPC apartments (n=30678) via systems.csv",period and class specific
+P3,Apartments,heating_system_type,Autonomous,0.3944,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,heating_system_type,Centralized,0.6056,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,energy_carrier,District heating,0.0575,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,energy_carrier,Electricity,0.07,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,energy_carrier,Gas Oil,0.0125,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,energy_carrier,LPG,0.02,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,dhw_system,"Autonomous, coupled with heating",0.2895,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,dhw_system,"Autonomous, detached from heating",0.6255,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,dhw_system,"Centralized, coupled with heating",0.0674,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P3,Apartments,dhw_system,"Centralized, detached from heating",0.0175,urbem distribution,"URBEM ['1941-1950', '1951-1960'] EPC apartments (n=64810) via systems.csv",period and class specific
+P4,Apartments,heating_system_type,Centralized,0.73,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,heating_system_type,Autonomous,0.27,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,energy_carrier,Electricity,0.07,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,energy_carrier,District heating,0.06,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,energy_carrier,LPG,0.02,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,dhw_system,"Autonomous, detached from heating",0.66,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,dhw_system,"Autonomous, coupled with heating",0.2,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,dhw_system,"Centralized, coupled with heating",0.1,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P4,Apartments,dhw_system,"Centralized, detached from heating",0.04,urbem distribution,URBEM ['1961-1970'] EPC apartments (n=76504) via systems.csv,period and class specific
+P5,Apartments,heating_system_type,Centralized,0.57,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,heating_system_type,Autonomous,0.43,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,energy_carrier,Electricity,0.07,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,energy_carrier,District heating,0.05,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,energy_carrier,LPG,0.02,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,dhw_system,"Autonomous, detached from heating",0.38,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,dhw_system,"Autonomous, coupled with heating",0.36,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,dhw_system,"Centralized, coupled with heating",0.19,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P5,Apartments,dhw_system,"Centralized, detached from heating",0.07,urbem distribution,URBEM ['1971-1980'] EPC apartments (n=33754) via systems.csv,period and class specific
+P6,Apartments,heating_system_type,Autonomous,0.76,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,heating_system_type,Centralized,0.24,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,energy_carrier,Natural Gas,0.79,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,energy_carrier,Electricity,0.07,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,energy_carrier,District heating,0.05,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,energy_carrier,LPG,0.03,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,dhw_system,"Autonomous, coupled with heating",0.69,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,dhw_system,"Autonomous, detached from heating",0.19,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,dhw_system,"Centralized, coupled with heating",0.1,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P6,Apartments,dhw_system,"Centralized, detached from heating",0.02,urbem distribution,URBEM ['1981-1990'] EPC apartments (n=14645) via systems.csv,period and class specific
+P7,Apartments,heating_system_type,Autonomous,0.96,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,heating_system_type,Centralized,0.04,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,energy_carrier,Natural Gas,0.79,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,energy_carrier,Electricity,0.07,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,energy_carrier,District heating,0.05,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,energy_carrier,LPG,0.03,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,dhw_system,"Autonomous, coupled with heating",0.91,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,dhw_system,"Autonomous, detached from heating",0.04,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,dhw_system,"Centralized, coupled with heating",0.04,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P7,Apartments,dhw_system,"Centralized, detached from heating",0.01,urbem distribution,URBEM ['1991-2000'] EPC apartments (n=12567) via systems.csv,period and class specific
+P8,Apartments,heating_system_type,Autonomous,0.82,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,heating_system_type,Centralized,0.18,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,energy_carrier,District heating,0.06,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,energy_carrier,Electricity,0.06,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,energy_carrier,LPG,0.02,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,dhw_system,"Autonomous, coupled with heating",0.79,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,dhw_system,"Autonomous, detached from heating",0.04,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,dhw_system,"Centralized, coupled with heating",0.16,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P8,Apartments,dhw_system,"Centralized, detached from heating",0.01,urbem distribution,URBEM ['2001-2010'] EPC apartments (n=18517) via systems.csv,period and class specific
+P9,Apartments,heating_system_type,Autonomous,0.7161,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,heating_system_type,Centralized,0.2839,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,energy_carrier,District heating,0.06,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,energy_carrier,Electricity,0.06,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,energy_carrier,Gas Oil,0.02,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,energy_carrier,LPG,0.02,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,energy_carrier,Natural Gas,0.8,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,energy_carrier,Solid biomass,0.04,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,dhw_system,"Autonomous, coupled with heating",0.657,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,dhw_system,"Autonomous, detached from heating",0.0774,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,dhw_system,"Centralized, coupled with heating",0.2265,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+P9,Apartments,dhw_system,"Centralized, detached from heating",0.0391,urbem distribution,"URBEM ['2001-2010', '2011-'] EPC apartments (n=31679) via systems.csv",period and class specific
+ALL,SFH,heating_system_type,Individual heating system for a single dwelling,0.7504,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes; 'central for several dwellings' removed (impossible for one dwelling) and renormalised"
+ALL,SFH,heating_system_type,Single heating devices for dwelling as a whole,0.0949,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes; 'central for several dwellings' removed (impossible for one dwelling) and renormalised"
+ALL,SFH,heating_system_type,Single heating devices for part of dwelling,0.1547,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes; 'central for several dwellings' removed (impossible for one dwelling) and renormalised"
+ALL,SFH,energy_carrier,Natural gas,0.705,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,energy_carrier,Gas oil,0.062,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,energy_carrier,LPG,0.032,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,energy_carrier,"Solid fuel (wood, coal)",0.14,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,energy_carrier,Fuel oil,0.002,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,energy_carrier,Electricity,0.015,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,energy_carrier,Other fuel or energy,0.044,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,dhw_system,No hot water system,0.008,episcope distribution,"EPISCOPE Italy country page S-2.5, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,dhw_system,Same system as heating,0.628,episcope distribution,"EPISCOPE Italy country page S-2.5, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,SFH,dhw_system,Separate from heating system,0.364,episcope distribution,"EPISCOPE Italy country page S-2.5, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,heating_system_type,Central heating system for several dwellings,0.347,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,heating_system_type,Individual heating system for a single dwelling,0.49,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,heating_system_type,Single heating devices for dwelling as a whole,0.062,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,heating_system_type,Single heating devices for part of dwelling,0.101,episcope distribution,"EPISCOPE Italy country page S-2.1, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,Natural gas,0.705,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,Gas oil,0.062,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,LPG,0.032,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,"Solid fuel (wood, coal)",0.14,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,Fuel oil,0.002,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,Electricity,0.015,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,energy_carrier,Other fuel or energy,0.044,episcope distribution,"EPISCOPE Italy country page S-2.3, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,dhw_system,No hot water system,0.008,episcope distribution,"EPISCOPE Italy country page S-2.5, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,dhw_system,Same system as heating,0.628,episcope distribution,"EPISCOPE Italy country page S-2.5, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"
+ALL,MFH,dhw_system,Separate from heating system,0.364,episcope distribution,"EPISCOPE Italy country page S-2.5, Piedmont (ISTAT Census 2011)","Piedmont region, all periods and all classes"

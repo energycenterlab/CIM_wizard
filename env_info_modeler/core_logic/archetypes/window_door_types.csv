@@ -1,0 +1,12 @@
+component,type_id,description,period_from,period_to,u_value,g_gl_n,source
+window,W_SG_WOOD,"Single glass, wood frame",,1975,4.9,0.85,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+window,W_SG_METAL,"Single glass, metal frame without thermal break",,1975,5.7,0.85,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+window,W_DG_WOOD,"Double glass, air filled, wood frame",1976,2005,2.8,0.75,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+window,W_DG_METAL,"Double glass, air filled, metal frame without thermal break",1976,2005,3.7,0.75,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+window,W_DG_METAL_TB,"Double glass, air filled, metal frame with thermal break",1991,2005,3.4,0.75,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+window,W_LOWE_WOOD,"Low-e double glass, air or other gas filled, wood frame",2000,,2.2,0.67,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+window,W_LOWE_METAL_TB,"Low-e double glass, air or other gas filled, metal frame with thermal break",2000,,2.4,0.67,"TABULA Italy Scientific Report (POLITO 2012), Table 6"
+door,D_WOOD,Wooden door,,1980,3.0,,"TABULA Italy Scientific Report (POLITO 2012), Table 5"
+door,D_GLASS_METAL,Glass and metal door,,1980,5.7,0.85,"TABULA Italy Scientific Report (POLITO 2012), Table 5"
+door,D_GLASS_METAL_IMPROVED,Glass and metal door (thermally improved),1980,2005,3.8,0.75,"TABULA Italy Scientific Report (POLITO 2012), Table 5"
+door,D_DOUBLE_WOOD,Double panel wooden door,1980,,1.7,,"TABULA Italy Scientific Report (POLITO 2012), Table 5"
