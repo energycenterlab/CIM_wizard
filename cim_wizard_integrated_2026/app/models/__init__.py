@@ -9,7 +9,8 @@ from app.models.vector import (
     BuildingProperties,
     GridBus,
     GridLine,
-    PV
+    PV,
+    Alberate,
 )
 
 from app.models.census import CensusGeo
@@ -54,6 +55,7 @@ __all__ = [
     'GridBus',
     'GridLine',
     'PV',
+    'Alberate',
 
     # Census models
     'CensusGeo',

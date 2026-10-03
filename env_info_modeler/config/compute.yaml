@@ -1,0 +1,19 @@
+# Compute settings. Edit this file, not the code, to fit the machine.
+#
+# n_workers:  processes running in parallel (1 = run in this process, no pool).
+#             Keep it at or below the CPU cores you can spare.
+# chunk_size: buildings sent to one worker at a time. Larger chunks mean less
+#             overhead but more RAM per worker.
+
+active_profile: laptop_test
+
+profiles:
+  laptop_test:      # tiny chunks so a 10-building test still uses both workers
+    n_workers: 2
+    chunk_size: 5
+  laptop:           # 12 cores / 16 GB
+    n_workers: 4
+    chunk_size: 1000
+  server:
+    n_workers: 16
+    chunk_size: 2000

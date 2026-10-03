@@ -188,6 +188,25 @@ async def get_buildings_geojson(
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@router.get("/get_trees_geojson/{scenario_id}")
+async def get_trees_geojson(
+    scenario_id: str,
+    db: Session = Depends(get_db),
+):
+    """Trees inside the project boundary stored for this scenario."""
+    try:
+        result = _dm(db).get_trees_geojson(scenario_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+        return result
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
 # ── Building properties endpoints ─────────────────────────────────────
 
 @router.get("/buildingproperties/{project_id}/{scenario_id}")

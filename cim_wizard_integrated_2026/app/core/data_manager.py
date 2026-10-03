@@ -797,6 +797,76 @@ class CimWizardDataManager:
             result["grid"] = grid_info
         return result
 
+    def get_trees_geojson(self, scenario_id: str) -> Optional[Dict[str, Any]]:
+        """Trees whose point lies inside the scenario project boundary.
+
+        Returns None when the scenario does not exist. Raises ValueError
+        when the scenario exists but has no project boundary.
+        """
+        import json
+        from sqlalchemy import text
+
+        session = self._require_session()
+        scenarios = session.execute(text("""
+            SELECT project_boundary IS NOT NULL AS has_boundary
+            FROM cim_vector.cim_wizard_project_scenario
+            WHERE scenario_id = :sid
+        """), {"sid": scenario_id}).fetchall()
+        if not scenarios:
+            return None
+        if not any(row[0] for row in scenarios):
+            raise ValueError("Project boundary is not set for this scenario")
+
+        rows = session.execute(text("""
+            SELECT
+                a.id_posto_pianta,
+                a.num_posto_pianta,
+                a.descr_ambito,
+                a.descr_specie,
+                a.descr_eta,
+                a.diametro_fusto,
+                a.altezza,
+                a.descr_pavimentazione,
+                a.descr_posiz_posto_pianta,
+                a.descr_stato_posto_pianta,
+                a.id_pianta,
+                a.altezza_impalcato,
+                a.diametro_medio_chioma,
+                ST_AsGeoJSON(a.geometry)::text AS geojson
+            FROM cim_vector.alberate a
+            WHERE EXISTS (
+                SELECT 1
+                FROM cim_vector.cim_wizard_project_scenario s
+                WHERE s.scenario_id = :sid
+                  AND s.project_boundary IS NOT NULL
+                  AND ST_Intersects(a.geometry, s.project_boundary)
+            )
+        """), {"sid": scenario_id}).mappings().all()
+
+        property_names = (
+            "id_posto_pianta",
+            "num_posto_pianta",
+            "descr_ambito",
+            "descr_specie",
+            "descr_eta",
+            "diametro_fusto",
+            "altezza",
+            "descr_pavimentazione",
+            "descr_posiz_posto_pianta",
+            "descr_stato_posto_pianta",
+            "id_pianta",
+            "altezza_impalcato",
+            "diametro_medio_chioma",
+        )
+        features = []
+        for row in rows:
+            features.append({
+                "type": "Feature",
+                "geometry": json.loads(row["geojson"]),
+                "properties": {name: row[name] for name in property_names},
+            })
+        return {"type": "FeatureCollection", "features": features}
+
     def get_buildings_at_point(self, lng: float, lat: float) -> List[Dict[str, Any]]:
         from geoalchemy2 import func
         from app.models.vector import Building

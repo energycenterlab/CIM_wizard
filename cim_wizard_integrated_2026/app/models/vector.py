@@ -3,7 +3,7 @@ Vector data models for CIM Wizard Integrated
 Uses cim_vector schema
 """
 
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger, func, ForeignKeyConstraint
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger, Text, func, ForeignKeyConstraint
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from geoalchemy2 import Geometry
@@ -210,3 +210,28 @@ class PV(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Alberate(Base):
+    """Comune di Torino street tree / planting place.
+
+    One point per planting place. Geometry is EPSG:4326. The GiST index
+    ``alberate_geometry_idx`` is created with the table, not by the ORM.
+    """
+    __tablename__ = 'alberate'
+    __table_args__ = {'schema': 'cim_vector'}
+
+    id_posto_pianta = Column(Text, primary_key=True)
+    num_posto_pianta = Column(Text, nullable=True)
+    descr_ambito = Column(Text, nullable=True)
+    descr_specie = Column(Text, nullable=True)
+    descr_eta = Column(Text, nullable=True)
+    diametro_fusto = Column(Float, nullable=True)
+    altezza = Column(Float, nullable=True)
+    descr_pavimentazione = Column(Text, nullable=True)
+    descr_posiz_posto_pianta = Column(Text, nullable=True)
+    descr_stato_posto_pianta = Column(Text, nullable=True)
+    id_pianta = Column(Text, nullable=True)
+    altezza_impalcato = Column(Float, nullable=True)
+    diametro_medio_chioma = Column(Float, nullable=True)
+    geometry = Column(Geometry('POINT', srid=4326), nullable=False)
