@@ -12,3 +12,7 @@ datalake/rawdata/
 
 cim-database/3DCityDB-Importer-Exporter-5.1.1.zip
 cim-database/3DCityDB-Importer-Exporter-5.1.1/
+
+gateway/
+3DCityDB-Importer-Exporter-5.5.3-Setup.jar
+*.jar

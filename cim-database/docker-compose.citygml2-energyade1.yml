@@ -1,0 +1,39 @@
+# CityGML 2.0 + Energy ADE 1.0 (KIT profile)
+# Official image: 3dcitydb/3dcitydb-pg:13-3.2-4.4.0
+# Does not collide with citydbv4 (55432), citydbv440 (35432), or citygml1 (45432).
+#
+# Start: docker compose -f docker-compose.citygml2-energyade1.yml up -d
+# Connect Importer/Exporter 5.5.3: host localhost, port 65432, db/user/pass below.
+# Do not pre-run CREATE_ADE_DB.sql: ADE Manager Register ADE creates tables
+# and objectclass rows. Point it at citydb/energy-ade-2.1.0
+# (same package already in desktop ade-extensions as energy-ade-2.1.0).
+# Do not use Energy ADE 3.0 beta 7 on this stack.
+
+name: citygml2ade1
+
+services:
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:13-3.2-4.4.0
+    container_name: citydb-gml2-energyade1
+    restart: unless-stopped
+    ports:
+      - "65432:5432"
+    environment:
+      POSTGRES_DB: citydb
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      SRID: "4326"
+      SRS_NAME: "urn:ogc:def:crs:EPSG::4326"
+      GMLSRSNAME: "urn:ogc:def:crs:EPSG::4326"
+    volumes:
+      - citydb_gml2_energyade1_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cim_wizard_user -d citydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  citydb_gml2_energyade1_data:
+    driver: local

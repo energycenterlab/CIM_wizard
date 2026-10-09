@@ -1,0 +1,7428 @@
+{
+  "type": "CityJSON",
+  "version": "2.0",
+  "extensions": {
+    "EnergyADE3": {
+      "url": "./energy-ade3-v2.0.ext.json",
+      "version": "0.1"
+    }
+  },
+  "metadata": {
+    "identifier": "report_house",
+    "title": "Report house, Venice. One terraced house described at LoD3, LoD2, LoD2-hull and LoD1, in Venice. Derived from the Energy ADE 3.0 test dataset 'Alderaan' created by Giorgio Agugiaro (g.agugiaro@tudelft.nl).",
+    "referenceSystem": "https://www.opengis.net/def/crs/EPSG/0/32633",
+    "geographicalExtent": [
+      291300.0,
+      5041900.0,
+      0.0,
+      291370.0,
+      5041910.0,
+      9.0
+    ]
+  },
+  "transform": {
+    "scale": [
+      0.001,
+      0.001,
+      0.001
+    ],
+    "translate": [
+      291300.0,
+      5041900.0,
+      0.0
+    ]
+  },
+  "+Energy-libraries": {
+    "layeredConstructionLibrary": {
+      "type": {
+        "value": "layered_construction_library_type",
+        "codeSpace": "layered_construction_library_type_codeSpace"
+      },
+      "id": "id_layered_construction_library_1",
+      "description": "This is Layered Construction Library 1",
+      "name": "Layered Construction Library 1",
+      "members": [
+        {
+          "type": "LayeredConstruction",
+          "id": "id_layered_construction_glazing_5",
+          "description": "This is LayeredConstruction Glazing 5 (without layers as children objects)",
+          "name": "LayeredConstruction Glazing 5 (no layers)",
+          "libraryCode": {
+            "value": "layered_constr_library_code_5",
+            "codeSpace": "layered_constr_library_codeSpace"
+          },
+          "uValue": {
+            "value": 1.9,
+            "uom": "W/(K*m^2)"
+          },
+          "glazingRatio": {
+            "value": 0.95,
+            "uom": "unit interval"
+          },
+          "emissivity": [
+            {
+              "fraction": {
+                "value": 0.1,
+                "uom": "unit interval"
+              },
+              "surface": "outside"
+            },
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "inside"
+            }
+          ],
+          "reflectance": [
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "outside",
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.3,
+                "uom": "unit interval"
+              },
+              "surface": "inside",
+              "wavelengthRange": "solar"
+            }
+          ],
+          "transmittance": [
+            {
+              "fraction": {
+                "value": 0.7,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.5,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            }
+          ]
+        },
+        {
+          "type": "LayeredConstruction",
+          "id": "id_layered_construction_ground_1",
+          "description": "This is LayeredConstruction Ground 1 (from inside to outside)",
+          "name": "LayeredConstruction Ground 1",
+          "libraryCode": {
+            "value": "layered_constr_library_code_1",
+            "codeSpace": "layered_constr_library_codeSpace"
+          },
+          "uValue": {
+            "value": 0.42,
+            "uom": "W/(K*m^2)"
+          },
+          "glazingRatio": {
+            "value": 0.95,
+            "uom": "unit interval"
+          },
+          "emissivity": [
+            {
+              "fraction": {
+                "value": 0.1,
+                "uom": "unit interval"
+              },
+              "surface": "outside"
+            },
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "inside"
+            }
+          ],
+          "reflectance": [
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "outside",
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.3,
+                "uom": "unit interval"
+              },
+              "surface": "inside",
+              "wavelengthRange": "solar"
+            }
+          ],
+          "transmittance": [
+            {
+              "fraction": {
+                "value": 0.7,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.5,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            }
+          ],
+          "layers": [
+            {
+              "type": "Layer",
+              "id": "id_layer_1",
+              "description": "This is Layer 1",
+              "name": "Layer 1",
+              "thickness": {
+                "value": 40,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_1"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_2",
+              "description": "This is Layer 2",
+              "name": "Layer 2",
+              "thickness": {
+                "value": 45,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_2"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_3",
+              "description": "This is Layer 3",
+              "name": "Layer 3",
+              "thickness": {
+                "value": 80,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_3"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_4",
+              "description": "This is Layer 4",
+              "name": "Layer 4",
+              "thickness": {
+                "value": 5,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_4"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_5",
+              "description": "This is Layer 5",
+              "name": "Layer 5",
+              "thickness": {
+                "value": 300,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_5"
+              }
+            }
+          ]
+        },
+        {
+          "type": "LayeredConstruction",
+          "id": "id_layered_construction_iwall_4",
+          "description": "This is LayeredConstruction Internal Wall 4 (from inside to outside)",
+          "name": "LayeredConstruction Internal Wall 4",
+          "libraryCode": {
+            "value": "layered_constr_library_code_4",
+            "codeSpace": "layered_constr_library_codeSpace"
+          },
+          "uValue": {
+            "value": 0.42,
+            "uom": "W/(K*m^2)"
+          },
+          "glazingRatio": {
+            "value": 0.95,
+            "uom": "unit interval"
+          },
+          "emissivity": [
+            {
+              "fraction": {
+                "value": 0.1,
+                "uom": "unit interval"
+              },
+              "surface": "outside"
+            },
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "inside"
+            }
+          ],
+          "reflectance": [
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "outside",
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.3,
+                "uom": "unit interval"
+              },
+              "surface": "inside",
+              "wavelengthRange": "solar"
+            }
+          ],
+          "transmittance": [
+            {
+              "fraction": {
+                "value": 0.7,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.5,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            }
+          ],
+          "layers": [
+            {
+              "type": "Layer",
+              "id": "id_layer_16",
+              "description": "This is Layer 16",
+              "name": "Layer 16",
+              "thickness": {
+                "value": 10,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_16"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_17",
+              "description": "This is Layer 17",
+              "name": "Layer 17",
+              "thickness": {
+                "value": 200,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_17"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_18",
+              "description": "This is Layer 18",
+              "name": "Layer 18",
+              "thickness": {
+                "value": 120,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_18"
+              }
+            }
+          ]
+        },
+        {
+          "type": "LayeredConstruction",
+          "id": "id_layered_construction_roof_3",
+          "description": "This is LayeredConstruction Roof 3 (from inside to outside)",
+          "name": "LayeredConstruction Roof 3",
+          "libraryCode": {
+            "value": "layered_constr_library_code_3",
+            "codeSpace": "layered_constr_library_codeSpace"
+          },
+          "uValue": {
+            "value": 0.39,
+            "uom": "W/(K*m^2)"
+          },
+          "glazingRatio": {
+            "value": 0.95,
+            "uom": "unit interval"
+          },
+          "emissivity": [
+            {
+              "fraction": {
+                "value": 0.1,
+                "uom": "unit interval"
+              },
+              "surface": "outside"
+            },
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "inside"
+            }
+          ],
+          "reflectance": [
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "outside",
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.3,
+                "uom": "unit interval"
+              },
+              "surface": "inside",
+              "wavelengthRange": "solar"
+            }
+          ],
+          "transmittance": [
+            {
+              "fraction": {
+                "value": 0.7,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.5,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            }
+          ],
+          "layers": [
+            {
+              "type": "Layer",
+              "id": "id_layer_11",
+              "description": "This is Layer 11",
+              "name": "Layer 11",
+              "thickness": {
+                "value": 10,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_11"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_12",
+              "description": "This is Layer 12",
+              "name": "Layer 12",
+              "thickness": {
+                "value": 200,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_12"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_13",
+              "description": "This is Layer 13",
+              "name": "Layer 13",
+              "thickness": {
+                "value": 30,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_gas_2"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_14",
+              "description": "This is Layer 14",
+              "name": "Layer 14",
+              "thickness": {
+                "value": 120,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_14"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_15",
+              "description": "This is Layer 15",
+              "name": "Layer 15",
+              "thickness": {
+                "value": 5,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_15"
+              }
+            }
+          ]
+        },
+        {
+          "type": "LayeredConstruction",
+          "id": "id_layered_construction_wall_2",
+          "description": "This is LayeredConstruction Wall 2 (from inside to outside)",
+          "name": "LayeredConstruction Wall 2",
+          "libraryCode": {
+            "value": "layered_constr_library_code_2",
+            "codeSpace": "layered_constr_library_codeSpace"
+          },
+          "uValue": {
+            "value": 0.31,
+            "uom": "W/(K*m^2)"
+          },
+          "glazingRatio": {
+            "value": 0.95,
+            "uom": "unit interval"
+          },
+          "emissivity": [
+            {
+              "fraction": {
+                "value": 0.1,
+                "uom": "unit interval"
+              },
+              "surface": "outside"
+            },
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "inside"
+            }
+          ],
+          "reflectance": [
+            {
+              "fraction": {
+                "value": 0.2,
+                "uom": "unit interval"
+              },
+              "surface": "outside",
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.3,
+                "uom": "unit interval"
+              },
+              "surface": "inside",
+              "wavelengthRange": "solar"
+            }
+          ],
+          "transmittance": [
+            {
+              "fraction": {
+                "value": 0.7,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            },
+            {
+              "fraction": {
+                "value": 0.5,
+                "uom": "unit interval"
+              },
+              "wavelengthRange": "solar"
+            }
+          ],
+          "layers": [
+            {
+              "type": "Layer",
+              "id": "id_layer_6",
+              "description": "This is Layer 6",
+              "name": "Layer 6",
+              "thickness": {
+                "value": 10,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_6"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_7",
+              "description": "This is Layer 7",
+              "name": "Layer 7",
+              "thickness": {
+                "value": 300,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_7"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_8",
+              "description": "This is Layer 8",
+              "name": "Layer 8",
+              "thickness": {
+                "value": 30,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_gas_1"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_9",
+              "description": "This is Layer 9",
+              "name": "Layer 9",
+              "thickness": {
+                "value": 80,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_9"
+              }
+            },
+            {
+              "type": "Layer",
+              "id": "id_layer_10",
+              "description": "This is Layer 10",
+              "name": "Layer 10",
+              "thickness": {
+                "value": 20,
+                "uom": "mm"
+              },
+              "material": {
+                "href": "id_solid_material_10"
+              }
+            }
+          ]
+        },
+        {
+          "type": "ReverseLayeredConstruction",
+          "id": "id_reverse_layered_construction_ground_1",
+          "description": "ReverseLayeredConstruction Ground 1 (from inside to outside) (reverse the order of the layers of the linked LayeredConstruction)",
+          "name": "ReverseLayeredConstruction Ground 1",
+          "baseLayeredConstruction": {
+            "href": "id_layered_construction_ground_1"
+          }
+        },
+        {
+          "type": "ReverseLayeredConstruction",
+          "id": "id_reverse_layered_construction_iwall_4",
+          "description": "ReverseLayeredConstruction Internal Wall 4 (from inside to outside) (reverse the order of the layers of the linked LayeredConstruction)",
+          "name": "ReverseLayeredConstruction Internal Wall 4",
+          "baseLayeredConstruction": {
+            "href": "id_layered_construction_iwall_4"
+          }
+        },
+        {
+          "type": "LayeredConstruction",
+          "id": "id_layered_construction_hull_6",
+          "description": "The whole outer shell of this house as one average: walls, windows, roof and ground floor of the LoD3 house, weighted by area. One U-value for a LoD1 zone, which may state no more (Energy ADE 3.0, Table 1).",
+          "name": "LayeredConstruction Hull 6 (average of the whole shell, no layers)",
+          "uValue": {
+            "value": 0.514,
+            "uom": "W/(K*m^2)"
+          }
+        }
+      ],
+      "source": "TABULA",
+      "author": "Giorgio Agugiaro"
+    },
+    "materialLibrary": {
+      "type": {
+        "value": "material_library_type",
+        "codeSpace": "material_library_type_codeSpace"
+      },
+      "id": "id_material_library_1",
+      "description": "This is Material Library 1",
+      "name": "Material Library 1",
+      "members": [
+        {
+          "type": "Gas",
+          "id": "id_gas_1",
+          "description": "This is Gas 1",
+          "name": "Gas 1",
+          "libraryCode": {
+            "value": "gas_code_1",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "isVentilated": false,
+          "rValue": {
+            "value": 8.314,
+            "uom": "J/K/mol"
+          }
+        },
+        {
+          "type": "Gas",
+          "id": "id_gas_2",
+          "description": "This is Gas 2",
+          "name": "Gas 2",
+          "libraryCode": {
+            "value": "gas_code_2",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "isVentilated": false,
+          "rValue": {
+            "value": 8.314,
+            "uom": "J/K/mol"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_1",
+          "description": "This is SolidMaterial 1",
+          "name": "SolidMaterial 1",
+          "libraryCode": {
+            "value": "solid_material_code_1",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 3.5,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 2500,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 15.4,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 1.9,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_2",
+          "description": "This is SolidMaterial 2",
+          "name": "SolidMaterial 2",
+          "libraryCode": {
+            "value": "solid_material_code_2",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 1.4,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 2000,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.1,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 15.1,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 1.2,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_3",
+          "description": "This is SolidMaterial 3",
+          "name": "SolidMaterial 3",
+          "libraryCode": {
+            "value": "solid_material_code_3",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.04,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 20,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.01,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 2.1,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 2.1,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_4",
+          "description": "This is SolidMaterial 4",
+          "name": "SolidMaterial 4",
+          "libraryCode": {
+            "value": "solid_material_code_4",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.23,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1100,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.01,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 9.8,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 7.3,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_5",
+          "description": "This is SolidMaterial 5",
+          "name": "SolidMaterial 5",
+          "libraryCode": {
+            "value": "solid_material_code_5",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 2.3,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 2300,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.1,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 0,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 2.8,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_6",
+          "description": "This is SolidMaterial 6",
+          "name": "SolidMaterial 6",
+          "libraryCode": {
+            "value": "solid_material_code_6",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.7,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1400,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 8,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 3.3,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_7",
+          "description": "This is SolidMaterial 7",
+          "name": "SolidMaterial 7",
+          "libraryCode": {
+            "value": "solid_material_code_7",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.8,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1800,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 2.2,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 1.4,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_9",
+          "description": "This is SolidMaterial 9",
+          "name": "SolidMaterial 9",
+          "libraryCode": {
+            "value": "solid_material_code_9",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.035,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 20,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.01,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 6.9,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 6.7,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_10",
+          "description": "This is SolidMaterial 10",
+          "name": "SolidMaterial 10",
+          "libraryCode": {
+            "value": "solid_material_code_10",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.87,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1800,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 6.7,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 6.9,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_11",
+          "description": "This is SolidMaterial 11",
+          "name": "SolidMaterial 11",
+          "libraryCode": {
+            "value": "solid_material_code_11",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.7,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1400,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 14.9,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 3.4,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_12",
+          "description": "This is SolidMaterial 12",
+          "name": "SolidMaterial 12",
+          "libraryCode": {
+            "value": "solid_material_code_12",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 2.3,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 2400,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.1,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 11.9,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 1.7,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_14",
+          "description": "This is SolidMaterial 14",
+          "name": "SolidMaterial 14",
+          "libraryCode": {
+            "value": "solid_material_code_14",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.04,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 110,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.01,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 19.9,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 1.4,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_15",
+          "description": "This is SolidMaterial 15",
+          "name": "SolidMaterial 15",
+          "libraryCode": {
+            "value": "solid_material_code_15",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.23,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1100,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 19.2,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 9.8,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_16",
+          "description": "This is SolidMaterial 16",
+          "name": "SolidMaterial 16",
+          "libraryCode": {
+            "value": "solid_material_code_16",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.7,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1400,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 14.1,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 3.9,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_17",
+          "description": "This is SolidMaterial 17",
+          "name": "SolidMaterial 17",
+          "libraryCode": {
+            "value": "solid_material_code_17",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.8,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1800,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 1.1,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 5.2,
+            "uom": "kgCO2/kg"
+          }
+        },
+        {
+          "type": "SolidMaterial",
+          "id": "id_solid_material_18",
+          "description": "This is SolidMaterial 18",
+          "name": "SolidMaterial 18",
+          "libraryCode": {
+            "value": "solid_material_code_18",
+            "codeSpace": "gascode_codeSpace"
+          },
+          "thermalConductivity": {
+            "value": 0.7,
+            "uom": "W/(K*m)"
+          },
+          "density": {
+            "value": 1400,
+            "uom": "kg/m^3"
+          },
+          "specificHeatCapacity": {
+            "value": 0.9,
+            "uom": "J/(kg*K)"
+          },
+          "permeance": {
+            "value": 0.9,
+            "uom": "xxx"
+          },
+          "porosity": {
+            "value": 0.05,
+            "uom": "ratio"
+          },
+          "embodiedEnergy": {
+            "value": 9.4,
+            "uom": "kWh/kg"
+          },
+          "embodiedCarbon": {
+            "value": 0.5,
+            "uom": "kgCO2/kg"
+          }
+        }
+      ],
+      "source": "TABULA",
+      "author": "Giorgio Agugiaro"
+    },
+    "scheduleLibrary": {
+      "type": {
+        "value": "schedule_library_type",
+        "codeSpace": "schedule_library_type_codeSpace"
+      },
+      "id": "id_schedule_library_1",
+      "description": "This is Schedule Library 1",
+      "name": "Schedule Library 1",
+      "members": [
+        {
+          "type": {
+            "value": "year",
+            "codeSpace": "schedule_type_codeSpace"
+          },
+          "id": "id_atomic_schedule_1",
+          "description": "This is AtomicSchedule 1 for a year, connected to a timeseries of 1 yearly value",
+          "name": "AtomicSchedule 1",
+          "libraryCode": {
+            "value": "atom_sched_code_1",
+            "codeSpace": "schedule_library_codeSpace"
+          },
+          "startTime": "00:00:00",
+          "startDay": 1,
+          "startMonth": 1,
+          "temporalExtent": {
+            "value": 1,
+            "unit": "year"
+          },
+          "timeSeries": {
+            "type": "TypicalValuesTimeSeries",
+            "id": "id_default_values_time_series_2",
+            "description": "This is DefaultValuesTimeSeries 2",
+            "name": "DefaultValuesTimeSeries 2",
+            "acquisitionMethod": {
+              "value": "calibratedSimulation",
+              "codeSpace": "codespace_18"
+            },
+            "interpolationType": "discontinuous",
+            "source": "source_18",
+            "temporalExtent": {
+              "value": 1,
+              "unit": "year"
+            },
+            "timeInterval": {
+              "value": 1,
+              "unit": "year"
+            },
+            "valuesList": {
+              "values": [
+                100
+              ],
+              "uom": "unit"
+            }
+          }
+        },
+        {
+          "type": {
+            "value": "year",
+            "codeSpace": "schedule_type_codeSpace"
+          },
+          "id": "id_atomic_schedule_2",
+          "description": "This is AtomicSchedule 2 for a year, connected to a timeseries of 12 monthly values",
+          "name": "AtomicSchedule 2",
+          "libraryCode": {
+            "value": "atom_sched_code_2",
+            "codeSpace": "schedule_library_codeSpace"
+          },
+          "startTime": "00:00:00",
+          "startDay": 1,
+          "startMonth": 1,
+          "temporalExtent": {
+            "value": 1,
+            "unit": "year"
+          },
+          "timeSeries": {
+            "type": "TypicalValuesTimeSeries",
+            "id": "id_default_values_time_series_3",
+            "description": "This is DefaultValuesTimeSeries 3",
+            "name": "DefaultValuesTimeSeries 3",
+            "acquisitionMethod": {
+              "value": "estimation",
+              "codeSpace": "codespace_19"
+            },
+            "interpolationType": "instantaneousTotal",
+            "source": "source_19",
+            "temporalExtent": {
+              "value": 1,
+              "unit": "year"
+            },
+            "timeInterval": {
+              "value": 0.083,
+              "unit": "year"
+            },
+            "valuesList": {
+              "values": [
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112
+              ],
+              "uom": "unit"
+            }
+          }
+        },
+        {
+          "type": {
+            "value": "weekDay",
+            "codeSpace": "schedule_type_codeSpace"
+          },
+          "id": "id_atomic_schedule_6",
+          "description": "This is AtomicSchedule 6",
+          "name": "AtomicSchedule 6",
+          "libraryCode": {
+            "value": "atom_sched_code_6",
+            "codeSpace": "schedule_library_codeSpace"
+          },
+          "startTime": "00:00:00",
+          "temporalExtent": {
+            "value": 1,
+            "unit": "day"
+          },
+          "timeSeries": {
+            "type": "TypicalValuesTimeSeries",
+            "id": "id_default_values_time_series_7",
+            "description": "This is DefaultValuesTimeSeries 7",
+            "name": "DefaultValuesTimeSeries 7",
+            "acquisitionMethod": {
+              "value": "estimation",
+              "codeSpace": "codespace_23"
+            },
+            "interpolationType": "instantaneousTotal",
+            "source": "source_23",
+            "temporalExtent": {
+              "value": 1,
+              "unit": "day"
+            },
+            "timeInterval": {
+              "value": 1,
+              "unit": "hour"
+            },
+            "valuesList": {
+              "values": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24
+              ],
+              "uom": "unit"
+            }
+          }
+        },
+        {
+          "type": {
+            "value": "weekendDay",
+            "codeSpace": "schedule_type_codeSpace"
+          },
+          "id": "id_atomic_schedule_7",
+          "description": "This is AtomicSchedule 7",
+          "name": "AtomicSchedule 7",
+          "libraryCode": {
+            "value": "atom_sched_code_7",
+            "codeSpace": "schedule_library_codeSpace"
+          },
+          "startTime": "00:00:00",
+          "temporalExtent": {
+            "value": 1,
+            "unit": "day"
+          },
+          "timeSeries": {
+            "type": "TypicalValuesTimeSeries",
+            "id": "id_default_values_time_series_8",
+            "description": "This is DefaultValuesTimeSeries 8",
+            "name": "DefaultValuesTimeSeries 8",
+            "acquisitionMethod": {
+              "value": "unknown",
+              "codeSpace": "codespace_24"
+            },
+            "interpolationType": "maximumInPrecedingInterval",
+            "source": "source_24",
+            "temporalExtent": {
+              "value": 1,
+              "unit": "day"
+            },
+            "timeInterval": {
+              "value": 1,
+              "unit": "hour"
+            },
+            "valuesList": {
+              "values": [
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+                116,
+                117,
+                118,
+                119,
+                120,
+                121,
+                122,
+                123,
+                124
+              ],
+              "uom": "unit"
+            }
+          }
+        },
+        {
+          "type": {
+            "value": "week",
+            "codeSpace": "schedule_type_codeSpace"
+          },
+          "id": "id_composite_schedule_1",
+          "description": "This is CompositeSchedule 1, for 1 typical week, composed of 5 typical days and 2 weekend days",
+          "name": "CompositeSchedule 1",
+          "libraryCode": {
+            "value": "comp_sched_code_1",
+            "codeSpace": "schedule_library_codeSpace"
+          },
+          "startTime": "00:00:00",
+          "temporalExtent": {
+            "value": 7,
+            "unit": "day"
+          },
+          "scheduleComponents": [
+            {
+              "type": {
+                "value": "weekDay",
+                "codeSpace": "schedule_type_codeSpace"
+              },
+              "id": "id_schedule_component_1",
+              "description": "This is ScheduleComponent 1",
+              "name": "ScheduleComponent 1 containing a repetition of 5 times a daily schedule of timeseries of 24 hourly values for a week day",
+              "repetitions": 5,
+              "additionalGap": {
+                "value": 0,
+                "unit": "day"
+              },
+              "scheduleComponentMember": {
+                "href": "id_atomic_schedule_6"
+              }
+            },
+            {
+              "type": {
+                "value": "weekendDay",
+                "codeSpace": "schedule_type_codeSpace"
+              },
+              "id": "id_schedule_component_2",
+              "description": "This is ScheduleComponent 2",
+              "name": "ScheduleComponent 2 containing a repetition of 2 times a daily schedule of timeseries of 24 hourly values for a weekend day",
+              "repetitions": 2,
+              "additionalGap": {
+                "value": 0,
+                "unit": "day"
+              },
+              "scheduleComponentMember": {
+                "href": "id_atomic_schedule_7"
+              }
+            }
+          ]
+        },
+        {
+          "type": {
+            "value": "monday",
+            "codeSpace": "schedule_type_codeSpace"
+          },
+          "id": "id_dual_value_schedule_1",
+          "description": "This is DualValueSchedule 1 for a Monday",
+          "name": "DualValueSchedule 1",
+          "libraryCode": {
+            "value": "dual_value_sched_code_1",
+            "codeSpace": "schedule_library_codeSpace"
+          },
+          "startTime": "00:00:00",
+          "temporalExtent": {
+            "value": 1,
+            "unit": "day"
+          },
+          "idleValue": {
+            "value": 12,
+            "uom": "degrees Celsius"
+          },
+          "usageValue": {
+            "value": 19,
+            "uom": "degrees Celsius"
+          },
+          "startUsageTime": "07:00:00",
+          "endUsageTime": "21:00:00"
+        }
+      ],
+      "source": "Coruscant Schedule Library",
+      "author": "Giorgio Agugiaro"
+    }
+  },
+  "CityObjects": {
+    "id_building_unit_1": {
+      "type": "+Energy-BuildingUnit",
+      "attributes": {
+        "description": "This is BuildingUnit 1",
+        "name": "BuildingUnit 1",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source",
+            "value": {
+              "value": 875,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "energyReferenceVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "type": {
+          "value": "residential",
+          "codeSpace": "buildingUnit_codeSpace_123"
+        },
+        "numberOfRooms": 4,
+        "ownershipType": {
+          "value": "corporation",
+          "codeSpace": "ownership_type_codeSpace_abc"
+        }
+      },
+      "parents": [
+        "house_lod3_1"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  4,
+                  5
+                ]
+              ],
+              [
+                [
+                  3,
+                  2,
+                  6,
+                  4
+                ]
+              ],
+              [
+                [
+                  2,
+                  1,
+                  7,
+                  6
+                ]
+              ],
+              [
+                [
+                  1,
+                  0,
+                  5,
+                  7
+                ]
+              ],
+              [
+                [
+                  5,
+                  4,
+                  6,
+                  7
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_groundsurface_1": {
+      "type": "+Energy-GroundSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) GroundSurface 1 (ThermalZone 1)",
+        "name": "(ThermalBoundary) GroundSurface 1 (ThermalZone 1)",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_ground_1",
+        "bdgBdrySurfAzimuth": {
+          "value": -1,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 1,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 180,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 100,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                1,
+                2,
+                3
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                0,
+                1,
+                2,
+                3
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                1,
+                2,
+                3
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                0,
+                1,
+                2,
+                3
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_roofsurface_1": {
+      "type": "+Energy-RoofSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) RoofSurface 1 (ThermalZone 1)",
+        "name": "(ThermalBoundary) RoofSurface 1 (ThermalZone 1)",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_roof_3",
+        "bdgBdrySurfAzimuth": {
+          "value": 270,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 30.9638,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 58.3095,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                10,
+                11,
+                12,
+                13
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                10,
+                11,
+                12,
+                13
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                10,
+                11,
+                12,
+                13
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                10,
+                11,
+                12,
+                13
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_roofsurface_2": {
+      "type": "+Energy-RoofSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) RoofSurface 2 (ThermalZone 1)",
+        "name": "(ThermalBoundary) RoofSurface 2 (ThermalZone 1)",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_roof_3",
+        "bdgBdrySurfAzimuth": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 30.9638,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 58.3095,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                11,
+                9,
+                8,
+                12
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                11,
+                9,
+                8,
+                12
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                11,
+                9,
+                8,
+                12
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                11,
+                9,
+                8,
+                12
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_wallsurface_1_thermal_opening_1": {
+      "type": "+Energy-Window",
+      "attributes": {
+        "description": "This is Thermal Opening 1",
+        "name": "Thermal Opening 1",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_glazing_5",
+        "bdgOpnArea": {
+          "value": 16.2176,
+          "uom": "m^2"
+        },
+        "bdgOpnAzimuth": {
+          "value": 180,
+          "uom": "decimal degree"
+        },
+        "bdgOpnGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgOpnInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgOpnSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1_wallsurface_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                14,
+                18,
+                17,
+                16,
+                15
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_wallsurface_1": {
+      "type": "+Energy-WallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) WallSurface 1 (ThermalZone 1)",
+        "name": "(ThermalBoundary) WallSurface 1 (ThermalZone 1)",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 180,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpaqueSurfaceArea": {
+          "value": 58.7824,
+          "uom": "m^2"
+        },
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0.2162,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 75,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                3,
+                9,
+                11,
+                10
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                0,
+                3,
+                9,
+                11,
+                10
+              ],
+              [
+                14,
+                15,
+                16,
+                17,
+                18
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                3,
+                9,
+                11,
+                10
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                0,
+                3,
+                9,
+                11,
+                10
+              ],
+              [
+                14,
+                15,
+                16,
+                17,
+                18
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "id_thermal_zone_1_wallsurface_1_thermal_opening_1"
+      ]
+    },
+    "id_thermal_zone_1_wallsurface_2_thermal_opening_2": {
+      "type": "+Energy-Window",
+      "attributes": {
+        "description": "This is Thermal Opening 2",
+        "name": "Thermal Opening 2",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_glazing_5",
+        "bdgOpnArea": {
+          "value": 16.2176,
+          "uom": "m^2"
+        },
+        "bdgOpnAzimuth": {
+          "value": 0,
+          "uom": "decimal degree"
+        },
+        "bdgOpnGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgOpnInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgOpnSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1_wallsurface_2"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                19,
+                23,
+                22,
+                21,
+                20
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_wallsurface_2": {
+      "type": "+Energy-WallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) WallSurface 2 (ThermalZone 1)",
+        "name": "(ThermalBoundary) WallSurface 2 (ThermalZone 1)",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 0,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpaqueSurfaceArea": {
+          "value": 58.7824,
+          "uom": "m^2"
+        },
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0.2162,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 75,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                1,
+                13,
+                12,
+                8,
+                2
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                1,
+                13,
+                12,
+                8,
+                2
+              ],
+              [
+                19,
+                20,
+                21,
+                22,
+                23
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                1,
+                13,
+                12,
+                8,
+                2
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                1,
+                13,
+                12,
+                8,
+                2
+              ],
+              [
+                19,
+                20,
+                21,
+                22,
+                23
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "id_thermal_zone_1_wallsurface_2_thermal_opening_2"
+      ]
+    },
+    "id_thermal_zone_1_wallsurface_3_thermal_opening_3": {
+      "type": "+Energy-Window",
+      "attributes": {
+        "description": "This is Thermal Opening 3",
+        "name": "Thermal Opening 3",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_glazing_5",
+        "bdgOpnArea": {
+          "value": 9.6,
+          "uom": "m^2"
+        },
+        "bdgOpnAzimuth": {
+          "value": 270,
+          "uom": "decimal degree"
+        },
+        "bdgOpnGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgOpnInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgOpnSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1_wallsurface_3"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                24,
+                27,
+                26,
+                25
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1_wallsurface_3": {
+      "type": "+Energy-WallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) WallSurface 3 (ThermalZone 1)",
+        "name": "(ThermalBoundary) WallSurface 3 (ThermalZone 1)",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 270,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpaqueSurfaceArea": {
+          "value": 50.4,
+          "uom": "m^2"
+        },
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0.16,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 60,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                10,
+                13,
+                1
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                0,
+                10,
+                13,
+                1
+              ],
+              [
+                24,
+                25,
+                26,
+                27
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                10,
+                13,
+                1
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                0,
+                10,
+                13,
+                1
+              ],
+              [
+                24,
+                25,
+                26,
+                27
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "id_thermal_zone_1_wallsurface_3_thermal_opening_3"
+      ]
+    },
+    "id_thermal_zone_1_partywallsurface_1": {
+      "type": "+Energy-PartyWallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) PartyWallSurface 8",
+        "name": "(ThermalBoundary) PartyWallSurface 8",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 60,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                8,
+                9,
+                3,
+                2
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                8,
+                9,
+                3,
+                2
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                8,
+                9,
+                3,
+                2
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                8,
+                9,
+                3,
+                2
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "id_thermal_zone_1": {
+      "type": "+Energy-ThermalZone",
+      "attributes": {
+        "description": "This is ThermalZone 1",
+        "name": "ThermalZone 1",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 180,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "heatCapacity": {
+          "value": 500,
+          "uom": "J/K"
+        },
+        "infiltrationRate": {
+          "value": 0.3,
+          "uom": "1/h"
+        },
+        "isCooled": false,
+        "isHeated": true,
+        "coincidesWithLod2Hull": false,
+        "coincidesWithLod3Hull": false
+      },
+      "parents": [
+        "house_lod3_1"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  4,
+                  5
+                ]
+              ],
+              [
+                [
+                  3,
+                  2,
+                  6,
+                  4
+                ]
+              ],
+              [
+                [
+                  2,
+                  1,
+                  7,
+                  6
+                ]
+              ],
+              [
+                [
+                  1,
+                  0,
+                  5,
+                  7
+                ]
+              ],
+              [
+                [
+                  5,
+                  4,
+                  6,
+                  7
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "id_thermal_zone_1_groundsurface_1",
+        "id_thermal_zone_1_roofsurface_1",
+        "id_thermal_zone_1_roofsurface_2",
+        "id_thermal_zone_1_wallsurface_1",
+        "id_thermal_zone_1_wallsurface_2",
+        "id_thermal_zone_1_wallsurface_3",
+        "id_thermal_zone_1_partywallsurface_1"
+      ]
+    },
+    "id_occupants_1": {
+      "type": "+Energy-Occupants",
+      "attributes": {
+        "description": "This is Occupants 1",
+        "name": "Occupants 1",
+        "type": {
+          "value": "residents",
+          "codeSpace": "occ_codeSpace_xyz"
+        },
+        "numberOfOccupants": 12,
+        "heatDissipation": {
+          "value": 100,
+          "uom": "W/m^2"
+        },
+        "heatDissipationConvectiveFraction": {
+          "value": 0.3,
+          "uom": "unit interval"
+        },
+        "heatDissipationLatentFraction": {
+          "value": 0.2,
+          "uom": "unit interval"
+        },
+        "heatDissipationRadiantFraction": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "occupancyRate": "id_atomic_schedule_2",
+        "averageDietType": {
+          "value": "omnivorous",
+          "codeSpace": "diet_codeSpace"
+        },
+        "averageIncomeLevel": {
+          "value": "middle",
+          "codeSpace": "income_level codeSpace"
+        },
+        "averageInstructionLevel": {
+          "value": "university",
+          "codeSpace": "instruction_level_codeSpace"
+        }
+      },
+      "parents": [
+        "id_usage_zone_1"
+      ]
+    },
+    "id_usage_zone_1": {
+      "type": "+Energy-UsageZone",
+      "attributes": {
+        "description": "This is UsageZone 1",
+        "name": "UsageZone 1",
+        "referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 875,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "energyReferenceVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "type": {
+          "value": "residential",
+          "codeSpace": "usageZone_codeSpace_123"
+        },
+        "isPrimary": true,
+        "numberOfBuildingUnits": 1,
+        "internalHeatGains": {
+          "value": 100,
+          "uom": "W/m^2"
+        },
+        "internalHeatGainsConvectiveFraction": {
+          "value": 0.3,
+          "uom": "unit interval"
+        },
+        "internalHeatGainsLatentFraction": {
+          "value": 0.2,
+          "uom": "unit interval"
+        },
+        "internalHeatGainsRadiantFraction": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "coolingSchedule": "id_atomic_schedule_1",
+        "heatingSchedule": "id_dual_value_schedule_1",
+        "ventilationSchedule": "id_composite_schedule_1"
+      },
+      "parents": [
+        "house_lod3_1"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  4,
+                  5
+                ]
+              ],
+              [
+                [
+                  3,
+                  2,
+                  6,
+                  4
+                ]
+              ],
+              [
+                [
+                  2,
+                  1,
+                  7,
+                  6
+                ]
+              ],
+              [
+                [
+                  1,
+                  0,
+                  5,
+                  7
+                ]
+              ],
+              [
+                [
+                  5,
+                  4,
+                  6,
+                  7
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "id_occupants_1"
+      ]
+    },
+    "house_lod3_1": {
+      "type": "Building",
+      "attributes": {
+        "description": "The report house at LoD3: walls, roof and floor, with three real windows.",
+        "name": "Report house - LoD3",
+        "creationDate": "2024-09-25",
+        "+Energy-referencePoint": [
+          291305.0,
+          5041905.0,
+          4.5
+        ],
+        "class": "habitation",
+        "function": "residential building",
+        "yearOfConstruction": 1955,
+        "roofType": "gabled roof",
+        "measuredHeight": 9,
+        "storeysAboveGround": 2,
+        "storeysBelowGround": 0,
+        "storeyHeightsAboveGround": [
+          3
+        ],
+        "+Energy-bdgArea": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "+Energy-bdgAtticThermalStatus": "isOnlyCooled",
+        "+Energy-bdgBasementThermalStatus": "isOnlyHeated",
+        "+Energy-bdgConstructionWeight": {
+          "value": "heavy",
+          "codeSpace": "constrWeight_codeSpace"
+        },
+        "+Energy-bdgHeight": [
+          {
+            "description": "This is a type of height",
+            "source": "Height value source text",
+            "value": {
+              "value": 9,
+              "uom": "m"
+            },
+            "type": {
+              "value": "highestRoofEdge",
+              "codeSpace": "height_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of height",
+            "source": "Height value source text",
+            "value": {
+              "value": 0,
+              "uom": "m"
+            },
+            "type": {
+              "value": "bottomOfConstruction",
+              "codeSpace": "height_codeSpace"
+            }
+          }
+        ],
+        "+Energy-bdgIsProtected": false,
+        "+Energy-bdgType": {
+          "value": "terracedHouse",
+          "codeSpace": "bdgType_codeSpace"
+        },
+        "+Energy-bdgVolume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ]
+      },
+      "address": [
+        {
+          "country": "Bespin Territories",
+          "countryCode": "ALD",
+          "city": "Alderaan",
+          "thoroughfareName": "Bespin Square",
+          "thoroughfareNumber": "1",
+          "postalCode": "1977SW",
+          "id": "id_address_1"
+        }
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  4,
+                  5
+                ]
+              ],
+              [
+                [
+                  3,
+                  2,
+                  6,
+                  4
+                ]
+              ],
+              [
+                [
+                  2,
+                  1,
+                  7,
+                  6
+                ]
+              ],
+              [
+                [
+                  1,
+                  0,
+                  5,
+                  7
+                ]
+              ],
+              [
+                [
+                  5,
+                  4,
+                  6,
+                  7
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  1,
+                  13,
+                  12,
+                  8,
+                  2
+                ]
+              ],
+              [
+                [
+                  0,
+                  3,
+                  9,
+                  11,
+                  10
+                ]
+              ],
+              [
+                [
+                  0,
+                  10,
+                  13,
+                  1
+                ]
+              ],
+              [
+                [
+                  10,
+                  11,
+                  12,
+                  13
+                ]
+              ],
+              [
+                [
+                  11,
+                  9,
+                  8,
+                  12
+                ]
+              ],
+              [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              [
+                [
+                  8,
+                  9,
+                  3,
+                  2
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                0,
+                1,
+                2,
+                3
+              ]
+            ],
+            [
+              [
+                10,
+                11,
+                12,
+                13
+              ]
+            ],
+            [
+              [
+                11,
+                9,
+                8,
+                12
+              ]
+            ],
+            [
+              [
+                0,
+                3,
+                9,
+                11,
+                10
+              ]
+            ],
+            [
+              [
+                1,
+                13,
+                12,
+                8,
+                2
+              ]
+            ],
+            [
+              [
+                0,
+                10,
+                13,
+                1
+              ]
+            ],
+            [
+              [
+                8,
+                9,
+                3,
+                2
+              ]
+            ]
+          ],
+          "semantics": {
+            "surfaces": [
+              {
+                "type": "GroundSurface"
+              },
+              {
+                "type": "RoofSurface"
+              },
+              {
+                "type": "RoofSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "+Energy-PartyWallSurface"
+              }
+            ],
+            "values": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          }
+        }
+      ],
+      "children": [
+        "id_building_unit_1",
+        "id_thermal_zone_1",
+        "id_usage_zone_1"
+      ]
+    },
+    "fx2_id_building_unit_1": {
+      "type": "+Energy-BuildingUnit",
+      "attributes": {
+        "description": "This is BuildingUnit 1",
+        "name": "BuildingUnit 1",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source",
+            "value": {
+              "value": 875,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "energyReferenceVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "type": {
+          "value": "residential",
+          "codeSpace": "buildingUnit_codeSpace_123"
+        },
+        "numberOfRooms": 4,
+        "ownershipType": {
+          "value": "corporation",
+          "codeSpace": "ownership_type_codeSpace_abc"
+        }
+      },
+      "parents": [
+        "house_lod2_2"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  32,
+                  33
+                ]
+              ],
+              [
+                [
+                  31,
+                  30,
+                  34,
+                  32
+                ]
+              ],
+              [
+                [
+                  30,
+                  29,
+                  35,
+                  34
+                ]
+              ],
+              [
+                [
+                  29,
+                  28,
+                  33,
+                  35
+                ]
+              ],
+              [
+                [
+                  33,
+                  32,
+                  34,
+                  35
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  29,
+                  41,
+                  40,
+                  36,
+                  30
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  37,
+                  39,
+                  38
+                ]
+              ],
+              [
+                [
+                  28,
+                  38,
+                  41,
+                  29
+                ]
+              ],
+              [
+                [
+                  38,
+                  39,
+                  40,
+                  41
+                ]
+              ],
+              [
+                [
+                  39,
+                  37,
+                  36,
+                  40
+                ]
+              ],
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  36,
+                  37,
+                  31,
+                  30
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  29,
+                  41,
+                  40,
+                  36,
+                  30
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  37,
+                  39,
+                  38
+                ]
+              ],
+              [
+                [
+                  28,
+                  38,
+                  41,
+                  29
+                ]
+              ],
+              [
+                [
+                  38,
+                  39,
+                  40,
+                  41
+                ]
+              ],
+              [
+                [
+                  39,
+                  37,
+                  36,
+                  40
+                ]
+              ],
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  36,
+                  37,
+                  31,
+                  30
+                ]
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_groundsurface_1": {
+      "type": "+Energy-GroundSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) GroundSurface 1 (ThermalZone 1)",
+        "name": "(ThermalBoundary) GroundSurface 1 (ThermalZone 1)",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_ground_1",
+        "bdgBdrySurfAzimuth": {
+          "value": -1,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 1,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 180,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 100,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                29,
+                30,
+                31
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                29,
+                30,
+                31
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_roofsurface_1": {
+      "type": "+Energy-RoofSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) RoofSurface 1 (ThermalZone 1)",
+        "name": "(ThermalBoundary) RoofSurface 1 (ThermalZone 1)",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_roof_3",
+        "bdgBdrySurfAzimuth": {
+          "value": 270,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 30.9638,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 58.3095,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                38,
+                39,
+                40,
+                41
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                38,
+                39,
+                40,
+                41
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_roofsurface_2": {
+      "type": "+Energy-RoofSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) RoofSurface 2 (ThermalZone 1)",
+        "name": "(ThermalBoundary) RoofSurface 2 (ThermalZone 1)",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_roof_3",
+        "bdgBdrySurfAzimuth": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 30.9638,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 58.3095,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                39,
+                37,
+                36,
+                40
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                39,
+                37,
+                36,
+                40
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_wallsurface_1": {
+      "type": "+Energy-WallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) WallSurface 1 (ThermalZone 1)",
+        "name": "(ThermalBoundary) WallSurface 1 (ThermalZone 1)",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 180,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpaqueSurfaceArea": {
+          "value": 58.7824,
+          "uom": "m^2"
+        },
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0.2162,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 75,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                31,
+                37,
+                39,
+                38
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                31,
+                37,
+                39,
+                38
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_wallsurface_2": {
+      "type": "+Energy-WallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) WallSurface 2 (ThermalZone 1)",
+        "name": "(ThermalBoundary) WallSurface 2 (ThermalZone 1)",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 0,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpaqueSurfaceArea": {
+          "value": 58.7824,
+          "uom": "m^2"
+        },
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0.2162,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 75,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                29,
+                41,
+                40,
+                36,
+                30
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                29,
+                41,
+                40,
+                36,
+                30
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_wallsurface_3": {
+      "type": "+Energy-WallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) WallSurface 3 (ThermalZone 1)",
+        "name": "(ThermalBoundary) WallSurface 3 (ThermalZone 1)",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 270,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpaqueSurfaceArea": {
+          "value": 50.4,
+          "uom": "m^2"
+        },
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0.16,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0.6,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 60,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                38,
+                41,
+                29
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                38,
+                41,
+                29
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1_partywallsurface_1": {
+      "type": "+Energy-PartyWallSurface",
+      "attributes": {
+        "description": "This is (ThermalBoundary) PartyWallSurface 8",
+        "name": "(ThermalBoundary) PartyWallSurface 8",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "layeredConstruction": "id_layered_construction_wall_2",
+        "bdgBdrySurfAzimuth": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfGroundViewFactor": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfInclination": {
+          "value": 90,
+          "uom": "decimal degree"
+        },
+        "bdgBdrySurfIsAdiabatic": false,
+        "bdgBdrySurfOpeningToSurfaceRatio": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfSkyViewFactor": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "bdgBdrySurfTotalSurfaceArea": {
+          "value": 60,
+          "uom": "m^2"
+        }
+      },
+      "parents": [
+        "fx2_id_thermal_zone_1"
+      ],
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                36,
+                37,
+                31,
+                30
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                36,
+                37,
+                31,
+                30
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx2_id_thermal_zone_1": {
+      "type": "+Energy-ThermalZone",
+      "attributes": {
+        "description": "This is ThermalZone 1",
+        "name": "ThermalZone 1",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 180,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "heatCapacity": {
+          "value": 500,
+          "uom": "J/K"
+        },
+        "infiltrationRate": {
+          "value": 0.3,
+          "uom": "1/h"
+        },
+        "isCooled": false,
+        "isHeated": true,
+        "coincidesWithLod2Hull": false,
+        "coincidesWithLod3Hull": false
+      },
+      "parents": [
+        "house_lod2_2"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  32,
+                  33
+                ]
+              ],
+              [
+                [
+                  31,
+                  30,
+                  34,
+                  32
+                ]
+              ],
+              [
+                [
+                  30,
+                  29,
+                  35,
+                  34
+                ]
+              ],
+              [
+                [
+                  29,
+                  28,
+                  33,
+                  35
+                ]
+              ],
+              [
+                [
+                  33,
+                  32,
+                  34,
+                  35
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  29,
+                  41,
+                  40,
+                  36,
+                  30
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  37,
+                  39,
+                  38
+                ]
+              ],
+              [
+                [
+                  28,
+                  38,
+                  41,
+                  29
+                ]
+              ],
+              [
+                [
+                  38,
+                  39,
+                  40,
+                  41
+                ]
+              ],
+              [
+                [
+                  39,
+                  37,
+                  36,
+                  40
+                ]
+              ],
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  36,
+                  37,
+                  31,
+                  30
+                ]
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "fx2_id_thermal_zone_1_groundsurface_1",
+        "fx2_id_thermal_zone_1_roofsurface_1",
+        "fx2_id_thermal_zone_1_roofsurface_2",
+        "fx2_id_thermal_zone_1_wallsurface_1",
+        "fx2_id_thermal_zone_1_wallsurface_2",
+        "fx2_id_thermal_zone_1_wallsurface_3",
+        "fx2_id_thermal_zone_1_partywallsurface_1"
+      ]
+    },
+    "fx2_id_occupants_1": {
+      "type": "+Energy-Occupants",
+      "attributes": {
+        "description": "This is Occupants 1",
+        "name": "Occupants 1",
+        "type": {
+          "value": "residents",
+          "codeSpace": "occ_codeSpace_xyz"
+        },
+        "numberOfOccupants": 12,
+        "heatDissipation": {
+          "value": 100,
+          "uom": "W/m^2"
+        },
+        "heatDissipationConvectiveFraction": {
+          "value": 0.3,
+          "uom": "unit interval"
+        },
+        "heatDissipationLatentFraction": {
+          "value": 0.2,
+          "uom": "unit interval"
+        },
+        "heatDissipationRadiantFraction": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "occupancyRate": "id_atomic_schedule_2",
+        "averageDietType": {
+          "value": "omnivorous",
+          "codeSpace": "diet_codeSpace"
+        },
+        "averageIncomeLevel": {
+          "value": "middle",
+          "codeSpace": "income_level codeSpace"
+        },
+        "averageInstructionLevel": {
+          "value": "university",
+          "codeSpace": "instruction_level_codeSpace"
+        }
+      },
+      "parents": [
+        "fx2_id_usage_zone_1"
+      ]
+    },
+    "fx2_id_usage_zone_1": {
+      "type": "+Energy-UsageZone",
+      "attributes": {
+        "description": "This is UsageZone 1",
+        "name": "UsageZone 1",
+        "referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 875,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "energyReferenceVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "type": {
+          "value": "residential",
+          "codeSpace": "usageZone_codeSpace_123"
+        },
+        "isPrimary": true,
+        "numberOfBuildingUnits": 1,
+        "internalHeatGains": {
+          "value": 100,
+          "uom": "W/m^2"
+        },
+        "internalHeatGainsConvectiveFraction": {
+          "value": 0.3,
+          "uom": "unit interval"
+        },
+        "internalHeatGainsLatentFraction": {
+          "value": 0.2,
+          "uom": "unit interval"
+        },
+        "internalHeatGainsRadiantFraction": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "coolingSchedule": "id_atomic_schedule_1",
+        "heatingSchedule": "id_dual_value_schedule_1",
+        "ventilationSchedule": "id_composite_schedule_1"
+      },
+      "parents": [
+        "house_lod2_2"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  32,
+                  33
+                ]
+              ],
+              [
+                [
+                  31,
+                  30,
+                  34,
+                  32
+                ]
+              ],
+              [
+                [
+                  30,
+                  29,
+                  35,
+                  34
+                ]
+              ],
+              [
+                [
+                  29,
+                  28,
+                  33,
+                  35
+                ]
+              ],
+              [
+                [
+                  33,
+                  32,
+                  34,
+                  35
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  29,
+                  41,
+                  40,
+                  36,
+                  30
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  37,
+                  39,
+                  38
+                ]
+              ],
+              [
+                [
+                  28,
+                  38,
+                  41,
+                  29
+                ]
+              ],
+              [
+                [
+                  38,
+                  39,
+                  40,
+                  41
+                ]
+              ],
+              [
+                [
+                  39,
+                  37,
+                  36,
+                  40
+                ]
+              ],
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  36,
+                  37,
+                  31,
+                  30
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  29,
+                  41,
+                  40,
+                  36,
+                  30
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  37,
+                  39,
+                  38
+                ]
+              ],
+              [
+                [
+                  28,
+                  38,
+                  41,
+                  29
+                ]
+              ],
+              [
+                [
+                  38,
+                  39,
+                  40,
+                  41
+                ]
+              ],
+              [
+                [
+                  39,
+                  37,
+                  36,
+                  40
+                ]
+              ],
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  36,
+                  37,
+                  31,
+                  30
+                ]
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "fx2_id_occupants_1"
+      ]
+    },
+    "house_lod2_2": {
+      "type": "Building",
+      "attributes": {
+        "description": "The same house at LoD2: no window geometry; the glass is a declared ratio on each wall.",
+        "name": "Report house - LoD2",
+        "creationDate": "2024-09-25",
+        "+Energy-referencePoint": [
+          291325.0,
+          5041905.0,
+          4.5
+        ],
+        "class": "habitation",
+        "function": "residential building",
+        "yearOfConstruction": 1955,
+        "roofType": "gabled roof",
+        "measuredHeight": 9,
+        "storeysAboveGround": 2,
+        "storeysBelowGround": 0,
+        "storeyHeightsAboveGround": [
+          3
+        ],
+        "+Energy-bdgArea": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "+Energy-bdgAtticThermalStatus": "isOnlyCooled",
+        "+Energy-bdgBasementThermalStatus": "isOnlyHeated",
+        "+Energy-bdgConstructionWeight": {
+          "value": "heavy",
+          "codeSpace": "constrWeight_codeSpace"
+        },
+        "+Energy-bdgHeight": [
+          {
+            "description": "This is a type of height",
+            "source": "Height value source text",
+            "value": {
+              "value": 9,
+              "uom": "m"
+            },
+            "type": {
+              "value": "highestRoofEdge",
+              "codeSpace": "height_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of height",
+            "source": "Height value source text",
+            "value": {
+              "value": 0,
+              "uom": "m"
+            },
+            "type": {
+              "value": "bottomOfConstruction",
+              "codeSpace": "height_codeSpace"
+            }
+          }
+        ],
+        "+Energy-bdgIsProtected": false,
+        "+Energy-bdgType": {
+          "value": "terracedHouse",
+          "codeSpace": "bdgType_codeSpace"
+        },
+        "+Energy-bdgVolume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ]
+      },
+      "address": [
+        {
+          "country": "Bespin Territories",
+          "countryCode": "ALD",
+          "city": "Alderaan",
+          "thoroughfareName": "Bespin Square",
+          "thoroughfareNumber": "1",
+          "postalCode": "1977SW",
+          "id": "fx2_id_address_1"
+        }
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  32,
+                  33
+                ]
+              ],
+              [
+                [
+                  31,
+                  30,
+                  34,
+                  32
+                ]
+              ],
+              [
+                [
+                  30,
+                  29,
+                  35,
+                  34
+                ]
+              ],
+              [
+                [
+                  29,
+                  28,
+                  33,
+                  35
+                ]
+              ],
+              [
+                [
+                  33,
+                  32,
+                  34,
+                  35
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  29,
+                  41,
+                  40,
+                  36,
+                  30
+                ]
+              ],
+              [
+                [
+                  28,
+                  31,
+                  37,
+                  39,
+                  38
+                ]
+              ],
+              [
+                [
+                  28,
+                  38,
+                  41,
+                  29
+                ]
+              ],
+              [
+                [
+                  38,
+                  39,
+                  40,
+                  41
+                ]
+              ],
+              [
+                [
+                  39,
+                  37,
+                  36,
+                  40
+                ]
+              ],
+              [
+                [
+                  28,
+                  29,
+                  30,
+                  31
+                ]
+              ],
+              [
+                [
+                  36,
+                  37,
+                  31,
+                  30
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                28,
+                29,
+                30,
+                31
+              ]
+            ],
+            [
+              [
+                38,
+                39,
+                40,
+                41
+              ]
+            ],
+            [
+              [
+                39,
+                37,
+                36,
+                40
+              ]
+            ],
+            [
+              [
+                28,
+                31,
+                37,
+                39,
+                38
+              ]
+            ],
+            [
+              [
+                29,
+                41,
+                40,
+                36,
+                30
+              ]
+            ],
+            [
+              [
+                28,
+                38,
+                41,
+                29
+              ]
+            ],
+            [
+              [
+                36,
+                37,
+                31,
+                30
+              ]
+            ]
+          ],
+          "semantics": {
+            "surfaces": [
+              {
+                "type": "GroundSurface"
+              },
+              {
+                "type": "RoofSurface"
+              },
+              {
+                "type": "RoofSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "+Energy-PartyWallSurface"
+              }
+            ],
+            "values": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          }
+        }
+      ],
+      "children": [
+        "fx2_id_building_unit_1",
+        "fx2_id_thermal_zone_1",
+        "fx2_id_usage_zone_1"
+      ]
+    },
+    "house_lod2_hull_3_boiler": {
+      "type": "+Energy-Boiler",
+      "attributes": {
+        "description": "A test device: a heating plant described by its own values (EuReCa's \"From manual parameters\"), read from the file instead of the run file.",
+        "name": [
+          "Own gas boiler (test device)",
+          {
+            "value": "From manual parameters",
+            "codeSpace": "urn:eureca:heating-system"
+          }
+        ],
+        "creationDate": "2026-10-03",
+        "genericAttributes": {
+          "name": "Own gas boiler",
+          "description": "a gas boiler with radiators, described by its own values",
+          "SH generation efficiency [-]": 0.99,
+          "SH distribution efficiency [-]": 0.92,
+          "SH emission efficiency [-]": 0.882,
+          "SH regulation efficiency [-]": 1.0,
+          "SH emission convective fraction [-]": 0.6,
+          "SH emission target temperature [\u00b0C]": 45,
+          "SH fuel": "Natural Gas",
+          "DHW generation efficiency [-]": 0.99,
+          "DHW distribution efficiency [-]": 0.92,
+          "DHW emission efficiency [-]": 0.882,
+          "DHW regulation efficiency [-]": 1.0,
+          "DHW fuel": "Natural Gas"
+        },
+        "referencePoint": [
+          291345.0,
+          5041905.0,
+          1.0
+        ],
+        "model": "Condensing gas boiler, 15 kW (generic)",
+        "yearOfManufacture": 2018,
+        "numberOfDevices": 1,
+        "installedPower": {
+          "value": 15,
+          "uom": "kW"
+        },
+        "nominalEfficiency": {
+          "value": 0.99,
+          "uom": "dimensionless"
+        },
+        "efficiencyIndicator": "generation efficiency: share of the gas energy that becomes heat",
+        "heatDissipation": {
+          "value": 0,
+          "uom": "W"
+        },
+        "heatDissipationConvectiveFraction": {
+          "value": 1,
+          "uom": "unit interval"
+        },
+        "heatDissipationLatentFraction": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "heatDissipationRadiantFraction": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "deviceOperation": [
+          {
+            "id": "house_lod2_hull_3_boiler_heating",
+            "type": "spaceHeating",
+            "yearlyGlobalEfficiency": 0.8,
+            "schedule": "id_dual_value_schedule_1"
+          },
+          {
+            "id": "house_lod2_hull_3_boiler_hot_water",
+            "type": "domesticHotWater",
+            "yearlyGlobalEfficiency": 0.8
+          }
+        ],
+        "hasCondensation": true
+      },
+      "parents": [
+        "house_lod2_hull_3"
+      ]
+    },
+    "house_lod2_hull_3_chiller": {
+      "type": "+Energy-HeatPump",
+      "attributes": {
+        "description": "A test device: a cooling plant described by its own values (EuReCa's \"From manual parameters\"), read from the file instead of the run file.",
+        "name": [
+          "Own chiller (test device)",
+          {
+            "value": "From manual parameters",
+            "codeSpace": "urn:eureca:cooling-system"
+          }
+        ],
+        "creationDate": "2026-10-03",
+        "genericAttributes": {
+          "SC generation efficiency [-]": 2.7,
+          "SC distribution efficiency [-]": 0.97,
+          "SC emission efficiency [-]": 0.748,
+          "SC regulation efficiency [-]": 1.0,
+          "SC emission convective fraction [-]": 1.0,
+          "SC emission target temperature [\u00b0C]": 12,
+          "SC fuel": "Electric"
+        },
+        "referencePoint": [
+          291351.0,
+          5041905.0,
+          0.5
+        ],
+        "model": "Air-to-water chiller, 10 kW (generic)",
+        "yearOfManufacture": 2018,
+        "numberOfDevices": 1,
+        "installedPower": {
+          "value": 10,
+          "uom": "kW"
+        },
+        "nominalEfficiency": {
+          "value": 2.7,
+          "uom": "dimensionless"
+        },
+        "efficiencyIndicator": "seasonal performance factor: cooling delivered per unit of electricity",
+        "heatDissipation": {
+          "value": 0,
+          "uom": "W"
+        },
+        "heatDissipationConvectiveFraction": {
+          "value": 1,
+          "uom": "unit interval"
+        },
+        "heatDissipationLatentFraction": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "heatDissipationRadiantFraction": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "deviceOperation": [
+          {
+            "id": "house_lod2_hull_3_chiller_cooling",
+            "type": "spaceCooling",
+            "yearlyGlobalEfficiency": 1.96,
+            "schedule": "id_atomic_schedule_1"
+          }
+        ],
+        "heatSource": "ambientAir",
+        "copSourceTemperature": {
+          "value": 35,
+          "uom": "degrees Celsius"
+        },
+        "copOperationTemperature": {
+          "value": 7,
+          "uom": "degrees Celsius"
+        }
+      },
+      "parents": [
+        "house_lod2_hull_3"
+      ]
+    },
+    "fx7_id_building_unit_1": {
+      "type": "+Energy-BuildingUnit",
+      "attributes": {
+        "description": "This is BuildingUnit 1",
+        "name": "BuildingUnit 1",
+        "referencePoint": [
+          291345.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source",
+            "value": {
+              "value": 875,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "energyReferenceVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "type": {
+          "value": "residential",
+          "codeSpace": "buildingUnit_codeSpace_123"
+        },
+        "numberOfRooms": 4,
+        "ownershipType": {
+          "value": "corporation",
+          "codeSpace": "ownership_type_codeSpace_abc"
+        }
+      },
+      "parents": [
+        "house_lod2_hull_3"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  46,
+                  47
+                ]
+              ],
+              [
+                [
+                  45,
+                  44,
+                  48,
+                  46
+                ]
+              ],
+              [
+                [
+                  44,
+                  43,
+                  49,
+                  48
+                ]
+              ],
+              [
+                [
+                  43,
+                  42,
+                  47,
+                  49
+                ]
+              ],
+              [
+                [
+                  47,
+                  46,
+                  48,
+                  49
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  43,
+                  55,
+                  54,
+                  50,
+                  44
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  51,
+                  53,
+                  52
+                ]
+              ],
+              [
+                [
+                  42,
+                  52,
+                  55,
+                  43
+                ]
+              ],
+              [
+                [
+                  52,
+                  53,
+                  54,
+                  55
+                ]
+              ],
+              [
+                [
+                  53,
+                  51,
+                  50,
+                  54
+                ]
+              ],
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  50,
+                  51,
+                  45,
+                  44
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  43,
+                  55,
+                  54,
+                  50,
+                  44
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  51,
+                  53,
+                  52
+                ]
+              ],
+              [
+                [
+                  42,
+                  52,
+                  55,
+                  43
+                ]
+              ],
+              [
+                [
+                  52,
+                  53,
+                  54,
+                  55
+                ]
+              ],
+              [
+                [
+                  53,
+                  51,
+                  50,
+                  54
+                ]
+              ],
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  50,
+                  51,
+                  45,
+                  44
+                ]
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx7_id_thermal_zone_1": {
+      "type": "+Energy-ThermalZone",
+      "attributes": {
+        "description": "This is ThermalZone 1",
+        "name": "ThermalZone 1",
+        "referencePoint": [
+          291345.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 180,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "heatCapacity": {
+          "value": 500,
+          "uom": "J/K"
+        },
+        "infiltrationRate": {
+          "value": 0.3,
+          "uom": "1/h"
+        },
+        "isCooled": false,
+        "isHeated": true,
+        "coincidesWithLod2Hull": true,
+        "coincidesWithLod3Hull": false
+      },
+      "parents": [
+        "house_lod2_hull_3"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  46,
+                  47
+                ]
+              ],
+              [
+                [
+                  45,
+                  44,
+                  48,
+                  46
+                ]
+              ],
+              [
+                [
+                  44,
+                  43,
+                  49,
+                  48
+                ]
+              ],
+              [
+                [
+                  43,
+                  42,
+                  47,
+                  49
+                ]
+              ],
+              [
+                [
+                  47,
+                  46,
+                  48,
+                  49
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  43,
+                  55,
+                  54,
+                  50,
+                  44
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  51,
+                  53,
+                  52
+                ]
+              ],
+              [
+                [
+                  42,
+                  52,
+                  55,
+                  43
+                ]
+              ],
+              [
+                [
+                  52,
+                  53,
+                  54,
+                  55
+                ]
+              ],
+              [
+                [
+                  53,
+                  51,
+                  50,
+                  54
+                ]
+              ],
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  50,
+                  51,
+                  45,
+                  44
+                ]
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "fx7_id_occupants_1": {
+      "type": "+Energy-Occupants",
+      "attributes": {
+        "description": "This is Occupants 1",
+        "name": "Occupants 1",
+        "type": {
+          "value": "residents",
+          "codeSpace": "occ_codeSpace_xyz"
+        },
+        "numberOfOccupants": 12,
+        "heatDissipation": {
+          "value": 100,
+          "uom": "W/m^2"
+        },
+        "heatDissipationConvectiveFraction": {
+          "value": 0.3,
+          "uom": "unit interval"
+        },
+        "heatDissipationLatentFraction": {
+          "value": 0.2,
+          "uom": "unit interval"
+        },
+        "heatDissipationRadiantFraction": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "occupancyRate": "id_atomic_schedule_2",
+        "averageDietType": {
+          "value": "omnivorous",
+          "codeSpace": "diet_codeSpace"
+        },
+        "averageIncomeLevel": {
+          "value": "middle",
+          "codeSpace": "income_level codeSpace"
+        },
+        "averageInstructionLevel": {
+          "value": "university",
+          "codeSpace": "instruction_level_codeSpace"
+        }
+      },
+      "parents": [
+        "fx7_id_usage_zone_1"
+      ]
+    },
+    "fx7_id_usage_zone_1": {
+      "type": "+Energy-UsageZone",
+      "attributes": {
+        "description": "This is UsageZone 1",
+        "name": "UsageZone 1",
+        "referencePoint": [
+          291345.0,
+          5041905.0,
+          4.5
+        ],
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 875,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "energyReferenceVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "type": {
+          "value": "residential",
+          "codeSpace": "usageZone_codeSpace_123"
+        },
+        "isPrimary": true,
+        "numberOfBuildingUnits": 1,
+        "internalHeatGains": {
+          "value": 100,
+          "uom": "W/m^2"
+        },
+        "internalHeatGainsConvectiveFraction": {
+          "value": 0.3,
+          "uom": "unit interval"
+        },
+        "internalHeatGainsLatentFraction": {
+          "value": 0.2,
+          "uom": "unit interval"
+        },
+        "internalHeatGainsRadiantFraction": {
+          "value": 0.5,
+          "uom": "unit interval"
+        },
+        "coolingSchedule": "id_atomic_schedule_1",
+        "heatingSchedule": "id_dual_value_schedule_1",
+        "ventilationSchedule": "id_composite_schedule_1"
+      },
+      "parents": [
+        "house_lod2_hull_3"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  46,
+                  47
+                ]
+              ],
+              [
+                [
+                  45,
+                  44,
+                  48,
+                  46
+                ]
+              ],
+              [
+                [
+                  44,
+                  43,
+                  49,
+                  48
+                ]
+              ],
+              [
+                [
+                  43,
+                  42,
+                  47,
+                  49
+                ]
+              ],
+              [
+                [
+                  47,
+                  46,
+                  48,
+                  49
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  43,
+                  55,
+                  54,
+                  50,
+                  44
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  51,
+                  53,
+                  52
+                ]
+              ],
+              [
+                [
+                  42,
+                  52,
+                  55,
+                  43
+                ]
+              ],
+              [
+                [
+                  52,
+                  53,
+                  54,
+                  55
+                ]
+              ],
+              [
+                [
+                  53,
+                  51,
+                  50,
+                  54
+                ]
+              ],
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  50,
+                  51,
+                  45,
+                  44
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "3.0",
+          "boundaries": [
+            [
+              [
+                [
+                  43,
+                  55,
+                  54,
+                  50,
+                  44
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  51,
+                  53,
+                  52
+                ]
+              ],
+              [
+                [
+                  42,
+                  52,
+                  55,
+                  43
+                ]
+              ],
+              [
+                [
+                  52,
+                  53,
+                  54,
+                  55
+                ]
+              ],
+              [
+                [
+                  53,
+                  51,
+                  50,
+                  54
+                ]
+              ],
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  50,
+                  51,
+                  45,
+                  44
+                ]
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "fx7_id_occupants_1"
+      ]
+    },
+    "house_lod2_hull_3": {
+      "type": "Building",
+      "attributes": {
+        "description": "The same house whose thermal zone coincides with the LoD2 hull of the building.",
+        "name": "Report house - LoD2 hull",
+        "creationDate": "2024-09-25",
+        "+Energy-referencePoint": [
+          291345.0,
+          5041905.0,
+          4.5
+        ],
+        "class": "habitation",
+        "function": "residential building",
+        "yearOfConstruction": 1955,
+        "roofType": "gabled roof",
+        "measuredHeight": 9,
+        "storeysAboveGround": 2,
+        "storeysBelowGround": 0,
+        "storeyHeightsAboveGround": [
+          3
+        ],
+        "+Energy-bdgArea": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "+Energy-bdgAtticThermalStatus": "isOnlyCooled",
+        "+Energy-bdgBasementThermalStatus": "isOnlyHeated",
+        "+Energy-bdgConstructionWeight": {
+          "value": "heavy",
+          "codeSpace": "constrWeight_codeSpace"
+        },
+        "+Energy-bdgHeight": [
+          {
+            "description": "This is a type of height",
+            "source": "Height value source text",
+            "value": {
+              "value": 9,
+              "uom": "m"
+            },
+            "type": {
+              "value": "highestRoofEdge",
+              "codeSpace": "height_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of height",
+            "source": "Height value source text",
+            "value": {
+              "value": 0,
+              "uom": "m"
+            },
+            "type": {
+              "value": "bottomOfConstruction",
+              "codeSpace": "height_codeSpace"
+            }
+          }
+        ],
+        "+Energy-bdgIsProtected": false,
+        "+Energy-bdgType": {
+          "value": "terracedHouse",
+          "codeSpace": "bdgType_codeSpace"
+        },
+        "+Energy-bdgVolume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 750,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ]
+      },
+      "address": [
+        {
+          "country": "Bespin Territories",
+          "countryCode": "ALD",
+          "city": "Alderaan",
+          "thoroughfareName": "Bespin Square",
+          "thoroughfareNumber": "1",
+          "postalCode": "1977SW",
+          "id": "fx7_id_address_1"
+        }
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  46,
+                  47
+                ]
+              ],
+              [
+                [
+                  45,
+                  44,
+                  48,
+                  46
+                ]
+              ],
+              [
+                [
+                  44,
+                  43,
+                  49,
+                  48
+                ]
+              ],
+              [
+                [
+                  43,
+                  42,
+                  47,
+                  49
+                ]
+              ],
+              [
+                [
+                  47,
+                  46,
+                  48,
+                  49
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                [
+                  43,
+                  55,
+                  54,
+                  50,
+                  44
+                ]
+              ],
+              [
+                [
+                  42,
+                  45,
+                  51,
+                  53,
+                  52
+                ]
+              ],
+              [
+                [
+                  42,
+                  52,
+                  55,
+                  43
+                ]
+              ],
+              [
+                [
+                  52,
+                  53,
+                  54,
+                  55
+                ]
+              ],
+              [
+                [
+                  53,
+                  51,
+                  50,
+                  54
+                ]
+              ],
+              [
+                [
+                  42,
+                  43,
+                  44,
+                  45
+                ]
+              ],
+              [
+                [
+                  50,
+                  51,
+                  45,
+                  44
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "MultiSurface",
+          "lod": "2.0",
+          "boundaries": [
+            [
+              [
+                42,
+                43,
+                44,
+                45
+              ]
+            ],
+            [
+              [
+                52,
+                53,
+                54,
+                55
+              ]
+            ],
+            [
+              [
+                53,
+                51,
+                50,
+                54
+              ]
+            ],
+            [
+              [
+                42,
+                45,
+                51,
+                53,
+                52
+              ]
+            ],
+            [
+              [
+                43,
+                55,
+                54,
+                50,
+                44
+              ]
+            ],
+            [
+              [
+                42,
+                52,
+                55,
+                43
+              ]
+            ],
+            [
+              [
+                50,
+                51,
+                45,
+                44
+              ]
+            ]
+          ],
+          "semantics": {
+            "surfaces": [
+              {
+                "type": "GroundSurface"
+              },
+              {
+                "type": "RoofSurface"
+              },
+              {
+                "type": "RoofSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "WallSurface"
+              },
+              {
+                "type": "+Energy-PartyWallSurface"
+              }
+            ],
+            "values": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          }
+        }
+      ],
+      "children": [
+        "house_lod2_hull_3_boiler",
+        "house_lod2_hull_3_chiller",
+        "fx7_id_building_unit_1",
+        "fx7_id_thermal_zone_1",
+        "fx7_id_usage_zone_1"
+      ]
+    },
+    "house_lod1_4_heat_pump": {
+      "type": "+Energy-HeatPump",
+      "attributes": {
+        "description": "A test device: the plant of this house, read from the file instead of the run file.",
+        "name": [
+          "Heat pump (test device)",
+          {
+            "value": "A-W Heat Pump, Centralized, Low Temp Radiator",
+            "codeSpace": "urn:eureca:heating-system"
+          }
+        ],
+        "creationDate": "2026-10-03",
+        "referencePoint": [
+          291371.0,
+          5041905.0,
+          0.5
+        ],
+        "model": "Air-to-water heat pump, 6 kW (generic)",
+        "yearOfManufacture": 2020,
+        "numberOfDevices": 1,
+        "installedPower": {
+          "value": 6,
+          "uom": "kW"
+        },
+        "nominalEfficiency": {
+          "value": 3.2,
+          "uom": "dimensionless"
+        },
+        "efficiencyIndicator": "COP at 7 degC outdoor air and 35 degC water",
+        "heatDissipation": {
+          "value": 0,
+          "uom": "W"
+        },
+        "heatDissipationConvectiveFraction": {
+          "value": 1,
+          "uom": "unit interval"
+        },
+        "heatDissipationLatentFraction": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "heatDissipationRadiantFraction": {
+          "value": 0,
+          "uom": "unit interval"
+        },
+        "deviceOperation": [
+          {
+            "id": "house_lod1_4_heat_pump_operation",
+            "type": "spaceHeating",
+            "yearlyGlobalEfficiency": 2.6,
+            "schedule": "id_dual_value_schedule_1"
+          }
+        ],
+        "heatSource": "ambientAir",
+        "copSourceTemperature": {
+          "value": 7,
+          "uom": "degrees Celsius"
+        },
+        "copOperationTemperature": {
+          "value": 35,
+          "uom": "degrees Celsius"
+        }
+      },
+      "parents": [
+        "house_lod1_4"
+      ]
+    },
+    "fx_lod1_thermal_zone": {
+      "type": "+Energy-ThermalZone",
+      "attributes": {
+        "description": "This is ThermalZone 1",
+        "name": "ThermalZone 1",
+        "referencePoint": [
+          291365.0,
+          5041905.0,
+          3.0
+        ],
+        "layeredConstruction": "id_layered_construction_hull_6",
+        "area": [
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 200,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "grossFloorArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 100,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "footprintArea",
+              "codeSpace": "area_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of floor area",
+            "source": "Area value source text",
+            "value": {
+              "value": 180,
+              "uom": "m^2"
+            },
+            "type": {
+              "value": "energyReferenceArea",
+              "codeSpace": "area_codeSpace"
+            }
+          }
+        ],
+        "volume": [
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 600,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "grossVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          },
+          {
+            "description": "This is a type of volume",
+            "source": "Volume value source text",
+            "value": {
+              "value": 486,
+              "uom": "m^3"
+            },
+            "type": {
+              "value": "netVolume",
+              "codeSpace": "volume_codeSpace"
+            }
+          }
+        ],
+        "heatCapacity": {
+          "value": 500,
+          "uom": "J/K"
+        },
+        "infiltrationRate": {
+          "value": 0.3,
+          "uom": "1/h"
+        },
+        "isCooled": false,
+        "isHeated": true,
+        "coincidesWithLod2Hull": false,
+        "coincidesWithLod3Hull": false
+      },
+      "parents": [
+        "house_lod1_4"
+      ],
+      "geometry": [
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  56,
+                  59,
+                  58,
+                  57
+                ]
+              ],
+              [
+                [
+                  56,
+                  57,
+                  60,
+                  61
+                ]
+              ],
+              [
+                [
+                  57,
+                  58,
+                  62,
+                  60
+                ]
+              ],
+              [
+                [
+                  58,
+                  59,
+                  63,
+                  62
+                ]
+              ],
+              [
+                [
+                  59,
+                  56,
+                  61,
+                  63
+                ]
+              ],
+              [
+                [
+                  61,
+                  60,
+                  62,
+                  63
+                ]
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    "house_lod1_4": {
+      "type": "Building",
+      "attributes": {
+        "description": "The same house as a LoD1 box: no windows and no party wall, all LoD1 may say. Its thermal zone states one average U-value for the whole shell.",
+        "name": "Report house - LoD1",
+        "creationDate": "2024-09-25",
+        "+Energy-referencePoint": [
+          291365.0,
+          5041905.0,
+          3.0
+        ]
+      },
+      "geometry": [
+        {
+          "type": "MultiSurface",
+          "lod": "0.0",
+          "boundaries": [
+            [
+              [
+                56,
+                57,
+                58,
+                59
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "Solid",
+          "lod": "1.0",
+          "boundaries": [
+            [
+              [
+                [
+                  56,
+                  59,
+                  58,
+                  57
+                ]
+              ],
+              [
+                [
+                  56,
+                  57,
+                  60,
+                  61
+                ]
+              ],
+              [
+                [
+                  57,
+                  58,
+                  62,
+                  60
+                ]
+              ],
+              [
+                [
+                  58,
+                  59,
+                  63,
+                  62
+                ]
+              ],
+              [
+                [
+                  59,
+                  56,
+                  61,
+                  63
+                ]
+              ],
+              [
+                [
+                  61,
+                  60,
+                  62,
+                  63
+                ]
+              ]
+            ]
+          ]
+        }
+      ],
+      "children": [
+        "house_lod1_4_heat_pump",
+        "fx_lod1_thermal_zone"
+      ]
+    }
+  },
+  "vertices": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      10000,
+      0
+    ],
+    [
+      10000,
+      10000,
+      0
+    ],
+    [
+      10000,
+      0,
+      0
+    ],
+    [
+      10000,
+      0,
+      7500
+    ],
+    [
+      0,
+      0,
+      7500
+    ],
+    [
+      10000,
+      10000,
+      7500
+    ],
+    [
+      0,
+      10000,
+      7500
+    ],
+    [
+      10000,
+      10000,
+      6000
+    ],
+    [
+      10000,
+      0,
+      6000
+    ],
+    [
+      0,
+      0,
+      6000
+    ],
+    [
+      5000,
+      0,
+      9000
+    ],
+    [
+      5000,
+      10000,
+      9000
+    ],
+    [
+      0,
+      10000,
+      6000
+    ],
+    [
+      3000,
+      0,
+      1800
+    ],
+    [
+      3000,
+      0,
+      5254
+    ],
+    [
+      5000,
+      0,
+      6454
+    ],
+    [
+      7000,
+      0,
+      5254
+    ],
+    [
+      7000,
+      0,
+      1800
+    ],
+    [
+      3000,
+      10000,
+      1800
+    ],
+    [
+      7000,
+      10000,
+      1800
+    ],
+    [
+      7000,
+      10000,
+      5254
+    ],
+    [
+      5000,
+      10000,
+      6454
+    ],
+    [
+      3000,
+      10000,
+      5254
+    ],
+    [
+      0,
+      3000,
+      1800
+    ],
+    [
+      0,
+      7000,
+      1800
+    ],
+    [
+      0,
+      7000,
+      4200
+    ],
+    [
+      0,
+      3000,
+      4200
+    ],
+    [
+      20000,
+      0,
+      0
+    ],
+    [
+      20000,
+      10000,
+      0
+    ],
+    [
+      30000,
+      10000,
+      0
+    ],
+    [
+      30000,
+      0,
+      0
+    ],
+    [
+      30000,
+      0,
+      7500
+    ],
+    [
+      20000,
+      0,
+      7500
+    ],
+    [
+      30000,
+      10000,
+      7500
+    ],
+    [
+      20000,
+      10000,
+      7500
+    ],
+    [
+      30000,
+      10000,
+      6000
+    ],
+    [
+      30000,
+      0,
+      6000
+    ],
+    [
+      20000,
+      0,
+      6000
+    ],
+    [
+      25000,
+      0,
+      9000
+    ],
+    [
+      25000,
+      10000,
+      9000
+    ],
+    [
+      20000,
+      10000,
+      6000
+    ],
+    [
+      40000,
+      0,
+      0
+    ],
+    [
+      40000,
+      10000,
+      0
+    ],
+    [
+      50000,
+      10000,
+      0
+    ],
+    [
+      50000,
+      0,
+      0
+    ],
+    [
+      50000,
+      0,
+      7500
+    ],
+    [
+      40000,
+      0,
+      7500
+    ],
+    [
+      50000,
+      10000,
+      7500
+    ],
+    [
+      40000,
+      10000,
+      7500
+    ],
+    [
+      50000,
+      10000,
+      6000
+    ],
+    [
+      50000,
+      0,
+      6000
+    ],
+    [
+      40000,
+      0,
+      6000
+    ],
+    [
+      45000,
+      0,
+      9000
+    ],
+    [
+      45000,
+      10000,
+      9000
+    ],
+    [
+      40000,
+      10000,
+      6000
+    ],
+    [
+      60000,
+      0,
+      0
+    ],
+    [
+      70000,
+      0,
+      0
+    ],
+    [
+      70000,
+      10000,
+      0
+    ],
+    [
+      60000,
+      10000,
+      0
+    ],
+    [
+      70000,
+      0,
+      6000
+    ],
+    [
+      60000,
+      0,
+      6000
+    ],
+    [
+      70000,
+      10000,
+      6000
+    ],
+    [
+      60000,
+      10000,
+      6000
+    ]
+  ]
+}

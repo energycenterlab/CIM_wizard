@@ -1,0 +1,32 @@
+# 3DCityDB 4.4.0 (PostgreSQL 13, PostGIS 3.2)
+# Official image: 3dcitydb/3dcitydb-pg:13-3.2-4.4.0
+# Separate project/volume/port from docker-compose.citydbv4.yml (4.4.2 on 55432).
+
+name: citydbv440
+
+services:
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:13-3.2-4.4.0
+    container_name: citydb-v4-4.4.0
+    restart: unless-stopped
+    ports:
+      - "35432:5432"
+    environment:
+      POSTGRES_DB: citydb
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      SRID: "4326"
+      SRS_NAME: "urn:ogc:def:crs:EPSG::4326"
+      GMLSRSNAME: "urn:ogc:def:crs:EPSG::4326"
+    volumes:
+      - citydb_v440_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cim_wizard_user -d citydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  citydb_v440_data:
+    driver: local

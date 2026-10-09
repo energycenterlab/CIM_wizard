@@ -1,0 +1,37 @@
+# CityGML 1.0 / AdV LoD2 (no ADE)
+# Official image: 3dcitydb/3dcitydb-pg:13-3.2-4.4.0
+# Does not collide with citydbv4 (55432), citydbv440 (35432), or citygml2-energyade1 (65432).
+#
+# Start: docker compose -f docker-compose.citygml1.yml up -d
+# Connect Importer/Exporter 5.5.3: host localhost, port 45432, db/user/pass below.
+# Uncheck Bounding Box. No ADE Manager. Import CityGML 1.0 LoD2 as-is.
+
+name: citygml1
+
+services:
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:13-3.2-4.4.0
+    container_name: citydb-gml1
+    restart: unless-stopped
+    ports:
+      - "45432:5432"
+    environment:
+      POSTGRES_DB: citydb
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      # Berlin / AdV UTM 33N. Zone 32 tiles need 25832 instead.
+      SRID: "25833"
+      SRS_NAME: "urn:ogc:def:crs:EPSG::25833"
+      GMLSRSNAME: "urn:ogc:def:crs:EPSG::25833"
+    volumes:
+      - citydb_gml1_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cim_wizard_user -d citydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  citydb_gml1_data:
+    driver: local

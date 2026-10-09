@@ -1,0 +1,310 @@
+{
+  "type": "CityJSONExtension",
+  "name": "EnergyADE3",
+  "uri": "./energy-ade3-v1.1.ext.json",
+  "version": "0.1",
+  "versionCityJSON": "1.1",
+  "description": "Energy ADE 3.0 beta 7 extras on CityJSON 1.1. Core objects stay Building so ninja and cjval can read the geometry. ADE 3 libraries, zones, devices and party-wall CityObjects are +Energy-* extras. Not the registry energy-space-heating extension (KIT / ADE 1). Party walls draw as WallSurface (no extraSemanticSurfaces in 1.1).",
+  "extraRootProperties": {
+    "+Energy-libraries": {
+      "type": "object"
+    }
+  },
+  "extraAttributes": {
+    "Building": {
+      "+Energy-referencePoint": {
+        "type": "array"
+      },
+      "+Energy-bdgArea": {
+        "type": "array"
+      },
+      "+Energy-bdgHeight": {
+        "type": "array"
+      },
+      "+Energy-bdgVolume": {
+        "type": "array"
+      },
+      "+Energy-bdgAtticThermalStatus": {
+        "type": "string"
+      },
+      "+Energy-bdgBasementThermalStatus": {
+        "type": "string"
+      },
+      "+Energy-bdgConstructionWeight": {
+        "type": "object"
+      },
+      "+Energy-bdgIsProtected": {
+        "type": "boolean"
+      },
+      "+Energy-bdgType": {
+        "type": "object"
+      }
+    }
+  },
+  "extraCityObjects": {
+    "+Energy-BuildingUnit": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-BuildingUnit"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-ThermalZone": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-ThermalZone"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-UsageZone": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-UsageZone"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-Occupants": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-Occupants"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-Boiler": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-Boiler"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-HeatPump": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-HeatPump"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-Window": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-Window"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-Door": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-Door"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-GroundSurface": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-GroundSurface"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-RoofSurface": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-RoofSurface"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-WallSurface": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-WallSurface"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    },
+    "+Energy-PartyWallSurface": {
+      "allOf": [
+        {
+          "$ref": "cityobjects.schema.json#/_AbstractCityObject"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "+Energy-PartyWallSurface"
+              ]
+            },
+            "attributes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      ]
+    }
+  }
+}
