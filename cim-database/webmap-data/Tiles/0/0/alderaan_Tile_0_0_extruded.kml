@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Written by 3D City Database Importer/Exporter, version "5.5.3" -->
+<!-- Chair of Geoinformatics, Technical University of Munich -->
+<kml xmlns:xal="urn:oasis:names:tc:ciq:xsdschema:xAL:2.0" xmlns="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:gx="http://www.google.com/kml/ext/2.2">
+  <Document>
+    <name>alderaan_Tile_0_0_extruded</name>
+    <open>false</open>
+    <Placemark id="KMLExtr_id_building_1">
+      <name>id_building_1</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.313557632910218,47.974765884661494,15.0 3.313691334808403,47.97476837827957,15.0 3.3136876213046613,47.974858156418804,15.0 3.31355391916736,47.974855662794596,15.0 3.313557632910218,47.974765884661494,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_5">
+      <name>id_building_5</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3143598445336906,47.97478084395976,15.0 3.3143561322255293,47.97487062212962,15.0 3.314222430010113,47.974868129308845,15.0 3.314226142557389,47.97477835114509,15.0 3.3143598445336906,47.97478084395976,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_4">
+      <name>id_building_4</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.314092440596708,47.974775858169735,15.0 3.3140887278103146,47.97486563632735,15.0 3.3139550256261394,47.97486314318519,15.0 3.3139587386516505,47.97477336503368,15.0 3.314092440596708,47.974775858169735,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_8">
+      <name>id_building_8</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3138343198154234,47.974546426389004,15.0 3.3138306065898586,47.974636204525524,15.0 3.313696905034719,47.97463371107734,15.0 3.3137006184993973,47.97454393294692,15.0 3.3138343198154234,47.974546426389004,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_12">
+      <name>id_building_12</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3144991145998928,47.974648669356334,15.0 3.314495402554277,47.974738447527045,15.0 3.3143617006819133,47.9747359548761,15.0 3.3143654129666444,47.97464617671154,15.0 3.3144991145998928,47.974648669356334,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_2">
+      <name>id_building_2</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3138250367222146,47.97477087173696,15.0 3.313821323457589,47.97486064988232,15.0 3.3136876213046613,47.974858156418804,15.0 3.313691334808403,47.97476837827957,15.0 3.3138250367222146,47.97477087173696,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_3">
+      <name>id_building_3</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3138250367222146,47.97477087173696,15.0 3.3139587386516505,47.97477336503368,15.0 3.3139550256261394,47.97486314318519,15.0 3.313821323457589,47.97486064988232,15.0 3.3138250367222146,47.97477087173696,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_7">
+      <name>id_building_7</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3135687740450335,47.97449655028331,15.0 3.313702475225877,47.97449904388302,15.0 3.3136987617690115,47.97458882201168,15.0 3.313565060349055,47.97458632840585,15.0 3.3135687740450335,47.97449655028331,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_6">
+      <name>id_building_6</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3143579883815635,47.97482573304421,15.0 3.3144916904930426,47.9748282257013,15.0 3.3144879784161896,47.974918003879075,15.0 3.314354276065592,47.97491551121588,15.0 3.3143579883815635,47.97482573304421,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_11">
+      <name>id_building_11</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.314504682639031,47.974514002106865,15.0 3.3145009706168436,47.97460378027227,15.0 3.314367269103151,47.97460128763055,15.0 3.3143709813644517,47.97451150947125,15.0 3.314504682639031,47.974514002106865,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Placemark id="KMLExtr_id_building_9-10">
+      <name>id_building_9-10</name>
+      <styleUrl>#extrudedNormal</styleUrl>
+      <MultiGeometry>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.314101722494343,47.97455141279105,15.0 3.314098009747006,47.974641190939906,15.0 3.3139643081606205,47.97463869781306,15.0 3.313968021147073,47.974548919670355,15.0 3.314101722494343,47.97455141279105,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+        <Polygon>
+          <extrude>true</extrude>
+          <tessellate>true</tessellate>
+          <altitudeMode>relativeToGround</altitudeMode>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>3.3142372801054933,47.97450901667495,15.0 3.3142335676050805,47.97459879482814,15.0 3.314099866122629,47.974596301865056,15.0 3.314103578862155,47.97450652371797,15.0 3.3142372801054933,47.97450901667495,15.0</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </MultiGeometry>
+    </Placemark>
+    <Style id="extrudedNormal">
+      <LineStyle>
+        <color>C83366FF</color>
+        <width>1.5</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>C800CCFF</color>
+      </PolyStyle>
+      <BalloonStyle>
+        <text>$[description]</text>
+      </BalloonStyle>
+    </Style>
+    <name>alderaan_Tile_0_0_extruded</name>
+    <open>false</open>
+  </Document>
+</kml>

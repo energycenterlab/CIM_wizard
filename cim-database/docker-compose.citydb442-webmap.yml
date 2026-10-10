@@ -1,0 +1,63 @@
+# 3DCityDB Web Map Client (Cesium) for the citydb442 stack.
+# Image: tumgis/3dcitydb-web-map:alpine-latest  (= alpine-v2.0.0)
+#
+# This client does NOT read PostGIS. It serves a Cesium page plus files you
+# put in ./webmap-data (KML / COLLADA / glTF / 3D Tiles from Importer/Exporter).
+#
+# Start citydb first:
+#   docker compose -f docker-compose.citydb442.yml up -d
+# Then this stack:
+#   docker compose -f docker-compose.citydb442-webmap.yml up -d
+# Open: http://<host>:28000/
+# Data listing: http://<host>:28000/data/
+#
+# Optional WFS (CityGML GetFeature against citydb442, not a 3D viewer):
+#   docker compose -f docker-compose.citydb442-webmap.yml --profile wfs up -d
+#   http://<host>:28080/wfs?SERVICE=WFS&REQUEST=GetCapabilities
+#   http://<host>:28080/wfsclient
+#
+# WMS is not a 3DCityDB service. Optionally paste a public WMS/WMTS URL
+# (e.g. PDOK for EPSG:28992) as an imagery layer in the Cesium toolbox.
+#
+# Export 3D from Importer/Exporter: KML/COLLADA/glTF Exporter, WGS84,
+# copy the output into ./webmap-data/ then add the .kml / tileset.json URL
+# from the /data/ listing in the web client.
+
+name: citydb442webmap
+
+services:
+  webmap:
+    image: tumgis/3dcitydb-web-map:alpine-latest
+    container_name: citydb-442-webmap
+    restart: unless-stopped
+    ports:
+      - "28000:8000"
+    volumes:
+      - ./webmap-data:/var/www/data
+
+  wfs:
+    image: 3dcitydb/wfs:5.4.3
+    container_name: citydb-442-wfs
+    profiles: ["wfs"]
+    restart: unless-stopped
+    ports:
+      - "28080:8080"
+    environment:
+      CITYDB_TYPE: postgresql
+      CITYDB_HOST: citydb-442-energyade3
+      CITYDB_PORT: "5432"
+      CITYDB_NAME: citydb
+      CITYDB_SCHEMA: citydb
+      CITYDB_USERNAME: cim_wizard_user
+      CITYDB_PASSWORD: cim_wizard_password
+      WFS_CONTEXT_PATH: ROOT
+    networks:
+      - default
+      - citydb442
+    # Energy ADE 3 click-query needs WFS ADE plugin JARs. This image still
+    # serves vanilla CityGML Building / surfaces from the same database.
+
+networks:
+  citydb442:
+    external: true
+    name: citydb442_default
