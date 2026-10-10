@@ -16,3 +16,5 @@ cim-database/3DCityDB-Importer-Exporter-5.1.1/
 gateway/
 3DCityDB-Importer-Exporter-5.5.3-Setup.jar
 *.jar
+
+env_info_modeler/core_logic/torino_residenziale_express_dsm.pkl

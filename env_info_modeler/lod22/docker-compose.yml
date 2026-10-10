@@ -1,0 +1,22 @@
+# Roofer LoD2.2 on the Wippolder sample.
+# Docs: https://innovation.3dbag.nl/roofer/getting_started.html
+# Image: https://hub.docker.com/r/3dgi/roofer  (tag matches the 1.0.0 getting-started command)
+#
+# Sample from the getting-started page (about 7 MB). Unzip so this
+# directory contains wippolder/wippolder.las and wippolder/wippolder.gpkg:
+#   curl -LO https://data.3dbag.nl/testdata/roofer/wippolder.zip
+#   unzip wippolder.zip
+#
+# Run:
+#   docker compose run --rm roofer
+
+services:
+  roofer:
+    image: 3dgi/roofer:v1.0.0
+    volumes:
+      - ./wippolder:/data/wippolder:ro
+      - ./output:/data/output
+    command:
+      - /data/wippolder/wippolder.las
+      - /data/wippolder/wippolder.gpkg
+      - /data/output
