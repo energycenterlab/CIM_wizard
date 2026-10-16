@@ -1,0 +1,16 @@
+{
+	"version": "1.0.0",
+	"layername": "torino",
+	"fileextension": ".kml",
+	"displayform": "extruded",
+	"minLodPixels": 0,
+	"maxLodPixels": 0,
+	"colnum": 111,
+	"rownum": 118,
+	"bbox":{ 
+		"xmin": 7.594611537522767,
+		"xmax": 7.77363208189864,
+		"ymin": 45.00690641498082,
+		"ymax": 45.141035522489304
+	}
+}

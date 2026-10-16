@@ -4,6 +4,8 @@ Geometry comes from lod0_3d_footprint_32632. Walls are the footprint edges
 extruded by building_height_m. The roof is that footprint lifted to the eave.
 The file follows house2_lod2 in cim-database/report_house.gml: one shared
 construction library, then one building whose surfaces point at it.
+write_citygml_core / strip_energy_ade drop nrg3 so Importer/Exporter can
+load the LoD2 buildings without the LayeredConstructionLibrary NPE.
 """
 
 from __future__ import annotations
@@ -31,6 +33,19 @@ CITYMODEL_OPEN = (
     'xmlns:nrg3="http://www.citygml.org/ade/energy/3.0" '
     'xmlns:xlink="http://www.w3.org/1999/xlink">'
 )
+CITYMODEL_OPEN_CORE = (
+    '<core:CityModel xmlns:bldg="http://www.opengis.net/citygml/building/2.0" '
+    'xmlns:core="http://www.opengis.net/citygml/2.0" '
+    'xmlns:gml="http://www.opengis.net/gml">'
+)
+_NRG3_NS = re.compile(r'\sxmlns:nrg3="[^"]*"')
+_LIBRARY_MEMBER = re.compile(
+    r"<core:cityObjectMember><nrg3:LayeredConstructionLibrary\b.*?"
+    r"</nrg3:LayeredConstructionLibrary></core:cityObjectMember>"
+)
+_NRG3_BLOCK = re.compile(r"<nrg3:(device|thermalZone)\b.*?</nrg3:\1>")
+_NRG3_EMPTY = re.compile(r"<nrg3:[^>]*/>")
+_NRG3_ELEM = re.compile(r"<nrg3:([^ >]+)[^>]*>.*?</nrg3:\1>")
 
 # EPISCOPE / URBEM labels on the building frame -> EuReCa name parts.
 # Single is one plant per dwelling. Centralized is one plant for the building.
@@ -313,7 +328,7 @@ def _polygon_xml(polygon: Polygon, polygon_id: str) -> str:
     return "".join(parts)
 
 
-def _surface_xml(surface: pd.Series) -> str:
+def _surface_xml(surface: pd.Series, energy_ade: bool = True) -> str:
     tag = surface["surface_type"]
     surface_id = surface["surface_id"]
     lines = [
@@ -322,27 +337,28 @@ def _surface_xml(surface: pd.Series) -> str:
     ]
     construction_id = surface["construction_id"]
     u_value = surface["u_value"]
-    if isinstance(construction_id, str) and pd.notna(u_value):
+    if energy_ade and isinstance(construction_id, str) and pd.notna(u_value):
         lines.append(f'<nrg3:layeredConstruction xlink:href="#{escape(construction_id)}"/>')
     lines.append("<bldg:lod2MultiSurface>")
     lines.append(f'<gml:MultiSurface gml:id="{surface_id}_lod2" srsName="{CRS}" srsDimension="3">')
     lines.append("<gml:surfaceMember>")
     lines.append(_polygon_xml(surface.geometry, f"{surface_id}_polygon"))
     lines.append("</gml:surfaceMember></gml:MultiSurface></bldg:lod2MultiSurface>")
-    lines.append(
-        f'<nrg3:bdgBdrySurfAzimuth uom="decimal degree">{surface["azimuth_deg"]:.4f}</nrg3:bdgBdrySurfAzimuth>'
-    )
-    lines.append(
-        f'<nrg3:bdgBdrySurfInclination uom="decimal degree">{surface["inclination_deg"]:.1f}</nrg3:bdgBdrySurfInclination>'
-    )
-    adiabatic = "true" if surface["is_adiabatic"] else "false"
-    lines.append(f"<nrg3:bdgBdrySurfIsAdiabatic>{adiabatic}</nrg3:bdgBdrySurfIsAdiabatic>")
-    lines.append(
-        f'<nrg3:bdgBdrySurfOpeningToSurfaceRatio uom="unit interval">{surface["opening_ratio"]:.4f}</nrg3:bdgBdrySurfOpeningToSurfaceRatio>'
-    )
-    lines.append(
-        f'<nrg3:bdgBdrySurfTotalSurfaceArea uom="m^2">{surface["area_m2"]:.4f}</nrg3:bdgBdrySurfTotalSurfaceArea>'
-    )
+    if energy_ade:
+        lines.append(
+            f'<nrg3:bdgBdrySurfAzimuth uom="decimal degree">{surface["azimuth_deg"]:.4f}</nrg3:bdgBdrySurfAzimuth>'
+        )
+        lines.append(
+            f'<nrg3:bdgBdrySurfInclination uom="decimal degree">{surface["inclination_deg"]:.1f}</nrg3:bdgBdrySurfInclination>'
+        )
+        adiabatic = "true" if surface["is_adiabatic"] else "false"
+        lines.append(f"<nrg3:bdgBdrySurfIsAdiabatic>{adiabatic}</nrg3:bdgBdrySurfIsAdiabatic>")
+        lines.append(
+            f'<nrg3:bdgBdrySurfOpeningToSurfaceRatio uom="unit interval">{surface["opening_ratio"]:.4f}</nrg3:bdgBdrySurfOpeningToSurfaceRatio>'
+        )
+        lines.append(
+            f'<nrg3:bdgBdrySurfTotalSurfaceArea uom="m^2">{surface["area_m2"]:.4f}</nrg3:bdgBdrySurfTotalSurfaceArea>'
+        )
     lines.append(f"</bldg:{tag}></bldg:boundedBy>")
     return "".join(lines)
 
@@ -600,8 +616,14 @@ def write_citygml(
     surfaces: gpd.GeoDataFrame,
     devices: pd.DataFrame,
     path: str | Path,
+    energy_ade: bool = True,
 ) -> Path:
-    """Write one LoD2 building per row that has a wall. Constructions are the shared library."""
+    """Write one LoD2 building per row that has a wall.
+
+    energy_ade=True keeps the construction library, devices and thermal zones
+    (FME / Energy ADE 3). energy_ade=False is CityGML 2 Building only, which
+    Importer/Exporter can load without the LayeredConstructionLibrary NPE.
+    """
     output = Path(path)
     usable = surfaces.loc[surfaces["surface_type"].eq("WallSurface"), "building_id"].unique()
     selected = surfaces.loc[surfaces["building_id"].isin(usable)].sort_values(
@@ -614,30 +636,86 @@ def write_citygml(
     z_values = shapely.get_coordinates(selected.geometry.to_numpy(), include_z=True)[:, 2]
     with output.open("w", encoding="utf-8") as handle:
         handle.write('<?xml version="1.0" encoding="utf-8"?>\n')
-        handle.write(CITYMODEL_OPEN)
+        handle.write(CITYMODEL_OPEN if energy_ade else CITYMODEL_OPEN_CORE)
         handle.write(
             f'<gml:boundedBy><gml:Envelope srsName="{CRS}" srsDimension="3">'
             f"<gml:lowerCorner>{minimum[0]:.4f} {minimum[1]:.4f} {z_values.min():.4f}</gml:lowerCorner>"
             f"<gml:upperCorner>{minimum[2]:.4f} {minimum[3]:.4f} {z_values.max():.4f}</gml:upperCorner>"
             "</gml:Envelope></gml:boundedBy>"
         )
-        handle.write(_library_xml(selected) + "\n")
+        if energy_ade:
+            handle.write(_library_xml(selected) + "\n")
+        else:
+            handle.write("\n")
         for building_id, faces in selected.groupby("building_id", sort=False):
-            handle.write(_building_xml(attributes.loc[building_id], device_rows.loc[building_id], faces) + "\n")
+            handle.write(
+                _building_xml(
+                    attributes.loc[building_id],
+                    device_rows.loc[building_id],
+                    faces,
+                    energy_ade=energy_ade,
+                )
+                + "\n"
+            )
         handle.write("</core:CityModel>\n")
     return output
 
 
-def _building_xml(building: pd.Series, device: pd.Series, faces: gpd.GeoDataFrame) -> str:
+def write_citygml_core(
+    buildings: pd.DataFrame,
+    surfaces: gpd.GeoDataFrame,
+    devices: pd.DataFrame,
+    path: str | Path,
+) -> Path:
+    """CityGML 2 LoD2 buildings for Importer/Exporter. No Energy ADE objects."""
+    return write_citygml(buildings, surfaces, devices, path, energy_ade=False)
+
+
+def strip_energy_ade(source: str | Path, destination: str | Path | None = None) -> Path:
+    """Drop nrg3 from an existing CityGML file. Streaming, one line at a time.
+
+    Default destination is the source stem plus _core.gml. Use this on a
+    torino_residenziale.gml that already includes the construction library.
+    """
+    incoming = Path(source)
+    outgoing = Path(destination) if destination else incoming.with_name(
+        incoming.stem + "_core" + incoming.suffix
+    )
+    with incoming.open(encoding="utf-8") as reader, outgoing.open("w", encoding="utf-8") as writer:
+        for line in reader:
+            writer.write(_without_nrg3(line))
+    return outgoing
+
+
+def _without_nrg3(xml: str) -> str:
+    xml = _NRG3_NS.sub("", xml)
+    xml = _LIBRARY_MEMBER.sub("", xml)
+    xml = _NRG3_BLOCK.sub("", xml)
+    xml = _NRG3_EMPTY.sub("", xml)
+    xml = _NRG3_ELEM.sub("", xml)
+    return xml
+
+
+def _building_xml(
+    building: pd.Series,
+    device: pd.Series,
+    faces: gpd.GeoDataFrame,
+    energy_ade: bool = True,
+) -> str:
     building_id = building["building_id"]
     lines = [
         "<core:cityObjectMember>",
         f'<bldg:Building gml:id="b_{building_id}">',
         f"<gml:name>building {building_id}</gml:name>",
-        _device_xml(device),
-        '<bldg:class codeSpace="http://www.sig3d.org/codelists/standard/building/2.0/_AbstractBuilding_class.xml">habitation</bldg:class>',
-        '<bldg:function codeSpace="http://www.sig3d.org/codelists/standard/building/2.0/_AbstractBuilding_function.xml">residential building</bldg:function>',
     ]
+    if energy_ade:
+        lines.append(_device_xml(device))
+    lines.append(
+        '<bldg:class codeSpace="http://www.sig3d.org/codelists/standard/building/2.0/_AbstractBuilding_class.xml">habitation</bldg:class>'
+    )
+    lines.append(
+        '<bldg:function codeSpace="http://www.sig3d.org/codelists/standard/building/2.0/_AbstractBuilding_function.xml">residential building</bldg:function>'
+    )
     year = _construction_year(building["construction_period"])
     if year is not None:
         lines.append(f"<bldg:yearOfConstruction>{year}</bldg:yearOfConstruction>")
@@ -648,8 +726,9 @@ def _building_xml(building: pd.Series, device: pd.Series, faces: gpd.GeoDataFram
     if storeys is not None:
         lines.append(f"<bldg:storeysAboveGround>{storeys}</bldg:storeysAboveGround>")
     for face in faces.itertuples(index=False):
-        lines.append(_surface_xml(pd.Series(face._asdict())))
-    zone_height = float(height) if np.isfinite(height) else None
-    lines.append(_thermal_zone_from_faces(f"b_{building_id}", zone_height, storeys, faces))
+        lines.append(_surface_xml(pd.Series(face._asdict()), energy_ade=energy_ade))
+    if energy_ade:
+        zone_height = float(height) if np.isfinite(height) else None
+        lines.append(_thermal_zone_from_faces(f"b_{building_id}", zone_height, storeys, faces))
     lines.append("</bldg:Building></core:cityObjectMember>")
     return "".join(lines)

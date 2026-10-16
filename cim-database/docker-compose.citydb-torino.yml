@@ -1,0 +1,39 @@
+# 3DCityDB 4.4.2 for Torino residential LoD2 (EPSG:32632).
+# Empty citydb schema. No ADE SQL at init. Leave Alderaan on citydb442 (25432).
+#
+# Start: docker compose -f docker-compose.citydb-torino.yml up -d
+# Connect Importer/Exporter 5.5.3: host <server>, port 45432,
+#   db citydb, user/pass below. Uncheck Bounding Box.
+# Host port must be <= 65535 (75432 is not a valid TCP port).
+# Import torino_residenziale_core.gml (CityGML 2 Building only, no nrg3).
+# Register Energy ADE 3 later if you FME-enrich this database.
+# Do not Register energy-ade-2.1.0 (ADE 1) on this database.
+
+name: citydbtorino
+
+services:
+  citydb:
+    image: 3dcitydb/3dcitydb-pg:4.4.2
+    container_name: citydb-442-torino
+    restart: unless-stopped
+    ports:
+      - "45432:5432"
+    environment:
+      POSTGRES_DB: citydb
+      POSTGRES_USER: cim_wizard_user
+      POSTGRES_PASSWORD: cim_wizard_password
+      SRID: "32632"
+      SRS_NAME: "urn:ogc:def:crs:EPSG::32632"
+      GMLSRSNAME: "urn:ogc:def:crs:EPSG::32632"
+    volumes:
+      - citydb_442_torino_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cim_wizard_user -d citydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  citydb_442_torino_data:
+    driver: local
