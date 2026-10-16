@@ -1,0 +1,16 @@
+{
+	"version": "1.0.0",
+	"layername": "alderaan",
+	"fileextension": ".kml",
+	"displayform": "footprint",
+	"minLodPixels": 0,
+	"maxLodPixels": 0,
+	"colnum": 2,
+	"rownum": 2,
+	"bbox":{ 
+		"xmin": 3.3124508610259906,
+		"xmax": 3.315733963467029,
+		"ymin": 47.973848149285644,
+		"ymax": 47.97570354573889
+	}
+}

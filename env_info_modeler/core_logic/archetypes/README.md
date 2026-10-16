@@ -44,6 +44,9 @@ unused: one-dwelling rows map to `SFH` even if terraced.
 | `tabula_window_door_by_archetype.csv` | same report, Table 29 | window/door type per TABULA archetype (no door listed for MFH/AB) |
 | `refurbishment_u_targets.csv` | same report, Section 3.5 | standard/advanced refurbishment U targets |
 | `performance_clusters.csv` | RBS stacked-bar figure (slide 34), digitised by eye | performance levels per period: share, wall U band, window type, heat generator - low confidence, verify |
+| `material.csv` | `cim-database/report_house.gml` MaterialLibrary | every gas and solid material, with the properties the Energy ADE writes |
+| `layered_construction.csv` | same GML, LayeredConstructionLibrary | every construction and its layers (inside to outside), plus the two reversed stacks and the LoD1 hull |
+| `energy_systems.csv` | same GML devices + `cim-database/EuReCa plants in CityGML 2.md` | generation, distribution and emission for the three stated plants; every ready EuReCa heating and cooling name |
 
 `cim_wizard_integrated_2026/` was read for the census E-codes only. Nothing was changed there.
 

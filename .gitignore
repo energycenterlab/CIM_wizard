@@ -18,3 +18,16 @@ gateway/
 *.jar
 
 env_info_modeler/core_logic/torino_residenziale_express_dsm.pkl
+
+env_info_modeler/core_logic/torino_residenziale_surfaces.gpkg
+env_info_modeler/core_logic/torino_residenziale.gml
+
+env_info_modeler/core_logic/torino_residenziale_express_dsm.pkl
+env_info_modeler/core_logic/torino_residenziale_surfaces.gpkg
+env_info_modeler/core_logic/torino_residenziale.gml
+*.gpkg
+*.glb
+*.dae
+cim-database/webmap-data/Tiles/
+__pycache__/
+*.pyc

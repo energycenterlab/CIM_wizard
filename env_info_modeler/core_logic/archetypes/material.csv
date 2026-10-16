@@ -1,0 +1,19 @@
+material_id,material_kind,name,description,library_code,library_code_codespace,is_ventilated,r_value_m2k_w,thermal_conductivity_w_mk,density_kg_m3,specific_heat_capacity_j_kgk,porosity,embodied_energy_kwh_kg,embodied_carbon_kgco2_kg,source
+id_gas_1,Gas,Gas 1,This is Gas 1,gas_code_1,gascode_codeSpace,false,0.18,,,,,,,cim-database/report_house.gml
+id_gas_2,Gas,Gas 2,This is Gas 2,gas_code_2,gascode_codeSpace,false,0.18,,,,,,,cim-database/report_house.gml
+id_solid_material_1,SolidMaterial,SolidMaterial 1,This is SolidMaterial 1,solid_material_code_1,gascode_codeSpace,,,3.5,2500,1000,0.05,15.4,1.9,cim-database/report_house.gml
+id_solid_material_2,SolidMaterial,SolidMaterial 2,This is SolidMaterial 2,solid_material_code_2,gascode_codeSpace,,,1.4,2000,1000,0.1,15.1,1.2,cim-database/report_house.gml
+id_solid_material_3,SolidMaterial,SolidMaterial 3,This is SolidMaterial 3,solid_material_code_3,gascode_codeSpace,,,0.04,20,1220,0.01,2.1,2.1,cim-database/report_house.gml
+id_solid_material_4,SolidMaterial,SolidMaterial 4,This is SolidMaterial 4,solid_material_code_4,gascode_codeSpace,,,0.23,1100,1000,0.01,9.8,7.3,cim-database/report_house.gml
+id_solid_material_5,SolidMaterial,SolidMaterial 5,This is SolidMaterial 5,solid_material_code_5,gascode_codeSpace,,,2.3,2300,1000,0.1,0,2.8,cim-database/report_house.gml
+id_solid_material_6,SolidMaterial,SolidMaterial 6,This is SolidMaterial 6,solid_material_code_6,gascode_codeSpace,,,0.7,1400,1000,0.05,8,3.3,cim-database/report_house.gml
+id_solid_material_7,SolidMaterial,SolidMaterial 7,This is SolidMaterial 7,solid_material_code_7,gascode_codeSpace,,,0.8,1800,1000,0.05,2.2,1.4,cim-database/report_house.gml
+id_solid_material_9,SolidMaterial,SolidMaterial 9,This is SolidMaterial 9,solid_material_code_9,gascode_codeSpace,,,0.035,20,1220,0.01,6.9,6.7,cim-database/report_house.gml
+id_solid_material_10,SolidMaterial,SolidMaterial 10,This is SolidMaterial 10,solid_material_code_10,gascode_codeSpace,,,0.87,1800,910,0.05,6.7,6.9,cim-database/report_house.gml
+id_solid_material_11,SolidMaterial,SolidMaterial 11,This is SolidMaterial 11,solid_material_code_11,gascode_codeSpace,,,0.7,1400,1000,0.05,14.9,3.4,cim-database/report_house.gml
+id_solid_material_12,SolidMaterial,SolidMaterial 12,This is SolidMaterial 12,solid_material_code_12,gascode_codeSpace,,,2.3,2400,1000,0.1,11.9,1.7,cim-database/report_house.gml
+id_solid_material_14,SolidMaterial,SolidMaterial 14,This is SolidMaterial 14,solid_material_code_14,gascode_codeSpace,,,0.04,110,670,0.01,19.9,1.4,cim-database/report_house.gml
+id_solid_material_15,SolidMaterial,SolidMaterial 15,This is SolidMaterial 15,solid_material_code_15,gascode_codeSpace,,,0.23,1100,1000,0.05,19.2,9.8,cim-database/report_house.gml
+id_solid_material_16,SolidMaterial,SolidMaterial 16,This is SolidMaterial 16,solid_material_code_16,gascode_codeSpace,,,0.7,1400,1000,0.05,14.1,3.9,cim-database/report_house.gml
+id_solid_material_17,SolidMaterial,SolidMaterial 17,This is SolidMaterial 17,solid_material_code_17,gascode_codeSpace,,,0.8,1800,1000,0.05,1.1,5.2,cim-database/report_house.gml
+id_solid_material_18,SolidMaterial,SolidMaterial 18,This is SolidMaterial 18,solid_material_code_18,gascode_codeSpace,,,0.7,1400,1000,0.05,9.4,0.5,cim-database/report_house.gml

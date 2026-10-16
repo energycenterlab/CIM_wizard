@@ -27,6 +27,14 @@ def load_reference_tables(archetypes_dir: Path = ARCHETYPES_DIR) -> dict[str, pd
         "system_distributions",
         "episcope_refurbishment_piedmont",
         "performance_clusters",
+        "building_classes",
+        "systems",
+        "stock_weights",
+        "episcope_piedmont_aggregates",
+        "refurbishment_u_targets",
+        "material",
+        "layered_construction",
+        "energy_systems",
     ]
     return {name: pd.read_csv(archetypes_dir / f"{name}.csv") for name in names}
 

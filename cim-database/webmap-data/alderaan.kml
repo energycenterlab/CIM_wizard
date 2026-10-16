@@ -16,12 +16,72 @@
     <Folder>
       <name>alderaan_Tile_0_0</name>
       <NetworkLink>
+        <name>Display as footprint</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/0/alderaan_Tile_0_0_footprint.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
         <name>Display as extruded</name>
         <Region>
           <LatLonAltBox>
-            <north>47.97570354573889</north>
+            <north>47.97477584751226</north>
             <south>47.973848149285644</south>
-            <east>3.315733963467029</east>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/0/alderaan_Tile_0_0_extruded.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as geometry</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/0/alderaan_Tile_0_0_geometry.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as collada</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.31409241224651</east>
             <west>3.3124508610259906</west>
           </LatLonAltBox>
           <Lod>
@@ -30,7 +90,256 @@
           </Lod>
         </Region>
         <Link>
-          <href>Tiles/0/0/alderaan_Tile_0_0_extruded.kml</href>
+          <href>Tiles/0/0/alderaan_Tile_0_0_collada.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+    </Folder>
+    <Folder>
+      <name>alderaan_Tile_0_1</name>
+      <NetworkLink>
+        <name>Display as footprint</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/1/alderaan_Tile_0_1_footprint.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as extruded</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/1/alderaan_Tile_0_1_extruded.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as geometry</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/1/alderaan_Tile_0_1_geometry.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as collada</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97477584751226</north>
+            <south>47.973848149285644</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>-1.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/0/1/alderaan_Tile_0_1_collada.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+    </Folder>
+    <Folder>
+      <name>alderaan_Tile_1_0</name>
+      <NetworkLink>
+        <name>Display as footprint</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/0/alderaan_Tile_1_0_footprint.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as extruded</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/0/alderaan_Tile_1_0_extruded.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as geometry</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/0/alderaan_Tile_1_0_geometry.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as collada</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.31409241224651</east>
+            <west>3.3124508610259906</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>-1.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/0/alderaan_Tile_1_0_collada.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+    </Folder>
+    <Folder>
+      <name>alderaan_Tile_1_1</name>
+      <NetworkLink>
+        <name>Display as footprint</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/1/alderaan_Tile_1_1_footprint.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as extruded</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/1/alderaan_Tile_1_1_extruded.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as geometry</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>0.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/1/alderaan_Tile_1_1_geometry.kml</href>
+          <viewRefreshMode>onRegion</viewRefreshMode>
+          <viewFormat/>
+        </Link>
+      </NetworkLink>
+      <NetworkLink>
+        <name>Display as collada</name>
+        <Region>
+          <LatLonAltBox>
+            <north>47.97570354573889</north>
+            <south>47.97477584751226</south>
+            <east>3.315733963467029</east>
+            <west>3.31409241224651</west>
+          </LatLonAltBox>
+          <Lod>
+            <minLodPixels>0.0</minLodPixels>
+            <maxLodPixels>-1.0</maxLodPixels>
+          </Lod>
+        </Region>
+        <Link>
+          <href>Tiles/1/1/alderaan_Tile_1_1_collada.kml</href>
           <viewRefreshMode>onRegion</viewRefreshMode>
           <viewFormat/>
         </Link>
