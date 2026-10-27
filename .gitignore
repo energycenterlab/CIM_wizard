@@ -32,3 +32,5 @@ __pycache__/
 env_info_modeler/core_logic/archetipi_urbem.zip
 
 cim-database/EC_17 June_Version 1.ifc
+# Hamburg LOD2 sample, over GitHub 100 MB limit
+cim-database/lod2-de_hh_2016-11-22_21283_snap_1.GML
