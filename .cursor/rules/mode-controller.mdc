@@ -1,0 +1,28 @@
+---
+description: Selects the one active design mode and the one active plan, and ranks them above other style rules
+alwaysApply: true
+---
+
+# Mode controller
+
+Two axes. Name one to change it. Say both in the first reply of a chat.
+
+**Design mode** (how code is written). Default: design runtime.
+
+- design runtime → read `.cursor/skills/design-runtime/SKILL.md`
+- professional design → read `.cursor/skills/professional-design/SKILL.md`
+- development → read `.cursor/skills/development/SKILL.md`
+
+**Plan** (no application code). Default: none.
+
+- plan-literature, plan-litrature → read `.cursor/skills/plan-literature-review/SKILL.md`
+- plan-architecture → read `.cursor/skills/plan-architecture/SKILL.md`
+- plan-implementation, plan-implimentation → read `.cursor/skills/plan-implementation/SKILL.md`
+
+**Pipeline.** "orchestrate" or `/orchestrator` → read `.cursor/skills/orchestrator/SKILL.md`. That runs plan-implementation, then one implementation slice, then a review. It is not a third design mode.
+
+A plan finishes before any design skill writes code, unless the user said orchestrate or implement. Voice skills (`/caveman`, `/ponytail`) change the reply, not the mode.
+
+Rank: data rules and repo boundaries, then the active design skill, then the active plan skill. The active design skill suspends `mvp-prototyping` and the style clauses in `cim-development-structure` (parallelizable core, no print, raise specific exceptions) where they disagree. In development mode those structure rules apply again, and only inside `env_info_modeler/`.
+
+Read a skill file when its mode is named. Do not load the other mode skills.

@@ -1,6 +1,6 @@
 # CIM Wizard rules
 
-Project rules are the `.mdc` files in `.cursor/rules/`. Follow those files.
+Project rules are the `.mdc` files in `.cursor/rules/`. The mode controller picks the single design mode and the single plan. Follow that before any other style rule.
 
-New development goes in `city_information_modeler/`. `cim_wizard_integrated_2026/` is frozen:
+New development goes in `env_info_modeler/`. `cim_wizard_integrated_2026/` is frozen:
 read it for reference, do not change it. Do not create `logic/dev/`.

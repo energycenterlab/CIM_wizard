@@ -40,3 +40,6 @@ env_info_modeler/core_logic/torino_residenziale_express_fake_roofs.geojson
 
 
 env_info_modeler/core_logic/torino_residenziale_express_32632.geojson
+
+# Agent session dumps
+.handoff/
